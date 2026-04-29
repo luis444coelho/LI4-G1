@@ -7,6 +7,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,6 +25,9 @@ public class Loja extends EntidadeBase {
     @Column(nullable = false, unique = true, length = 9)
     private String nif;
 
+    @Column
+    private String telefone;
+
     @Column(nullable = false)
     private boolean ativa = true;
 
@@ -34,10 +38,23 @@ public class Loja extends EntidadeBase {
     }
 
     public Loja(String nome, String morada, String nif) {
+        this(nome, morada, nif, null);
+    }
+
+    public Loja(String nome, String morada, String nif, String telefone) {
         this.nome = nome;
         this.morada = morada;
         this.nif = nif;
+        this.telefone = telefone;
         this.ativa = true;
+    }
+
+    public FechoCaixa efetuarFechoCaixa(LocalDate data) {
+        return new FechoCaixa(this, data);
+    }
+
+    public Sincronizacao iniciarSincronizacao() {
+        return new Sincronizacao(this);
     }
 
     public void ativar() {
@@ -64,6 +81,10 @@ public class Loja extends EntidadeBase {
 
     public String getNif() {
         return nif;
+    }
+
+    public String getTelefone() {
+        return telefone;
     }
 
     public boolean isAtiva() {

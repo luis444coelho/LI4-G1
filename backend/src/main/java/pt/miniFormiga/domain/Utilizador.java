@@ -6,8 +6,10 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,8 +28,14 @@ public class Utilizador extends EntidadeBase {
     @Column(nullable = false)
     private String nome;
 
+    @Column
+    private String email;
+
     @Column(nullable = false)
     private boolean ativo = true;
+
+    @Column(nullable = false)
+    private LocalDateTime dataCriacao;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "perfil_id", nullable = false)
@@ -44,14 +52,35 @@ public class Utilizador extends EntidadeBase {
     }
 
     public Utilizador(String username, String passwordHash, String nome, Perfil perfil, Loja loja) {
+        this(username, passwordHash, nome, null, perfil, loja);
+    }
+
+    public Utilizador(String username, String passwordHash, String nome, String email, Perfil perfil, Loja loja) {
         this.username = username;
         this.passwordHash = passwordHash;
         this.nome = nome;
+        this.email = email;
         this.perfil = Objects.requireNonNull(perfil, "Perfil e obrigatorio");
         this.loja = Objects.requireNonNull(loja, "Loja e obrigatoria");
         this.ativo = true;
+        this.dataCriacao = LocalDateTime.now();
         this.perfil.adicionarUtilizador(this);
         this.loja.adicionarUtilizador(this);
+    }
+
+    public boolean autenticar(String password) {
+        return ativo && Objects.equals(passwordHash, password);
+    }
+
+    public void alterarPassword(String nova) {
+        this.passwordHash = Objects.requireNonNull(nova, "Password e obrigatoria");
+    }
+
+    @PrePersist
+    private void prePersistDataCriacao() {
+        if (this.dataCriacao == null) {
+            this.dataCriacao = LocalDateTime.now();
+        }
     }
 
     public boolean temPermissao(String modulo) {
@@ -80,8 +109,16 @@ public class Utilizador extends EntidadeBase {
         return nome;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
     public boolean isAtivo() {
         return ativo;
+    }
+
+    public LocalDateTime getDataCriacao() {
+        return dataCriacao;
     }
 
     public Perfil getPerfil() {

@@ -1,6 +1,7 @@
 package pt.miniFormiga.domain;
 
 public enum TipoOperacao {
+    VENDA,
     LOGIN,
     LOGOUT,
     VENDA_REGISTADA,
@@ -8,6 +9,8 @@ public enum TipoOperacao {
     FATURA_EMITIDA,
     DEVOLUCAO_REGISTADA,
     FECHO_CAIXA,
+    AJUSTE_STOCK,
+    ACESSO,
     AJUSTE_INVENTARIO,
     ENCOMENDA_CRIADA,
     UTILIZADOR_CRIADO,
