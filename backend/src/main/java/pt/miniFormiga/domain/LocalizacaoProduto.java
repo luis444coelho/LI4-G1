@@ -34,6 +34,12 @@ public class LocalizacaoProduto extends EntidadeBase {
         this.descricao = descricao;
     }
 
+    public void atualizar(String corredor, String prateleira, String descricao) {
+        this.corredor = corredor;
+        this.prateleira = prateleira;
+        this.descricao = descricao;
+    }
+
     public Produto getProduto() {
         return produto;
     }

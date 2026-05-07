@@ -8,6 +8,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import pt.miniFormiga.exception.MiniFormigaException;
 import pt.miniFormiga.subsistemas.utilizadores.CredenciaisInvalidasException;
 import pt.miniFormiga.subsistemas.utilizadores.RecursoNaoEncontradoException;
 import pt.miniFormiga.subsistemas.utilizadores.RegraNegocioException;
@@ -17,6 +18,12 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    @ExceptionHandler(MiniFormigaException.class)
+    public ResponseEntity<ApiError> miniFormiga(MiniFormigaException exception) {
+        HttpStatus status = exception.getCode().contains("NAO_ENCONTRAD") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+        return erro(status, exception.getCode(), exception.getMessage(), exception.getDetails());
+    }
 
     @ExceptionHandler({CredenciaisInvalidasException.class, BadCredentialsException.class})
     public ResponseEntity<ApiError> credenciaisInvalidas(RuntimeException exception) {

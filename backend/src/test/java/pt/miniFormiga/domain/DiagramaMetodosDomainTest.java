@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -166,8 +165,7 @@ class DiagramaMetodosDomainTest {
         NivelMinimo nivelMinimo = new NivelMinimo(stock, 7);
 
         AjusteInventario ajuste = new AjusteInventario(stock, motivo, utilizador, -1, "produto danificado");
-        AlertaStock alerta = new AlertaStock(nivelMinimo, stock.getQuantidade());
-        alerta.associarUtilizadores(Arrays.asList(utilizador, utilizador, null));
+        AlertaStock alerta = new AlertaStock(stock, stock.getQuantidade());
         CondicaoComercial condicao = new CondicaoComercial(
                 fornecedor,
                 produto,
@@ -185,7 +183,8 @@ class DiagramaMetodosDomainTest {
         assertEquals(-1, ajuste.getQuantidade());
         assertEquals(stock.getQuantidade(), alerta.getQuantidadeNoMomento());
         assertFalse(alerta.isLido());
-        assertEquals(List.of(utilizador), alerta.getDestinatarios());
+        alerta.marcarComoLido();
+        assertTrue(alerta.isLido());
         assertEquals(new BigDecimal("0.60"), condicao.getPrecoUnitario());
         assertEquals("A", localizacao.getCorredor());
         assertEquals("PENDENTE", estadoEncomenda.getCodigo());

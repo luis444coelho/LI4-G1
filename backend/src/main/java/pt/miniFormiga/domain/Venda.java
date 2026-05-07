@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "vendas")
@@ -75,9 +76,7 @@ public class Venda extends EntidadeBase {
             }
             linha.calcularTotal();
             novoTotalSemIVA = novoTotalSemIVA.add(linha.getTotalLinha());
-
-            TaxaIVA taxaIVA = linha.getProduto().getTaxaIVA();
-            BigDecimal percentagem = taxaIVA == null ? BigDecimal.ZERO : taxaIVA.getPercentagem();
+            BigDecimal percentagem = linha.getProduto().getTaxaIVA().getPercentagem();
             BigDecimal ivaLinha = linha.getTotalLinha()
                     .multiply(percentagem)
                     .divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
@@ -89,8 +88,34 @@ public class Venda extends EntidadeBase {
         this.totalComIVA = this.totalSemIVA.add(this.totalIVA).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public void finalizar() {
+    public BigDecimal calcularSubtotal() {
         calcularTotais();
+        return totalSemIVA;
+    }
+
+    public BigDecimal calcularIVA() {
+        calcularTotais();
+        return totalIVA;
+    }
+
+    public BigDecimal calcularTotal() {
+        calcularTotais();
+        return totalComIVA;
+    }
+
+    public void finalizar(MeioPagamento meioPagamento) {
+        if (anulada) {
+            throw new IllegalStateException("Venda anulada nao pode ser finalizada");
+        }
+        if (linhas.stream().noneMatch(linha -> !linha.isAnulada())) {
+            throw new IllegalStateException("Venda deve ter pelo menos uma linha");
+        }
+        this.meioPagamento = meioPagamento;
+        calcularTotais();
+    }
+
+    public void finalizar() {
+        finalizar(this.meioPagamento);
     }
 
     public void anular() {
@@ -101,6 +126,14 @@ public class Venda extends EntidadeBase {
         if (linhaVenda != null && !linhas.contains(linhaVenda)) {
             linhas.add(linhaVenda);
         }
+    }
+
+    public void anularLinha(UUID linhaId) {
+        linhas.stream()
+                .filter(linha -> linha.getId().equals(linhaId))
+                .findFirst()
+                .ifPresent(LinhaVenda::anular);
+        calcularTotais();
     }
 
     public Loja getLoja() {
@@ -138,4 +171,5 @@ public class Venda extends EntidadeBase {
     public List<LinhaVenda> getLinhas() {
         return Collections.unmodifiableList(linhas);
     }
+
 }

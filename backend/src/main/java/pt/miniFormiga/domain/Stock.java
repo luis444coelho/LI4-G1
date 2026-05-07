@@ -5,10 +5,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Table(name = "stocks")
@@ -26,10 +30,16 @@ public class Stock extends EntidadeBase {
     private int quantidade;
 
     @Column(nullable = false)
-    private LocalDateTime dataUltimaAtualizacao;
+    private LocalDateTime dataDefinicao;
 
     @OneToOne(mappedBy = "stock", fetch = FetchType.LAZY)
     private NivelMinimo nivelMinimo;
+
+    @OneToMany(mappedBy = "stock")
+    private List<AjusteInventario> ajustesInventario = new ArrayList<>();
+
+    @OneToMany(mappedBy = "stock")
+    private List<AlertaStock> alertasStock = new ArrayList<>();
 
     protected Stock() {
     }
@@ -41,7 +51,7 @@ public class Stock extends EntidadeBase {
         this.produto = produto;
         this.loja = loja;
         this.quantidade = quantidade;
-        this.dataUltimaAtualizacao = LocalDateTime.now();
+        this.dataDefinicao = LocalDateTime.now();
     }
 
     public void atualizarQuantidade(int delta) {
@@ -50,11 +60,15 @@ public class Stock extends EntidadeBase {
             throw new IllegalArgumentException("Quantidade de stock nao pode ser negativa");
         }
         this.quantidade = novaQuantidade;
-        this.dataUltimaAtualizacao = LocalDateTime.now();
+        this.dataDefinicao = LocalDateTime.now();
     }
 
     public boolean estaAbaixoMinimo() {
-        return nivelMinimo != null && quantidade < nivelMinimo.getQuantidade();
+        return precisaReposicao();
+    }
+
+    public boolean precisaReposicao() {
+        return nivelMinimo != null && quantidade <= nivelMinimo.getQuantidade();
     }
 
     void definirNivelMinimo(NivelMinimo nivelMinimo) {
@@ -73,11 +87,23 @@ public class Stock extends EntidadeBase {
         return quantidade;
     }
 
+    public LocalDateTime getDataDefinicao() {
+        return dataDefinicao;
+    }
+
     public LocalDateTime getDataUltimaAtualizacao() {
-        return dataUltimaAtualizacao;
+        return dataDefinicao;
     }
 
     public NivelMinimo getNivelMinimo() {
         return nivelMinimo;
+    }
+
+    public List<AjusteInventario> getAjustesInventario() {
+        return Collections.unmodifiableList(ajustesInventario);
+    }
+
+    public List<AlertaStock> getAlertasStock() {
+        return Collections.unmodifiableList(alertasStock);
     }
 }

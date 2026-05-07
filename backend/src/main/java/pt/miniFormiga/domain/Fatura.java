@@ -23,6 +23,9 @@ public class Fatura extends EntidadeBase {
     @Column(nullable = false)
     private String numero;
 
+    @Column(nullable = false, unique = true)
+    private String numeroFatura;
+
     @Column(nullable = false)
     private String serie;
 
@@ -58,6 +61,7 @@ public class Fatura extends EntidadeBase {
         this.numero = Objects.requireNonNull(numero, "Numero da fatura e obrigatorio");
         this.serie = Objects.requireNonNull(serie, "Serie da fatura e obrigatoria");
         this.tipo = Objects.requireNonNull(tipo, "Tipo da fatura e obrigatorio");
+        this.numeroFatura = this.serie + "/" + this.numero;
         this.nifCliente = nifCliente;
         this.nomeCliente = nomeCliente;
         this.dataEmissao = LocalDateTime.now();
@@ -71,6 +75,14 @@ public class Fatura extends EntidadeBase {
         this.totalComIVA = venda.getTotalComIVA();
         this.dataEmissao = LocalDateTime.now();
         this.emitida = true;
+    }
+
+    public static String decidirTipo(BigDecimal totalComIva, String nifCliente) {
+        boolean temNif = nifCliente != null && !nifCliente.isBlank();
+        if (temNif || totalComIva.compareTo(new BigDecimal("1000.00")) > 0) {
+            return "COMPLETA";
+        }
+        return "SIMPLIFICADA";
     }
 
     public byte[] gerarPDF() {
@@ -96,6 +108,10 @@ public class Fatura extends EntidadeBase {
 
     public String getNumero() {
         return numero;
+    }
+
+    public String getNumeroFatura() {
+        return numeroFatura;
     }
 
     public String getSerie() {
@@ -133,4 +149,5 @@ public class Fatura extends EntidadeBase {
     public boolean isEmitida() {
         return emitida;
     }
+
 }

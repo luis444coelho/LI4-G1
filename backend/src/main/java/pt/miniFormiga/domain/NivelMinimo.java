@@ -35,6 +35,14 @@ public class NivelMinimo extends EntidadeBase {
         }
     }
 
+    public void atualizarQuantidade(int quantidade) {
+        if (quantidade < 0) {
+            throw new IllegalArgumentException("Nivel minimo nao pode ser negativo");
+        }
+        this.quantidade = quantidade;
+        this.dataDefinicao = LocalDateTime.now();
+    }
+
     public Stock getStock() {
         return stock;
     }

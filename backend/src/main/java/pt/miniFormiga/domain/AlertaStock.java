@@ -4,23 +4,18 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 @Entity
 @Table(name = "alertas_stock")
 public class AlertaStock extends EntidadeBase {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "nivel_minimo_id", nullable = false)
-    private NivelMinimo nivelMinimo;
+    @JoinColumn(name = "stock_id", nullable = false)
+    private Stock stock;
 
     @Column(nullable = false)
     private LocalDateTime dataHora;
@@ -31,37 +26,22 @@ public class AlertaStock extends EntidadeBase {
     @Column(nullable = false)
     private boolean lido;
 
-    @ManyToMany
-    @JoinTable(
-            name = "alerta_stock_destinatarios",
-            joinColumns = @JoinColumn(name = "alerta_stock_id"),
-            inverseJoinColumns = @JoinColumn(name = "utilizador_id")
-    )
-    private List<Utilizador> destinatarios = new ArrayList<>();
-
     protected AlertaStock() {
     }
 
-    public AlertaStock(NivelMinimo nivelMinimo, int quantidadeNoMomento) {
-        this.nivelMinimo = nivelMinimo;
+    public AlertaStock(Stock stock, int quantidadeNoMomento) {
+        this.stock = stock;
         this.dataHora = LocalDateTime.now();
         this.quantidadeNoMomento = quantidadeNoMomento;
         this.lido = false;
     }
 
-    public void associarUtilizadores(List<Utilizador> utilizadores) {
-        destinatarios.clear();
-        if (utilizadores != null) {
-            for (Utilizador utilizador : utilizadores) {
-                if (utilizador != null && !destinatarios.contains(utilizador)) {
-                    destinatarios.add(utilizador);
-                }
-            }
-        }
+    public void marcarComoLido() {
+        this.lido = true;
     }
 
-    public NivelMinimo getNivelMinimo() {
-        return nivelMinimo;
+    public Stock getStock() {
+        return stock;
     }
 
     public LocalDateTime getDataHora() {
@@ -76,7 +56,4 @@ public class AlertaStock extends EntidadeBase {
         return lido;
     }
 
-    public List<Utilizador> getDestinatarios() {
-        return Collections.unmodifiableList(destinatarios);
-    }
 }

@@ -65,6 +65,11 @@ public class LinhaVenda extends EntidadeBase {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
+    public void anular() {
+        this.anulada = true;
+        calcularTotal();
+    }
+
     public Venda getVenda() {
         return venda;
     }

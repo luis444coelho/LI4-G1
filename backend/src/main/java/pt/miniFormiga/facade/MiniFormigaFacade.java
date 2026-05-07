@@ -29,6 +29,7 @@ import pt.miniFormiga.domain.Stock;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
+import pt.miniFormiga.subsistemas.pdv.ISubPDV;
 import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
 
 import java.math.BigDecimal;
@@ -49,6 +50,7 @@ import java.util.stream.Collectors;
 public class MiniFormigaFacade implements IMiniFormigaLN {
 
     private final ISubUtilizadores subUtilizadores;
+    private final ISubPDV subPDV;
 
     private final Map<UUID, Loja> lojas = new LinkedHashMap<>();
     private final Map<UUID, Perfil> perfis = new LinkedHashMap<>();
@@ -73,13 +75,19 @@ public class MiniFormigaFacade implements IMiniFormigaLN {
     private final Map<UUID, CondicaoComercial> condicoesComerciais = new LinkedHashMap<>();
     private final Map<UUID, LocalizacaoProduto> localizacoesProduto = new LinkedHashMap<>();
 
-    public MiniFormigaFacade(ISubUtilizadores subUtilizadores) {
+    public MiniFormigaFacade(ISubUtilizadores subUtilizadores, ISubPDV subPDV) {
         this.subUtilizadores = subUtilizadores;
+        this.subPDV = subPDV;
     }
 
     @Override
     public ISubUtilizadores utilizadores() {
         return subUtilizadores;
+    }
+
+    @Override
+    public ISubPDV pdv() {
+        return subPDV;
     }
 
     @PostConstruct
@@ -298,7 +306,7 @@ public class MiniFormigaFacade implements IMiniFormigaLN {
         if (stock != null) {
             stock.atualizarQuantidade(-quantidade);
             if (stock.estaAbaixoMinimo()) {
-                alertasStock.put(UUID.randomUUID(), new AlertaStock(stock.getNivelMinimo(), stock.getQuantidade()));
+                alertasStock.put(UUID.randomUUID(), new AlertaStock(stock, stock.getQuantidade()));
             }
         }
     }

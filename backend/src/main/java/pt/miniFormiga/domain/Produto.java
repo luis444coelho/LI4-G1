@@ -18,8 +18,14 @@ public class Produto extends EntidadeBase {
     @Column(nullable = false, unique = true)
     private String codigo;
 
+    @Column(name = "codigo_barras", unique = true)
+    private String codigoBarras;
+
     @Column(nullable = false)
     private String nome;
+
+    @Column(length = 1000)
+    private String descricao;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal precoVenda;
@@ -35,6 +41,10 @@ public class Produto extends EntidadeBase {
     @JoinColumn(name = "categoria_id", nullable = false)
     private Categoria categoria;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fornecedor_principal_id")
+    private Fornecedor fornecedorPrincipal;
+
     @Column(nullable = false)
     private boolean ativo = true;
 
@@ -47,8 +57,9 @@ public class Produto extends EntidadeBase {
                    BigDecimal precoCusto,
                    TaxaIVA taxaIVA,
                    Categoria categoria) {
-        this.codigo = codigo;
-        this.nome = nome;
+        this.codigo = validarTexto(codigo, "Codigo de barras e obrigatorio");
+        this.codigoBarras = this.codigo;
+        this.nome = validarTexto(nome, "Nome do produto e obrigatorio");
         this.precoVenda = Objects.requireNonNull(precoVenda, "Preco de venda e obrigatorio");
         this.precoCusto = Objects.requireNonNull(precoCusto, "Preco de custo e obrigatorio");
         this.taxaIVA = Objects.requireNonNull(taxaIVA, "Taxa de IVA e obrigatoria");
@@ -60,15 +71,21 @@ public class Produto extends EntidadeBase {
     }
 
     public BigDecimal calcularMargem() {
-        return precoVenda.subtract(precoCusto);
+        if (precoVenda.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return precoVenda.subtract(precoCusto)
+                .divide(precoVenda, 4, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("100"))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal calcularMargemPercentagem() {
-        if (precoCusto.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
+        if (precoVenda.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
         }
-        return calcularMargem()
-                .divide(precoCusto, 4, RoundingMode.HALF_UP)
+        return precoVenda.subtract(precoCusto)
+                .divide(precoVenda, 4, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"));
     }
 
@@ -83,8 +100,49 @@ public class Produto extends EntidadeBase {
         this.ativo = false;
     }
 
+    public void atualizar(String nome,
+                          String descricao,
+                          BigDecimal precoVenda,
+                          BigDecimal precoCusto,
+                          Categoria categoria,
+                          TaxaIVA taxaIVA,
+                          Fornecedor fornecedorPrincipal,
+                          Boolean ativo) {
+        if (nome != null) {
+            this.nome = validarTexto(nome, "Nome do produto e obrigatorio");
+        }
+        if (descricao != null) {
+            this.descricao = descricao;
+        }
+        if (precoVenda != null) {
+            this.precoVenda = precoVenda;
+        }
+        if (precoCusto != null) {
+            this.precoCusto = precoCusto;
+        }
+        if (categoria != null) {
+            this.categoria = categoria;
+            categoria.adicionarProduto(this);
+        }
+        if (taxaIVA != null) {
+            TaxaIVA.validarPercentagem(taxaIVA.getPercentagem());
+            this.taxaIVA = taxaIVA;
+            taxaIVA.adicionarProduto(this);
+        }
+        if (fornecedorPrincipal != null) {
+            this.fornecedorPrincipal = fornecedorPrincipal;
+        }
+        if (ativo != null) {
+            this.ativo = ativo;
+        }
+    }
+
     public String getCodigo() {
         return codigo;
+    }
+
+    public String getCodigoBarras() {
+        return codigoBarras == null ? codigo : codigoBarras;
     }
 
     public String getNome() {
@@ -103,11 +161,31 @@ public class Produto extends EntidadeBase {
         return taxaIVA;
     }
 
+    public TaxaIVA getTaxaIva() {
+        return taxaIVA;
+    }
+
     public Categoria getCategoria() {
         return categoria;
     }
 
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public Fornecedor getFornecedorPrincipal() {
+        return fornecedorPrincipal;
+    }
+
     public boolean isAtivo() {
         return ativo;
+    }
+
+    private String validarTexto(String valor, String mensagem) {
+        String normalizado = Objects.requireNonNull(valor, mensagem).trim();
+        if (normalizado.isEmpty()) {
+            throw new IllegalArgumentException(mensagem);
+        }
+        return normalizado;
     }
 }

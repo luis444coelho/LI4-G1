@@ -19,11 +19,11 @@ public class AjusteInventario extends EntidadeBase {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "motivo_id", nullable = false)
-    private MotivoAjuste motivo;
+    private MotivoAjuste motivoAjuste;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "responsavel_id", nullable = false)
-    private Utilizador responsavel;
+    @JoinColumn(name = "utilizador_id", nullable = false)
+    private Utilizador utilizador;
 
     @Column(nullable = false)
     private int quantidade;
@@ -43,8 +43,8 @@ public class AjusteInventario extends EntidadeBase {
                             int quantidade,
                             String observacoes) {
         this.stock = stock;
-        this.motivo = motivo;
-        this.responsavel = responsavel;
+        this.motivoAjuste = motivo;
+        this.utilizador = responsavel;
         this.quantidade = quantidade;
         this.observacoes = observacoes;
         this.dataHora = LocalDateTime.now();
@@ -55,11 +55,19 @@ public class AjusteInventario extends EntidadeBase {
     }
 
     public MotivoAjuste getMotivo() {
-        return motivo;
+        return motivoAjuste;
+    }
+
+    public MotivoAjuste getMotivoAjuste() {
+        return motivoAjuste;
     }
 
     public Utilizador getResponsavel() {
-        return responsavel;
+        return utilizador;
+    }
+
+    public Utilizador getUtilizador() {
+        return utilizador;
     }
 
     public int getQuantidade() {

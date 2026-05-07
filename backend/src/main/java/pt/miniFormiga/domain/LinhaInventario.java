@@ -49,7 +49,19 @@ public class LinhaInventario extends EntidadeBase {
         this.discrepancia = quantidadeContada - quantidadeSistema;
     }
 
+    public void atualizarQuantidadeContada(int quantidadeContada) {
+        if (quantidadeContada < 0) {
+            throw new IllegalArgumentException("Quantidade contada nao pode ser negativa");
+        }
+        this.quantidadeContada = quantidadeContada;
+        calcularDiscrepancia();
+    }
+
     public InventarioFisico getInventario() {
+        return inventario;
+    }
+
+    public InventarioFisico getInventarioFisico() {
         return inventario;
     }
 

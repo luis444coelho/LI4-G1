@@ -63,12 +63,18 @@ public class InventarioFisico extends EntidadeBase {
     }
 
     public void fechar() {
+        if (fechado) {
+            throw new IllegalStateException("Inventario fisico ja fechado");
+        }
         calcularDiscrepancias();
         this.dataFecho = LocalDateTime.now();
         this.fechado = true;
     }
 
     void adicionarLinha(LinhaInventario linhaInventario) {
+        if (fechado) {
+            throw new IllegalStateException("Inventario fisico fechado nao aceita contagens");
+        }
         if (linhaInventario != null && !linhas.contains(linhaInventario)) {
             linhas.add(linhaInventario);
         }
