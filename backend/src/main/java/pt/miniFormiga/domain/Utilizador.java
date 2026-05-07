@@ -56,10 +56,10 @@ public class Utilizador extends EntidadeBase {
     }
 
     public Utilizador(String username, String passwordHash, String nome, String email, Perfil perfil, Loja loja) {
-        this.username = username;
-        this.passwordHash = passwordHash;
-        this.nome = nome;
-        this.email = email;
+        this.username = validarTexto(username, "Username e obrigatorio");
+        this.passwordHash = validarTexto(passwordHash, "Password e obrigatoria");
+        this.nome = validarTexto(nome, "Nome e obrigatorio");
+        this.email = normalizarEmail(email);
         this.perfil = Objects.requireNonNull(perfil, "Perfil e obrigatorio");
         this.loja = Objects.requireNonNull(loja, "Loja e obrigatoria");
         this.ativo = true;
@@ -73,7 +73,7 @@ public class Utilizador extends EntidadeBase {
     }
 
     public void alterarPassword(String nova) {
-        this.passwordHash = Objects.requireNonNull(nova, "Password e obrigatoria");
+        this.passwordHash = validarTexto(nova, "Password e obrigatoria");
     }
 
     @PrePersist
@@ -89,6 +89,10 @@ public class Utilizador extends EntidadeBase {
 
     public void desativar() {
         this.ativo = false;
+    }
+
+    public void ativar() {
+        this.ativo = true;
     }
 
     void adicionarLogAuditoria(LogAuditoria logAuditoria) {
@@ -131,5 +135,20 @@ public class Utilizador extends EntidadeBase {
 
     public List<LogAuditoria> getLogsAuditoria() {
         return Collections.unmodifiableList(logsAuditoria);
+    }
+
+    private String validarTexto(String valor, String mensagem) {
+        String normalizado = Objects.requireNonNull(valor, mensagem).trim();
+        if (normalizado.isEmpty()) {
+            throw new IllegalArgumentException(mensagem);
+        }
+        return normalizado;
+    }
+
+    private String normalizarEmail(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        return valor.trim().toLowerCase();
     }
 }

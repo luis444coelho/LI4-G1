@@ -29,6 +29,7 @@ import pt.miniFormiga.domain.Stock;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
+import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,7 +46,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-public class MiniFormigaFacade {
+public class MiniFormigaFacade implements IMiniFormigaLN {
+
+    private final ISubUtilizadores subUtilizadores;
 
     private final Map<UUID, Loja> lojas = new LinkedHashMap<>();
     private final Map<UUID, Perfil> perfis = new LinkedHashMap<>();
@@ -69,6 +72,15 @@ public class MiniFormigaFacade {
     private final Map<UUID, GuiaRemessa> guiasRemessa = new LinkedHashMap<>();
     private final Map<UUID, CondicaoComercial> condicoesComerciais = new LinkedHashMap<>();
     private final Map<UUID, LocalizacaoProduto> localizacoesProduto = new LinkedHashMap<>();
+
+    public MiniFormigaFacade(ISubUtilizadores subUtilizadores) {
+        this.subUtilizadores = subUtilizadores;
+    }
+
+    @Override
+    public ISubUtilizadores utilizadores() {
+        return subUtilizadores;
+    }
 
     @PostConstruct
     public void inicializarDadosDemo() {

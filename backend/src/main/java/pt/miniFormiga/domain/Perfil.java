@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "perfis")
@@ -31,12 +32,12 @@ public class Perfil extends EntidadeBase {
     }
 
     public Perfil(String nome, List<String> permissoes) {
-        this.nome = nome;
+        this.nome = validarTexto(nome, "Nome do perfil e obrigatorio").toUpperCase();
         this.permissoes = permissoes == null ? new ArrayList<>() : new ArrayList<>(permissoes);
     }
 
     public boolean temPermissao(String permissao) {
-        return permissoes.contains(permissao);
+        return permissoes.contains(permissao) || permissoes.contains("GLOBAL_ADMIN");
     }
 
     void adicionarUtilizador(Utilizador utilizador) {
@@ -55,5 +56,13 @@ public class Perfil extends EntidadeBase {
 
     public List<Utilizador> getUtilizadores() {
         return Collections.unmodifiableList(utilizadores);
+    }
+
+    private String validarTexto(String valor, String mensagem) {
+        String normalizado = Objects.requireNonNull(valor, mensagem).trim();
+        if (normalizado.isEmpty()) {
+            throw new IllegalArgumentException(mensagem);
+        }
+        return normalizado;
     }
 }
