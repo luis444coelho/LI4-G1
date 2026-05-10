@@ -27,6 +27,10 @@ public class Encomenda extends EntidadeBase {
     @JoinColumn(name = "fornecedor_id", nullable = false)
     private Fornecedor fornecedor;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "estado_id", nullable = false)
+    private EstadoEncomenda estado;
+
     @Column(nullable = false)
     private LocalDateTime dataSubmissao;
 
@@ -46,8 +50,13 @@ public class Encomenda extends EntidadeBase {
     }
 
     public Encomenda(Loja loja, Fornecedor fornecedor) {
+        this(loja, fornecedor, new EstadoEncomenda("PENDENTE", "Pendente"));
+    }
+
+    public Encomenda(Loja loja, Fornecedor fornecedor, EstadoEncomenda estado) {
         this.loja = loja;
         this.fornecedor = fornecedor;
+        this.estado = estado;
         this.dataSubmissao = LocalDateTime.now();
         this.dataProcessamento = fornecedor == null
                 ? this.dataSubmissao
@@ -69,6 +78,13 @@ public class Encomenda extends EntidadeBase {
         calcularTotal();
     }
 
+    public void alterarEstado(EstadoEncomenda estado) {
+        if (estado == null) {
+            throw new IllegalArgumentException("Estado da encomenda e obrigatorio");
+        }
+        this.estado = estado;
+    }
+
     void adicionarLinha(LinhaEncomenda linhaEncomenda) {
         if (linhaEncomenda != null && !linhas.contains(linhaEncomenda)) {
             linhas.add(linhaEncomenda);
@@ -81,6 +97,10 @@ public class Encomenda extends EntidadeBase {
 
     public Fornecedor getFornecedor() {
         return fornecedor;
+    }
+
+    public EstadoEncomenda getEstado() {
+        return estado;
     }
 
     public LocalDateTime getDataSubmissao() {

@@ -29,7 +29,10 @@ import pt.miniFormiga.domain.Stock;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
+import pt.miniFormiga.subsistemas.encomendas.ISubEncomendas;
 import pt.miniFormiga.subsistemas.pdv.ISubPDV;
+import pt.miniFormiga.subsistemas.sincronizacao.ISubSincronizacao;
+import pt.miniFormiga.subsistemas.stock.ISubStock;
 import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
 
 import java.math.BigDecimal;
@@ -51,6 +54,9 @@ public class MiniFormigaFacade implements IMiniFormigaLN {
 
     private final ISubUtilizadores subUtilizadores;
     private final ISubPDV subPDV;
+    private final ISubStock subStock;
+    private final ISubEncomendas subEncomendas;
+    private final ISubSincronizacao subSincronizacao;
 
     private final Map<UUID, Loja> lojas = new LinkedHashMap<>();
     private final Map<UUID, Perfil> perfis = new LinkedHashMap<>();
@@ -75,9 +81,16 @@ public class MiniFormigaFacade implements IMiniFormigaLN {
     private final Map<UUID, CondicaoComercial> condicoesComerciais = new LinkedHashMap<>();
     private final Map<UUID, LocalizacaoProduto> localizacoesProduto = new LinkedHashMap<>();
 
-    public MiniFormigaFacade(ISubUtilizadores subUtilizadores, ISubPDV subPDV) {
+    public MiniFormigaFacade(ISubUtilizadores subUtilizadores,
+                             ISubPDV subPDV,
+                             ISubStock subStock,
+                             ISubEncomendas subEncomendas,
+                             ISubSincronizacao subSincronizacao) {
         this.subUtilizadores = subUtilizadores;
         this.subPDV = subPDV;
+        this.subStock = subStock;
+        this.subEncomendas = subEncomendas;
+        this.subSincronizacao = subSincronizacao;
     }
 
     @Override
@@ -88,6 +101,21 @@ public class MiniFormigaFacade implements IMiniFormigaLN {
     @Override
     public ISubPDV pdv() {
         return subPDV;
+    }
+
+    @Override
+    public ISubStock stock() {
+        return subStock;
+    }
+
+    @Override
+    public ISubEncomendas encomendas() {
+        return subEncomendas;
+    }
+
+    @Override
+    public ISubSincronizacao sincronizacao() {
+        return subSincronizacao;
     }
 
     @PostConstruct

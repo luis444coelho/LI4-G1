@@ -17,6 +17,10 @@ public class GuiaRemessa extends EntidadeBase {
     @JoinColumn(name = "fornecedor_id", nullable = false)
     private Fornecedor fornecedor;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "encomenda_id")
+    private Encomenda encomenda;
+
     @Column(nullable = false)
     private String numero;
 
@@ -30,7 +34,12 @@ public class GuiaRemessa extends EntidadeBase {
     }
 
     public GuiaRemessa(Fornecedor fornecedor, String numero, LocalDate dataEmissao, LocalDate dataRecepcao) {
+        this(fornecedor, null, numero, dataEmissao, dataRecepcao);
+    }
+
+    public GuiaRemessa(Fornecedor fornecedor, Encomenda encomenda, String numero, LocalDate dataEmissao, LocalDate dataRecepcao) {
         this.fornecedor = fornecedor;
+        this.encomenda = encomenda;
         this.numero = numero;
         this.dataEmissao = dataEmissao;
         this.dataRecepcao = dataRecepcao;
@@ -38,6 +47,10 @@ public class GuiaRemessa extends EntidadeBase {
 
     public Fornecedor getFornecedor() {
         return fornecedor;
+    }
+
+    public Encomenda getEncomenda() {
+        return encomenda;
     }
 
     public String getNumero() {
