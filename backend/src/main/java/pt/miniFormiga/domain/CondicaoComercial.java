@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
 
 @Entity
 @Table(name = "condicoes_comerciais")
@@ -43,12 +44,25 @@ public class CondicaoComercial extends EntidadeBase {
                              int prazoEntregaDias,
                              int quantidadeMinima,
                              LocalDate dataVigencia) {
-        this.fornecedor = fornecedor;
-        this.produto = produto;
+        this.fornecedor = Objects.requireNonNull(fornecedor, "Fornecedor e obrigatorio");
+        this.produto = Objects.requireNonNull(produto, "Produto e obrigatorio");
+        atualizar(precoUnitario, prazoEntregaDias, quantidadeMinima, dataVigencia);
+    }
+
+    public void atualizar(BigDecimal precoUnitario, int prazoEntregaDias, int quantidadeMinima, LocalDate dataVigencia) {
+        if (precoUnitario == null || precoUnitario.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Preco unitario nao pode ser negativo");
+        }
+        if (prazoEntregaDias < 0) {
+            throw new IllegalArgumentException("Prazo de entrega nao pode ser negativo");
+        }
+        if (quantidadeMinima <= 0) {
+            throw new IllegalArgumentException("Quantidade minima deve ser positiva");
+        }
         this.precoUnitario = precoUnitario;
         this.prazoEntregaDias = prazoEntregaDias;
         this.quantidadeMinima = quantidadeMinima;
-        this.dataVigencia = dataVigencia;
+        this.dataVigencia = dataVigencia == null ? LocalDate.now() : dataVigencia;
     }
 
     public Fornecedor getFornecedor() {

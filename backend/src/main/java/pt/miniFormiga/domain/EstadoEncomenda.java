@@ -8,7 +8,7 @@ import jakarta.persistence.Table;
 @Table(name = "estados_encomenda")
 public class EstadoEncomenda extends EntidadeBase {
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String codigo;
 
     @Column(nullable = false)

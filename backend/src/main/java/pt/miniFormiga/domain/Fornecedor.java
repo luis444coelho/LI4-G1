@@ -8,6 +8,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "fornecedores")
@@ -47,13 +48,34 @@ public class Fornecedor extends EntidadeBase {
                       String email,
                       LocalTime horarioInicioArmazem,
                       LocalTime horarioFimArmazem) {
-        this.nome = nome;
-        this.nif = nif;
-        this.morada = morada;
-        this.telefone = telefone;
-        this.email = email;
-        this.horarioInicioArmazem = horarioInicioArmazem;
-        this.horarioFimArmazem = horarioFimArmazem;
+        atualizarDados(nome, nif, morada, telefone, email, horarioInicioArmazem, horarioFimArmazem);
+        this.ativo = true;
+    }
+
+    public void atualizarDados(String nome,
+                               String nif,
+                               String morada,
+                               String telefone,
+                               String email,
+                               LocalTime horarioInicioArmazem,
+                               LocalTime horarioFimArmazem) {
+        this.nome = validarTexto(nome, "Nome do fornecedor e obrigatorio");
+        this.nif = validarTexto(nif, "NIF do fornecedor e obrigatorio");
+        this.morada = validarTexto(morada, "Morada do fornecedor e obrigatoria");
+        this.telefone = validarTexto(telefone, "Telefone do fornecedor e obrigatorio");
+        this.email = validarTexto(email, "Email do fornecedor e obrigatorio");
+        this.horarioInicioArmazem = Objects.requireNonNull(horarioInicioArmazem, "Inicio do horario e obrigatorio");
+        this.horarioFimArmazem = Objects.requireNonNull(horarioFimArmazem, "Fim do horario e obrigatorio");
+        if (!this.horarioFimArmazem.isAfter(this.horarioInicioArmazem)) {
+            throw new IllegalArgumentException("Horario de fim deve ser posterior ao horario de inicio");
+        }
+    }
+
+    public void desativar() {
+        this.ativo = false;
+    }
+
+    public void ativar() {
         this.ativo = true;
     }
 
@@ -115,5 +137,13 @@ public class Fornecedor extends EntidadeBase {
 
     public LocalTime getHorarioFimArmazem() {
         return horarioFimArmazem;
+    }
+
+    private String validarTexto(String valor, String mensagem) {
+        String normalizado = Objects.requireNonNull(valor, mensagem).trim();
+        if (normalizado.isEmpty()) {
+            throw new IllegalArgumentException(mensagem);
+        }
+        return normalizado;
     }
 }
