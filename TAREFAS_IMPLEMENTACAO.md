@@ -49,10 +49,10 @@ Tarefas:
 
 Testes obrigatorios:
 
-- [ ] Login com credenciais validas devolve JWT.
-- [ ] Login invalido devolve 401 e regista tentativa.
+- [x] Login com credenciais validas devolve JWT.
+- [x] Login invalido devolve 401 e regista tentativa.
 - [x] Conta bloqueada apos 5 falhas.
-- [ ] Gerente sem permissao nao acede a endpoints de gestor.
+- [x] Gerente sem permissao nao acede a endpoints de gestor.
 - [x] Editar utilizador fica registado em auditoria.
 
 ## 2. SubAuditoria
@@ -69,16 +69,16 @@ Tarefas:
   - [x] Criar `AuditoriaFacade`.
   - [x] Expor `auditoria()` em `IMiniFormigaLN`.
   - [x] Manter escrita em ficheiros JSON para respeitar DA-08.
-- [ ] Normalizar os campos do log: `utilizadorId`, `tipoOperacao`, `dataHora`, `entidade`, `entidadeId`, `descricao`.
-- [ ] Garantir que operacoes sensiveis chamam auditoria de forma consistente.
+- [x] Normalizar os campos do log: `utilizadorId`, `tipoOperacao`, `dataHora`, `entidade`, `entidadeId`, `descricao`.
+- [x] Garantir que operacoes sensiveis chamam auditoria de forma consistente.
 
 Testes obrigatorios:
 
-- [ ] Venda finalizada gera log.
-- [ ] Fatura emitida gera log.
-- [ ] Fecho de caixa confirmado gera log.
-- [ ] Ajuste de stock gera log.
-- [ ] Alteracao de utilizador gera log.
+- [x] Venda finalizada gera log.
+- [x] Fatura emitida gera log.
+- [x] Fecho de caixa confirmado gera log.
+- [x] Ajuste de stock gera log.
+- [x] Alteracao de utilizador gera log.
 
 ## 3. SubPDV - Venda, Pagamento, Fatura e Devolucao
 

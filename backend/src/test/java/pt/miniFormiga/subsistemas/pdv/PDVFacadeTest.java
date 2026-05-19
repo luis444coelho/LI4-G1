@@ -84,6 +84,7 @@ class PDVFacadeTest {
 
         assertEquals("A/2026/00001", primeira.getNumeroFatura());
         assertEquals(1, sequencia.getUltimoNumero());
+        verify(auditoria).registar(TipoOperacao.FATURA_EMITIDA, operador.getId(), "FATURA", "Fatura emitida");
     }
 
     @Test
@@ -126,6 +127,19 @@ class PDVFacadeTest {
         assertEquals(cartao, finalizada.getMeioPagamento());
         verify(stock).consultarStock(loja.getId());
         verify(stock).atualizarStock(produto.getId(), loja.getId(), -2);
+        verify(auditoria).registar(TipoOperacao.VENDA_FINALIZADA, operador.getId(), "VENDA", "Venda finalizada");
+    }
+
+    @Test
+    void confirmarFechoCaixaRegistaAuditoriaEAgendaSincronizacao() {
+        FechoCaixa fecho = new FechoCaixa(loja, operador, java.time.LocalDate.now(), List.of(vendaFinalizada()));
+        when(fechoCaixaRepository.findById(fecho.getId())).thenReturn(Optional.of(fecho));
+
+        facade.confirmarFechoCaixa(fecho.getId(), "sem discrepancias");
+
+        verify(auditoria).registar(TipoOperacao.FECHO_CAIXA_CONFIRMADO,
+                operador.getId(), "FECHO_CAIXA", "Fecho de caixa confirmado");
+        verify(sincronizacao).agendarSincronizacao(loja.getId());
     }
 
     @Test
