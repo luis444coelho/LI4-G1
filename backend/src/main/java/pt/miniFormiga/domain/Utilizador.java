@@ -35,6 +35,9 @@ public class Utilizador extends EntidadeBase {
     private boolean ativo = true;
 
     @Column(nullable = false)
+    private int tentativasFalhadas = 0;
+
+    @Column(nullable = false)
     private LocalDateTime dataCriacao;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -76,6 +79,23 @@ public class Utilizador extends EntidadeBase {
         this.passwordHash = validarTexto(nova, "Password e obrigatoria");
     }
 
+    public void atualizarDados(String nome, String email, Perfil perfil, Loja loja) {
+        if (nome != null) {
+            this.nome = validarTexto(nome, "Nome e obrigatorio");
+        }
+        if (email != null) {
+            this.email = normalizarEmail(email);
+        }
+        if (perfil != null && !perfil.equals(this.perfil)) {
+            this.perfil = perfil;
+            this.perfil.adicionarUtilizador(this);
+        }
+        if (loja != null && !loja.equals(this.loja)) {
+            this.loja = loja;
+            this.loja.adicionarUtilizador(this);
+        }
+    }
+
     @PrePersist
     private void prePersistDataCriacao() {
         if (this.dataCriacao == null) {
@@ -93,6 +113,18 @@ public class Utilizador extends EntidadeBase {
 
     public void ativar() {
         this.ativo = true;
+        this.tentativasFalhadas = 0;
+    }
+
+    public void registarFalhaAutenticacao(int limiteFalhas) {
+        this.tentativasFalhadas++;
+        if (this.tentativasFalhadas >= limiteFalhas) {
+            desativar();
+        }
+    }
+
+    public void registarAutenticacaoComSucesso() {
+        this.tentativasFalhadas = 0;
     }
 
     void adicionarLogAuditoria(LogAuditoria logAuditoria) {
@@ -123,6 +155,10 @@ public class Utilizador extends EntidadeBase {
 
     public LocalDateTime getDataCriacao() {
         return dataCriacao;
+    }
+
+    public int getTentativasFalhadas() {
+        return tentativasFalhadas;
     }
 
     public Perfil getPerfil() {

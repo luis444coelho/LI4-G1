@@ -16,6 +16,7 @@ public record UtilizadorResponse(
         UUID lojaId,
         String loja,
         List<String> permissoes,
+        int tentativasFalhadas,
         long version
 ) {
     public static UtilizadorResponse from(Utilizador utilizador) {
@@ -30,6 +31,7 @@ public record UtilizadorResponse(
                 utilizador.getLoja().getId(),
                 utilizador.getLoja().getNome(),
                 utilizador.getPerfil().getPermissoes(),
+                utilizador.getTentativasFalhadas(),
                 utilizador.getVersion()
         );
     }

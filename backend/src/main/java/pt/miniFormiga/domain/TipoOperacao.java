@@ -5,6 +5,8 @@ public enum TipoOperacao {
     VENDA_FORA_HORARIO,
     VENDA_FINALIZADA,
     LOGIN,
+    LOGIN_FALHADO,
+    CONTA_BLOQUEADA,
     LOGOUT,
     VENDA_REGISTADA,
     VENDA_ANULADA,

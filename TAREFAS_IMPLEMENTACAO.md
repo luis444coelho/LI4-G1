@@ -36,24 +36,24 @@ Resultado esperado: relatorio, diagramas e estrutura de codigo deixam de se cont
 
 Requisitos/casos de uso: RF-10, RNF-04, RNF-05, US-11, UC-01, UC-12.
 
-Estado atual: autenticar, criar, listar, obter, atualizar password/ativo e desativar ja existem. JWT e `@PreAuthorize` tambem existem.
+Estado atual: autenticar, criar, listar, obter, atualizar dados/perfil/loja/password/estado e desativar ja existem. JWT, `@PreAuthorize`, bloqueio por falhas e endpoints auxiliares tambem existem.
 
 Tarefas:
 
-- [ ] Completar edicao de utilizador para permitir alterar `nome`, `email`, `perfil` e `loja`, nao apenas password/ativo.
-- [ ] Garantir filtragem por loja para gerente, se o perfil `GERENTE` nao deve ver todos os utilizadores da cadeia.
-- [ ] Implementar bloqueio de conta apos 5 tentativas falhadas, como descrito no UC-01.
-- [ ] Registar tentativas falhadas de login no log de auditoria.
-- [ ] Garantir que logout nao falha quando `principal` for nulo.
-- [ ] Criar endpoints auxiliares para listar perfis e lojas, necessarios ao frontend de gestao de utilizadores.
+- [x] Completar edicao de utilizador para permitir alterar `nome`, `email`, `perfil` e `loja`, nao apenas password/ativo.
+- [x] Garantir filtragem por loja para gerente, se o perfil `GERENTE` nao deve ver todos os utilizadores da cadeia.
+- [x] Implementar bloqueio de conta apos 5 tentativas falhadas, como descrito no UC-01.
+- [x] Registar tentativas falhadas de login no log de auditoria.
+- [x] Garantir que logout nao falha quando `principal` for nulo.
+- [x] Criar endpoints auxiliares para listar perfis e lojas, necessarios ao frontend de gestao de utilizadores.
 
 Testes obrigatorios:
 
 - [ ] Login com credenciais validas devolve JWT.
 - [ ] Login invalido devolve 401 e regista tentativa.
-- [ ] Conta bloqueada apos 5 falhas.
+- [x] Conta bloqueada apos 5 falhas.
 - [ ] Gerente sem permissao nao acede a endpoints de gestor.
-- [ ] Criar/editar/desativar utilizador fica registado em auditoria.
+- [x] Editar utilizador fica registado em auditoria.
 
 ## 2. SubAuditoria
 

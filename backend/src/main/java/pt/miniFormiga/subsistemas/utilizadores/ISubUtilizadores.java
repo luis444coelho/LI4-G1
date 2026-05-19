@@ -13,6 +13,8 @@ public interface ISubUtilizadores {
 
     Page<Utilizador> listarUtilizadores(Pageable pageable);
 
+    Page<Utilizador> listarUtilizadoresPorLoja(UUID lojaId, Pageable pageable);
+
     Utilizador obterUtilizador(UUID id);
 
     Utilizador atualizarUtilizador(UUID id, AtualizarUtilizadorCommand command);

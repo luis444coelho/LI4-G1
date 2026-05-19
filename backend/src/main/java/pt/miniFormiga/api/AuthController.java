@@ -64,6 +64,7 @@ public class AuthController {
     @Operation(summary = "Registar logout", description = "JWT e stateless; o endpoint regista auditoria do logout.")
     @ApiResponse(responseCode = "204", description = "Logout registado")
     public void logout(@AuthenticationPrincipal UserDetails principal) {
-        auditoriaService.registar(TipoOperacao.LOGOUT, null, "AUTH_LOGOUT", "Logout de " + principal.getUsername());
+        String username = principal == null ? "utilizador desconhecido" : principal.getUsername();
+        auditoriaService.registar(TipoOperacao.LOGOUT, null, "AUTH_LOGOUT", "Logout de " + username);
     }
 }

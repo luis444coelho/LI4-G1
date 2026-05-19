@@ -20,6 +20,8 @@ import java.util.UUID;
 @Transactional
 public class UtilizadoresFacade implements ISubUtilizadores {
 
+    private static final int LIMITE_TENTATIVAS_FALHADAS = 5;
+
     private final UtilizadorRepository utilizadorRepository;
     private final PerfilRepository perfilRepository;
     private final LojaRepository lojaRepository;
@@ -39,15 +41,26 @@ public class UtilizadoresFacade implements ISubUtilizadores {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Utilizador autenticar(String username, String password) {
         Utilizador utilizador = utilizadorRepository.findByUsername(username)
-                .orElseThrow(() -> new CredenciaisInvalidasException("Credenciais invalidas"));
+                .orElseThrow(() -> {
+                    auditoriaService.registar(TipoOperacao.LOGIN_FALHADO, null, "AUTH_LOGIN", "Tentativa de login com username inexistente");
+                    return new CredenciaisInvalidasException("Credenciais invalidas");
+                });
 
         if (!utilizador.isAtivo() || !passwordEncoder.matches(password, utilizador.getPasswordHash())) {
+            boolean estavaAtivo = utilizador.isAtivo();
+            if (estavaAtivo) {
+                utilizador.registarFalhaAutenticacao(LIMITE_TENTATIVAS_FALHADAS);
+            }
+            auditoriaService.registar(TipoOperacao.LOGIN_FALHADO, utilizador.getId(), "AUTH_LOGIN", "Credenciais invalidas");
+            if (estavaAtivo && !utilizador.isAtivo()) {
+                auditoriaService.registar(TipoOperacao.CONTA_BLOQUEADA, utilizador.getId(), "UTILIZADOR", "Conta bloqueada apos 5 tentativas falhadas");
+            }
             throw new CredenciaisInvalidasException("Credenciais invalidas");
         }
 
+        utilizador.registarAutenticacaoComSucesso();
         auditoriaService.registar(TipoOperacao.LOGIN, utilizador.getId(), "AUTH_LOGIN", "Login efetuado");
         return utilizador;
     }
@@ -84,6 +97,12 @@ public class UtilizadoresFacade implements ISubUtilizadores {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<Utilizador> listarUtilizadoresPorLoja(UUID lojaId, Pageable pageable) {
+        return utilizadorRepository.findByLojaId(lojaId, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Utilizador obterUtilizador(UUID id) {
         return utilizadorRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Utilizador nao encontrado"));
@@ -92,6 +111,16 @@ public class UtilizadoresFacade implements ISubUtilizadores {
     @Override
     public Utilizador atualizarUtilizador(UUID id, AtualizarUtilizadorCommand command) {
         Utilizador utilizador = obterUtilizador(id);
+        Perfil perfil = command.perfilId() == null
+                ? null
+                : perfilRepository.findById(command.perfilId())
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Perfil nao encontrado"));
+        Loja loja = command.lojaId() == null
+                ? null
+                : lojaRepository.findById(command.lojaId())
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Loja nao encontrada"));
+
+        utilizador.atualizarDados(command.nome(), command.email(), perfil, loja);
         if (command.password() != null && !command.password().isBlank()) {
             utilizador.alterarPassword(passwordEncoder.encode(command.password()));
         }

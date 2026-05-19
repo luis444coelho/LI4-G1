@@ -21,4 +21,7 @@ public interface UtilizadorRepository extends JpaRepository<Utilizador, UUID> {
 
     @EntityGraph(attributePaths = {"perfil", "loja"})
     Page<Utilizador> findAll(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"perfil", "loja"})
+    Page<Utilizador> findByLojaId(UUID lojaId, Pageable pageable);
 }
