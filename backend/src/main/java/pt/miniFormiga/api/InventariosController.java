@@ -47,7 +47,7 @@ public class InventariosController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('RESP_ARMAZEM','RESPONSAVEL_ARMAZEM')")
+    @PreAuthorize("hasRole('RESPONSAVEL_ARMAZEM')")
     @Operation(summary = "Iniciar inventario fisico")
     @ApiResponse(responseCode = "200", description = "Inventario iniciado")
     public InventarioFisicoResponse iniciarInventario(@Valid @RequestBody IniciarInventarioRequest request) {
@@ -55,7 +55,7 @@ public class InventariosController {
     }
 
     @PostMapping("/{id}/linhas")
-    @PreAuthorize("hasAnyRole('RESP_ARMAZEM','RESPONSAVEL_ARMAZEM')")
+    @PreAuthorize("hasRole('RESPONSAVEL_ARMAZEM')")
     @Operation(summary = "Registar contagem de inventario")
     @ApiResponse(responseCode = "200", description = "Contagem registada")
     public LinhaInventarioResponse registarLinha(@PathVariable UUID id, @Valid @RequestBody RegistarContagemRequest request) {
@@ -63,7 +63,7 @@ public class InventariosController {
     }
 
     @PutMapping("/{id}/linhas/{linhaId}")
-    @PreAuthorize("hasAnyRole('RESP_ARMAZEM','RESPONSAVEL_ARMAZEM')")
+    @PreAuthorize("hasRole('RESPONSAVEL_ARMAZEM')")
     @Operation(summary = "Corrigir contagem de inventario")
     @ApiResponse(responseCode = "200", description = "Contagem corrigida")
     public LinhaInventarioResponse atualizarLinha(@PathVariable UUID id,
@@ -79,7 +79,7 @@ public class InventariosController {
     }
 
     @PostMapping("/{id}/fechar")
-    @PreAuthorize("hasAnyAuthority('STOCK_WRITE') or hasAnyRole('RESP_ARMAZEM','RESPONSAVEL_ARMAZEM')")
+    @PreAuthorize("hasAnyAuthority('STOCK_WRITE') or hasRole('RESPONSAVEL_ARMAZEM')")
     @Operation(summary = "Fechar inventario fisico")
     @ApiResponse(responseCode = "200", description = "Inventario fechado")
     public void fecharInventario(@PathVariable UUID id) {
@@ -87,7 +87,7 @@ public class InventariosController {
     }
 
     @GetMapping("/{id}/discrepancias")
-    @PreAuthorize("hasAnyAuthority('STOCK_WRITE') or hasAnyRole('RESP_ARMAZEM','RESPONSAVEL_ARMAZEM')")
+    @PreAuthorize("hasAnyAuthority('STOCK_WRITE') or hasRole('RESPONSAVEL_ARMAZEM')")
     @Operation(summary = "Listar discrepancias de inventario")
     @ApiResponse(responseCode = "200", description = "Discrepancias listadas")
     public List<LinhaInventarioResponse> listarDiscrepancias(@PathVariable UUID id) {
@@ -97,7 +97,7 @@ public class InventariosController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','RELATORIOS_READ','STOCK_WRITE') or hasAnyRole('RESP_ARMAZEM','RESPONSAVEL_ARMAZEM')")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','RELATORIOS_READ','STOCK_WRITE') or hasRole('RESPONSAVEL_ARMAZEM')")
     @Operation(summary = "Listar inventarios fisicos")
     @ApiResponse(responseCode = "200", description = "Inventarios listados")
     public Page<InventarioFisicoResponse> listarInventarios(@RequestParam UUID lojaId, Pageable pageable) {
@@ -105,7 +105,7 @@ public class InventariosController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','RELATORIOS_READ','STOCK_WRITE') or hasAnyRole('RESP_ARMAZEM','RESPONSAVEL_ARMAZEM')")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','RELATORIOS_READ','STOCK_WRITE') or hasRole('RESPONSAVEL_ARMAZEM')")
     @Operation(summary = "Obter inventario fisico")
     @ApiResponse(responseCode = "200", description = "Inventario encontrado")
     public InventarioFisicoResponse obterInventario(@PathVariable UUID id) {

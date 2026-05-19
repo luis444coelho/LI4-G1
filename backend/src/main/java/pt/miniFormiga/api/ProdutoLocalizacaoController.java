@@ -34,7 +34,7 @@ public class ProdutoLocalizacaoController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('STOCK_WRITE') or hasAnyRole('RESP_ARMAZEM','RESPONSAVEL_ARMAZEM')")
+    @PreAuthorize("hasAuthority('STOCK_WRITE') or hasRole('RESPONSAVEL_ARMAZEM')")
     @Operation(summary = "Obter localizacao de produto")
     @ApiResponse(responseCode = "200", description = "Localizacao encontrada")
     public LocalizacaoResponse obterLocalizacao(@PathVariable UUID id) {
@@ -44,7 +44,7 @@ public class ProdutoLocalizacaoController {
     }
 
     @PutMapping
-    @PreAuthorize("hasAuthority('STOCK_WRITE') or hasAnyRole('RESP_ARMAZEM','RESPONSAVEL_ARMAZEM')")
+    @PreAuthorize("hasAuthority('STOCK_WRITE') or hasRole('RESPONSAVEL_ARMAZEM')")
     @Operation(summary = "Atualizar localizacao de produto")
     @ApiResponse(responseCode = "200", description = "Localizacao atualizada")
     public LocalizacaoResponse atualizarLocalizacao(@PathVariable UUID id, @Valid @RequestBody LocalizacaoRequest request) {

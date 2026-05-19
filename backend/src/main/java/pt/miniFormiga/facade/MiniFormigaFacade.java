@@ -29,6 +29,7 @@ import pt.miniFormiga.domain.Stock;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.subsistemas.encomendas.ISubEncomendas;
 import pt.miniFormiga.subsistemas.pdv.ISubPDV;
 import pt.miniFormiga.subsistemas.sincronizacao.ISubSincronizacao;
@@ -57,6 +58,7 @@ public class MiniFormigaFacade implements IMiniFormigaLN {
     private final ISubStock subStock;
     private final ISubEncomendas subEncomendas;
     private final ISubSincronizacao subSincronizacao;
+    private final ISubAuditoria subAuditoria;
 
     private final Map<UUID, Loja> lojas = new LinkedHashMap<>();
     private final Map<UUID, Perfil> perfis = new LinkedHashMap<>();
@@ -85,12 +87,14 @@ public class MiniFormigaFacade implements IMiniFormigaLN {
                              ISubPDV subPDV,
                              ISubStock subStock,
                              ISubEncomendas subEncomendas,
-                             ISubSincronizacao subSincronizacao) {
+                             ISubSincronizacao subSincronizacao,
+                             ISubAuditoria subAuditoria) {
         this.subUtilizadores = subUtilizadores;
         this.subPDV = subPDV;
         this.subStock = subStock;
         this.subEncomendas = subEncomendas;
         this.subSincronizacao = subSincronizacao;
+        this.subAuditoria = subAuditoria;
     }
 
     @Override
@@ -116,6 +120,11 @@ public class MiniFormigaFacade implements IMiniFormigaLN {
     @Override
     public ISubSincronizacao sincronizacao() {
         return subSincronizacao;
+    }
+
+    @Override
+    public ISubAuditoria auditoria() {
+        return subAuditoria;
     }
 
     @PostConstruct

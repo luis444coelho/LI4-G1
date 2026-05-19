@@ -120,7 +120,7 @@ class SubStockDomainTest {
 
     private InventarioFisico inventario() {
         Loja loja = loja();
-        Perfil perfil = new Perfil("RESP_ARMAZEM", List.of("STOCK_WRITE"));
+        Perfil perfil = new Perfil("RESPONSAVEL_ARMAZEM", List.of("STOCK_WRITE"));
         Utilizador utilizador = new Utilizador("armazem", "hash", "Armazem", perfil, loja);
         return new InventarioFisico(loja, utilizador);
     }

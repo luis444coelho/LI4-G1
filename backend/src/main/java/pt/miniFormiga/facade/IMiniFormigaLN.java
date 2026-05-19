@@ -1,6 +1,7 @@
 package pt.miniFormiga.facade;
 
 import pt.miniFormiga.subsistemas.pdv.ISubPDV;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.subsistemas.encomendas.ISubEncomendas;
 import pt.miniFormiga.subsistemas.sincronizacao.ISubSincronizacao;
 import pt.miniFormiga.subsistemas.stock.ISubStock;
@@ -12,4 +13,5 @@ public interface IMiniFormigaLN {
     ISubStock stock();
     ISubEncomendas encomendas();
     ISubSincronizacao sincronizacao();
+    ISubAuditoria auditoria();
 }

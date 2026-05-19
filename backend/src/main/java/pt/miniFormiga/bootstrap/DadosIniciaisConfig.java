@@ -59,11 +59,6 @@ public class DadosIniciaisConfig {
                     Permissao.STOCK_WRITE,
                     Permissao.ENCOMENDAS_WRITE
             ));
-            criarPerfilSeNecessario(perfilRepository, "RESP_ARMAZEM", List.of(
-                    Permissao.STOCK_READ,
-                    Permissao.STOCK_WRITE,
-                    Permissao.ENCOMENDAS_WRITE
-            ));
 
             if (!utilizadorRepository.existsByUsername("gestor.formiga")) {
                 utilizadorRepository.save(new Utilizador(
