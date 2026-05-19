@@ -1,5 +1,6 @@
 package pt.miniFormiga.subsistemas.pdv;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class PDVFacade implements ISubPDV {
     private final FaturaSequenciaRepository faturaSequenciaRepository;
     private final FechoCaixaRepository fechoCaixaRepository;
     private final MeioPagamentoRepository meioPagamentoRepository;
+    private final DevolucaoRepository devolucaoRepository;
     private final ISubStock stock;
     private final ISubSincronizacao sincronizacao;
     private final AuditoriaService auditoria;
@@ -57,6 +59,7 @@ public class PDVFacade implements ISubPDV {
                      FaturaSequenciaRepository faturaSequenciaRepository,
                      FechoCaixaRepository fechoCaixaRepository,
                      MeioPagamentoRepository meioPagamentoRepository,
+                     DevolucaoRepository devolucaoRepository,
                      ISubStock stock,
                      ISubSincronizacao sincronizacao,
                      AuditoriaService auditoria) {
@@ -71,9 +74,17 @@ public class PDVFacade implements ISubPDV {
         this.faturaSequenciaRepository = faturaSequenciaRepository;
         this.fechoCaixaRepository = fechoCaixaRepository;
         this.meioPagamentoRepository = meioPagamentoRepository;
+        this.devolucaoRepository = devolucaoRepository;
         this.stock = stock;
         this.sincronizacao = sincronizacao;
         this.auditoria = auditoria;
+    }
+
+    @PostConstruct
+    public void garantirMeiosPagamentoObrigatorios() {
+        criarMeioPagamentoSeNecessario("NUMERARIO", "Pagamento em numerario");
+        criarMeioPagamentoSeNecessario("CARTAO", "Pagamento por cartao bancario");
+        criarMeioPagamentoSeNecessario("MBWAY", "Pagamento por MB Way");
     }
 
     @Override
@@ -124,13 +135,16 @@ public class PDVFacade implements ISubPDV {
     public Venda registarVenda(UUID lojaId, UUID utilizadorId) {
         Loja loja = lojaRepository.findById(lojaId).orElseThrow(() -> new RecursoNaoEncontradoException("Loja", lojaId));
         Utilizador operador = utilizadorRepository.findById(utilizadorId).orElseThrow(() -> new RecursoNaoEncontradoException("Utilizador", utilizadorId));
-        Venda venda = vendaRepository.save(new Venda(loja, operador));
+        Venda venda = vendaRepository.save(criarVenda(loja, operador));
         registarVendaForaHorarioSeNecessario(venda);
         return venda;
     }
 
     @Override
     public LinhaVenda adicionarLinhaVenda(UUID vendaId, UUID produtoId, Integer quantidade) {
+        if (quantidade == null || quantidade <= 0) {
+            throw new BusinessException("QUANTIDADE_LINHA_INVALIDA", "Quantidade da linha de venda deve ser positiva");
+        }
         Venda venda = obterVendaEntidade(vendaId);
         if (venda.isAnulada() || venda.getMeioPagamento() != null) {
             throw new BusinessException("VENDA_NAO_ABERTA", "A venda deve estar aberta");
@@ -147,6 +161,7 @@ public class PDVFacade implements ISubPDV {
                 .orElseThrow(() -> new pt.miniFormiga.exception.StockInsuficienteException(produto.getId(), 0, quantidade));
         LinhaVenda linhaVenda = new LinhaVenda(venda, produto, quantidade, produto.getPrecoVenda());
         venda.calcularTotais();
+        vendaRepository.save(venda);
         return linhaVenda;
     }
 
@@ -154,6 +169,7 @@ public class PDVFacade implements ISubPDV {
     public void anularLinhaVenda(UUID vendaId, UUID linhaId) {
         Venda venda = obterVendaEntidade(vendaId);
         venda.anularLinha(linhaId);
+        vendaRepository.save(venda);
     }
 
     @Override
@@ -163,13 +179,14 @@ public class PDVFacade implements ISubPDV {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("MeioPagamento", meioPagamentoId));
         for (LinhaVenda linha : venda.getLinhas()) {
             if (!linha.isAnulada()) {
+                // A atualizacao do stock e feita dentro da mesma transacao e protegida por @Version no agregado Stock.
                 stock.atualizarStock(linha.getProduto().getId(), venda.getLoja().getId(), -linha.getQuantidade());
             }
         }
         venda.finalizar(meioPagamento);
         auditoria.registar(TipoOperacao.VENDA_FINALIZADA, venda.getUtilizador().getId(), "VENDA", "Venda finalizada");
         registarVendaForaHorarioSeNecessario(venda);
-        return venda;
+        return vendaRepository.save(venda);
     }
 
     @Override
@@ -231,12 +248,21 @@ public class PDVFacade implements ISubPDV {
         }
         LinhaVenda linhaOriginal = original.getLinhas().stream()
                 .filter(linha -> linha.getProduto().getId().equals(request.produtoId()))
+                .filter(linha -> !linha.isAnulada())
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("PRODUTO_NAO_EXISTE_NA_VENDA", "Produto inexistente na venda original"));
         if (linhaOriginal.getQuantidade() < request.quantidade()) {
             throw new BusinessException("QUANTIDADE_DEVOLUCAO_INVALIDA", "Quantidade de devolucao superior a venda original");
         }
         stock.atualizarStock(request.produtoId(), original.getLoja().getId(), request.quantidade());
+        Devolucao devolucao = new Devolucao(
+                original,
+                linhaOriginal.getProduto(),
+                request.quantidade(),
+                linhaOriginal.getPrecoUnitario().multiply(BigDecimal.valueOf(request.quantidade())),
+                proximoNumeroDocumentoDevolucao()
+        );
+        devolucaoRepository.save(devolucao);
         auditoria.registar(TipoOperacao.DEVOLUCAO_REGISTADA, original.getUtilizador().getId(), "VENDA", "Devolucao registada");
         return VendaDTO.from(original);
     }
@@ -311,6 +337,20 @@ public class PDVFacade implements ISubPDV {
         FaturaSequencia sequencia = faturaSequenciaRepository.findBySerie(serie)
                 .orElseGet(() -> faturaSequenciaRepository.saveAndFlush(new FaturaSequencia(serie)));
         return sequencia.proximoNumero();
+    }
+
+    private String proximoNumeroDocumentoDevolucao() {
+        String serie = "NC/" + LocalDate.now().getYear();
+        int numero = proximoNumeroFatura(serie);
+        return serie + "/" + String.format("%05d", numero);
+    }
+
+    private void criarMeioPagamentoSeNecessario(String tipo, String descricao) {
+        meioPagamentoRepository.findByTipo(tipo).orElseGet(() -> meioPagamentoRepository.save(new MeioPagamento(tipo, descricao)));
+    }
+
+    protected Venda criarVenda(Loja loja, Utilizador operador) {
+        return new Venda(loja, operador);
     }
 
     private void registarVendaForaHorarioSeNecessario(Venda venda) {

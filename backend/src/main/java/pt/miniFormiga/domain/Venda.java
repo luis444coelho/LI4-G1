@@ -129,10 +129,11 @@ public class Venda extends EntidadeBase {
     }
 
     public void anularLinha(UUID linhaId) {
-        linhas.stream()
+        LinhaVenda linhaVenda = linhas.stream()
                 .filter(linha -> linha.getId().equals(linhaId))
                 .findFirst()
-                .ifPresent(LinhaVenda::anular);
+                .orElseThrow(() -> new IllegalArgumentException("Linha de venda nao encontrada"));
+        linhaVenda.anular();
         calcularTotais();
     }
 

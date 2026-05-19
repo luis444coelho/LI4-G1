@@ -84,35 +84,35 @@ Testes obrigatorios:
 
 Requisitos/casos de uso: RF-12, RF-13, RF-14, RF-15, RF-16, RNF-01, RNF-02, RNF-08, RD-01, RD-02, RD-03, RD-04, RD-05, UC-02, UC-03, UC-04.
 
-Estado atual: existem venda aberta, linhas, finalizar, anular linha, anular venda, fatura, devolucao e fecho de caixa.
+Estado atual: existem venda aberta, linhas persistidas por cascade, finalizar, anular linha, anular venda, fatura, devolucao persistida como documento de movimento e fecho de caixa.
 
 Tarefas:
 
-- [ ] Persistir corretamente linhas de venda quando sao adicionadas, garantindo cascades JPA e reload consistente.
-- [ ] Validar quantidade positiva em `adicionarLinhaVenda`.
-- [ ] Garantir que remover/anular linha recalcula totais e nao afeta linhas restantes.
-- [ ] Confirmar que finalizar venda bloqueia stock negativo em concorrencia, nao apenas por validacao previa.
-- [ ] Garantir que os meios de pagamento obrigatorios existem: `NUMERARIO`, `CARTAO`, `MBWAY`.
-- [ ] Formalizar devolucao como entidade ou documento de movimento, se o relatorio exigir historico proprio. Atualmente a devolucao repoe stock e audita, mas nao cria uma venda negativa/nota persistida separada.
-- [ ] Implementar nota de credito ou documentar que fica fora do ambito fiscal completo.
-- [ ] Garantir que fatura simplificada/completa cumpre RD-02:
-  - [ ] simplificada ate 1000 EUR sem NIF;
-  - [ ] completa quando ha NIF ou valor superior ao limite.
-- [ ] Garantir numeracao sequencial unica e ininterrupta por serie em contexto concorrente.
-- [ ] Confirmar sinalizacao de venda fora de horario para auditoria.
+- [x] Persistir corretamente linhas de venda quando sao adicionadas, garantindo cascades JPA e reload consistente.
+- [x] Validar quantidade positiva em `adicionarLinhaVenda`.
+- [x] Garantir que remover/anular linha recalcula totais e nao afeta linhas restantes.
+- [x] Confirmar que finalizar venda bloqueia stock negativo em concorrencia, nao apenas por validacao previa.
+- [x] Garantir que os meios de pagamento obrigatorios existem: `NUMERARIO`, `CARTAO`, `MBWAY`.
+- [x] Formalizar devolucao como entidade ou documento de movimento, se o relatorio exigir historico proprio. A devolucao ficou persistida em `Devolucao`.
+- [x] Implementar nota de credito ou documentar que fica fora do ambito fiscal completo. Foi implementado documento de devolucao numerado com serie `NC/<ano>`.
+- [x] Garantir que fatura simplificada/completa cumpre RD-02:
+  - [x] simplificada ate 1000 EUR sem NIF;
+  - [x] completa quando ha NIF ou valor superior ao limite.
+- [x] Garantir numeracao sequencial unica e ininterrupta por serie em contexto concorrente.
+- [x] Confirmar sinalizacao de venda fora de horario para auditoria.
 
 Testes obrigatorios:
 
-- [ ] Registar venda com 3 produtos.
-- [ ] Pesquisar produto por codigo de barras.
-- [ ] Remover linha antes de finalizar.
-- [ ] Finalizar com numerario, cartao e MB Way.
-- [ ] Bloquear venda com stock insuficiente.
-- [ ] Emitir fatura simplificada.
-- [ ] Emitir fatura completa com NIF.
-- [ ] Bloquear fatura completa sem NIF quando obrigatoria.
-- [ ] Processar devolucao e repor stock.
-- [ ] Venda fora de horario gera log de auditoria.
+- [x] Registar venda com 3 produtos.
+- [x] Pesquisar produto por codigo de barras.
+- [x] Remover linha antes de finalizar.
+- [x] Finalizar com numerario, cartao e MB Way.
+- [x] Bloquear venda com stock insuficiente.
+- [x] Emitir fatura simplificada.
+- [x] Emitir fatura completa com NIF.
+- [x] Bloquear fatura completa sem NIF quando obrigatoria.
+- [x] Processar devolucao e repor stock.
+- [x] Venda fora de horario gera log de auditoria.
 
 ## 4. SubStock - Stock, Alertas, Ajustes e Inventario
 

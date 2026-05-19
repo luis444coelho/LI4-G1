@@ -4,6 +4,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
+import java.util.Locale;
+import java.util.Objects;
+
 @Entity
 @Table(name = "meios_pagamento")
 public class MeioPagamento extends EntidadeBase {
@@ -18,8 +21,8 @@ public class MeioPagamento extends EntidadeBase {
     }
 
     public MeioPagamento(String tipo, String descricao) {
-        this.tipo = tipo;
-        this.descricao = descricao;
+        this.tipo = Objects.requireNonNull(tipo, "Tipo e obrigatorio").trim().toUpperCase(Locale.ROOT);
+        this.descricao = Objects.requireNonNull(descricao, "Descricao e obrigatoria").trim();
     }
 
     public String getTipo() {
