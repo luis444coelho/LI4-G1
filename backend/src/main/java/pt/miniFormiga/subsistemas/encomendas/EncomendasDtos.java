@@ -55,7 +55,11 @@ public final class EncomendasDtos {
 
     public record CriarEncomendaRequest(@NotNull UUID lojaId,
                                         @NotNull UUID fornecedorId,
-                                        @Valid @NotEmpty List<CriarLinhaEncomendaRequest> linhas) {
+                                        @Valid @NotEmpty List<CriarLinhaEncomendaRequest> linhas,
+                                        LocalDateTime dataHoraSubmissao) {
+        public CriarEncomendaRequest(UUID lojaId, UUID fornecedorId, List<CriarLinhaEncomendaRequest> linhas) {
+            this(lojaId, fornecedorId, linhas, null);
+        }
     }
 
     public record AtualizarEstadoEncomendaRequest(@NotBlank String estadoCodigo) {
@@ -64,13 +68,27 @@ public final class EncomendasDtos {
     public record RegistarEntradaMercadoriaRequest(@NotNull UUID encomendaId,
                                                    @NotNull UUID lojaId,
                                                    @NotNull UUID responsavelId,
-                                                   @NotNull UUID produtoId,
                                                    @NotBlank String guiaNumero,
                                                    @NotNull LocalDate dataEmissao,
                                                    LocalDate dataRecepcao,
-                                                   @Min(0) int quantidadeRecebida,
-                                                   @Min(0) int quantidadeEncomendada,
-                                                   String observacoes) {
+                                                   @Valid @NotEmpty List<RegistarEntradaMercadoriaLinhaRequest> linhas) {
+    }
+
+    public record RegistarEntradaMercadoriaLinhaRequest(@NotNull UUID produtoId,
+                                                        @Min(0) int quantidadeRecebida,
+                                                        @Min(0) int quantidadeEncomendada,
+                                                        String observacoes) {
+    }
+
+    public record SugestaoEncomendaResponse(UUID fornecedorId,
+                                            String fornecedor,
+                                            UUID produtoId,
+                                            String produto,
+                                            UUID lojaId,
+                                            int quantidadeAtual,
+                                            Integer nivelMinimo,
+                                            int quantidadeSugerida,
+                                            BigDecimal precoUnitario) {
     }
 
     public record FornecedorResponse(UUID id,
@@ -165,6 +183,8 @@ public final class EncomendasDtos {
                                             UUID encomendaId,
                                             UUID lojaId,
                                             UUID responsavelId,
+                                            UUID produtoId,
+                                            String produto,
                                             String guiaNumero,
                                             LocalDateTime dataHora,
                                             int quantidadeRecebida,
@@ -180,6 +200,8 @@ public final class EncomendasDtos {
                     encomendaId,
                     entrada.getLoja().getId(),
                     entrada.getResponsavel().getId(),
+                    entrada.getProduto() == null ? null : entrada.getProduto().getId(),
+                    entrada.getProduto() == null ? null : entrada.getProduto().getNome(),
                     entrada.getGuiaRemessa().getNumero(),
                     entrada.getDataHora(),
                     entrada.getQuantidadeRecebida(),

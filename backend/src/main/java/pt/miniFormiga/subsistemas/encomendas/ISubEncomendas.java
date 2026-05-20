@@ -31,7 +31,9 @@ public interface ISubEncomendas {
 
     EncomendaResponse atualizarEstado(UUID id, AtualizarEstadoEncomendaRequest request);
 
-    EntradaMercadoriaResponse registarEntradaMercadoria(RegistarEntradaMercadoriaRequest request);
+    List<SugestaoEncomendaResponse> sugerirEncomendas(UUID lojaId, UUID fornecedorId);
+
+    List<EntradaMercadoriaResponse> registarEntradaMercadoria(RegistarEntradaMercadoriaRequest request);
 
     Page<EntradaMercadoriaResponse> listarEntradasMercadoria(UUID lojaId, Pageable pageable);
 }

@@ -203,6 +203,16 @@ Motivo: alinhar a implementação com o critério de verificação da US-20, em 
 
 Impacto no relatório: pode ser descrito como detalhe de implementação do UC-11; não contradiz o diagrama, apenas concretiza o fluxo.
 
+### DM-18 - Entrada de mercadoria exclusivamente por linhas
+
+Diferença face ao relatório/API inicial: a tabela de API indicava `POST /entradas-mercadoria` como registo de receção, mas não detalhava o formato do corpo. A primeira implementação ainda aceitava um formato antigo de uma única linha com `produtoId`, `quantidadeRecebida` e `quantidadeEncomendada` no topo do pedido.
+
+Decisão tomada: o pedido de entrada de mercadoria passou a aceitar exclusivamente uma lista `linhas`, onde cada linha contém `produtoId`, `quantidadeRecebida`, `quantidadeEncomendada` e `observacoes`.
+
+Motivo: o UC-08 e o diagrama descrevem a receção associada a guia de remessa com várias linhas/produtos. Remover o formato antigo evita duas formas concorrentes de representar a mesma operação e torna a API mais coerente com o modelo `GuiaRemessa -> EntradaMercadoria -> Produto`.
+
+Impacto no relatório: a especificação de API deve indicar que `POST /entradas-mercadoria` devolve uma lista de entradas registadas e que o corpo do pedido é baseado em linhas de receção.
+
 ## Divergências Ainda Pendentes
 
 ### DP-01 - Frontend ainda usa dados mock

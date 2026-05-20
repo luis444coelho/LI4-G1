@@ -30,8 +30,13 @@ import pt.miniFormiga.repository.UtilizadorRepository;
 import pt.miniFormiga.subsistemas.stock.ISubStock;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.*;
 
@@ -186,6 +191,9 @@ public class EncomendasFacade implements ISubEncomendas {
 
     @Override
     public EncomendaResponse criarEncomenda(CriarEncomendaRequest request) {
+        if (request.linhas() == null || request.linhas().isEmpty()) {
+            throw new BusinessException("ENCOMENDA_SEM_LINHAS", "Encomenda deve ter pelo menos uma linha");
+        }
         Loja loja = lojaRepository.findById(request.lojaId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Loja", request.lojaId()));
         Fornecedor fornecedor = obterFornecedorEntidade(request.fornecedorId());
@@ -198,9 +206,11 @@ public class EncomendasFacade implements ISubEncomendas {
         for (CriarLinhaEncomendaRequest linhaRequest : request.linhas()) {
             Produto produto = produtoRepository.findById(linhaRequest.produtoId())
                     .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", linhaRequest.produtoId()));
+            CondicaoComercial condicao = obterCondicaoFornecedorProduto(fornecedor.getId(), produto.getId());
+            validarLinhaEncomenda(linhaRequest, condicao);
             new LinhaEncomenda(encomenda, produto, linhaRequest.quantidade(), linhaRequest.precoUnitario());
         }
-        encomenda.submeter();
+        encomenda.submeter(request.dataHoraSubmissao());
         Encomenda guardada = encomendaRepository.save(encomenda);
         auditoria.registar(TipoOperacao.ENCOMENDA_CRIADA, null, "ENCOMENDA", "Encomenda criada");
         return EncomendaResponse.from(guardada);
@@ -217,7 +227,35 @@ public class EncomendasFacade implements ISubEncomendas {
     }
 
     @Override
-    public EntradaMercadoriaResponse registarEntradaMercadoria(RegistarEntradaMercadoriaRequest request) {
+    @Transactional(readOnly = true)
+    public List<SugestaoEncomendaResponse> sugerirEncomendas(UUID lojaId, UUID fornecedorId) {
+        return stock.getAlertasAtivos(lojaId).stream()
+                .flatMap(alerta -> condicoesParaSugestao(alerta.getStock().getProduto().getId(), fornecedorId).stream()
+                        .map(condicao -> {
+                            int nivelMinimo = alerta.getStock().getNivelMinimo() == null
+                                    ? 0
+                                    : alerta.getStock().getNivelMinimo().getQuantidade();
+                            int quantidadeSugerida = Math.max(condicao.getQuantidadeMinima(),
+                                    Math.max(1, nivelMinimo - alerta.getQuantidadeNoMomento() + condicao.getQuantidadeMinima()));
+                            return new SugestaoEncomendaResponse(
+                                    condicao.getFornecedor().getId(),
+                                    condicao.getFornecedor().getNome(),
+                                    condicao.getProduto().getId(),
+                                    condicao.getProduto().getNome(),
+                                    alerta.getStock().getLoja().getId(),
+                                    alerta.getQuantidadeNoMomento(),
+                                    alerta.getStock().getNivelMinimo() == null ? null : alerta.getStock().getNivelMinimo().getQuantidade(),
+                                    quantidadeSugerida,
+                                    condicao.getPrecoUnitario()
+                            );
+                        }))
+                .sorted(Comparator.comparing(SugestaoEncomendaResponse::fornecedor)
+                        .thenComparing(SugestaoEncomendaResponse::produto))
+                .toList();
+    }
+
+    @Override
+    public List<EntradaMercadoriaResponse> registarEntradaMercadoria(RegistarEntradaMercadoriaRequest request) {
         Encomenda encomenda = obterEncomendaEntidade(request.encomendaId());
         Loja loja = lojaRepository.findById(request.lojaId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Loja", request.lojaId()));
@@ -226,8 +264,6 @@ public class EncomendasFacade implements ISubEncomendas {
         }
         Utilizador responsavel = utilizadorRepository.findById(request.responsavelId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Utilizador", request.responsavelId()));
-        Produto produto = produtoRepository.findById(request.produtoId())
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", request.produtoId()));
 
         GuiaRemessa guia = guiaRemessaRepository.findByNumero(request.guiaNumero())
                 .orElseGet(() -> guiaRemessaRepository.save(new GuiaRemessa(
@@ -237,22 +273,29 @@ public class EncomendasFacade implements ISubEncomendas {
                         request.dataEmissao(),
                         request.dataRecepcao()
                 )));
-        EntradaMercadoria entrada = new EntradaMercadoria(
-                guia,
-                loja,
-                responsavel,
-                request.quantidadeRecebida(),
-                request.quantidadeEncomendada(),
-                request.observacoes()
-        );
-        stock.atualizarStock(produto.getId(), loja.getId(), request.quantidadeRecebida());
-        encomenda.alterarEstado(obterOuCriarEstado(ESTADO_RECEBIDA, "Recebida"));
-        EntradaMercadoria guardada = entradaMercadoriaRepository.save(entrada);
+        List<EntradaMercadoria> guardadas = new ArrayList<>();
+        for (RegistarEntradaMercadoriaLinhaRequest linha : linhasEntrada(request)) {
+            Produto produto = produtoRepository.findById(linha.produtoId())
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", linha.produtoId()));
+            validarProdutoEncomendado(encomenda, produto.getId());
+            EntradaMercadoria entrada = new EntradaMercadoria(
+                    guia,
+                    loja,
+                    responsavel,
+                    produto,
+                    linha.quantidadeRecebida(),
+                    linha.quantidadeEncomendada(),
+                    linha.observacoes()
+            );
+            stock.atualizarStock(produto.getId(), loja.getId(), linha.quantidadeRecebida());
+            guardadas.add(entradaMercadoriaRepository.save(entrada));
+        }
+        atualizarEstadoRececao(encomenda, guardadas);
         auditoria.registar(TipoOperacao.ENTRADA_MERCADORIA_REGISTADA,
                 responsavel.getId(),
                 "ENTRADA_MERCADORIA",
                 "Entrada de mercadoria registada");
-        return EntradaMercadoriaResponse.from(guardada);
+        return guardadas.stream().map(EntradaMercadoriaResponse::from).toList();
     }
 
     @Override
@@ -274,5 +317,71 @@ public class EncomendasFacade implements ISubEncomendas {
     private EstadoEncomenda obterOuCriarEstado(String codigo, String descricao) {
         return estadoEncomendaRepository.findByCodigo(codigo)
                 .orElseGet(() -> estadoEncomendaRepository.save(new EstadoEncomenda(codigo, descricao)));
+    }
+
+    private CondicaoComercial obterCondicaoFornecedorProduto(UUID fornecedorId, UUID produtoId) {
+        return condicaoComercialRepository.findByFornecedorIdAndProdutoId(fornecedorId, produtoId)
+                .orElseThrow(() -> new BusinessException("PRODUTO_NAO_FORNECIDO",
+                        "Produto nao tem condicao comercial definida para o fornecedor"));
+    }
+
+    private void validarLinhaEncomenda(CriarLinhaEncomendaRequest linhaRequest, CondicaoComercial condicao) {
+        if (linhaRequest.quantidade() <= 0) {
+            throw new BusinessException("QUANTIDADE_ENCOMENDA_INVALIDA", "Quantidade encomendada deve ser positiva");
+        }
+        if (linhaRequest.precoUnitario() == null || linhaRequest.precoUnitario().signum() < 0) {
+            throw new BusinessException("PRECO_ENCOMENDA_INVALIDO", "Preco unitario nao pode ser negativo");
+        }
+        if (linhaRequest.quantidade() < condicao.getQuantidadeMinima()) {
+            throw new BusinessException("QUANTIDADE_ABAIXO_MINIMO", "Quantidade inferior ao minimo comercial do fornecedor");
+        }
+    }
+
+    private List<CondicaoComercial> condicoesParaSugestao(UUID produtoId, UUID fornecedorId) {
+        if (fornecedorId != null) {
+            return condicaoComercialRepository.findByFornecedorIdAndProdutoId(fornecedorId, produtoId)
+                    .stream()
+                    .filter(condicao -> condicao.getFornecedor().isAtivo())
+                    .toList();
+        }
+        return condicaoComercialRepository.findAll().stream()
+                .filter(condicao -> condicao.getProduto().getId().equals(produtoId))
+                .filter(condicao -> condicao.getFornecedor().isAtivo())
+                .toList();
+    }
+
+    private List<RegistarEntradaMercadoriaLinhaRequest> linhasEntrada(RegistarEntradaMercadoriaRequest request) {
+        if (request.linhas() == null || request.linhas().isEmpty()) {
+            throw new BusinessException("ENTRADA_SEM_LINHAS", "Entrada de mercadoria deve indicar pelo menos uma linha");
+        }
+        return request.linhas();
+    }
+
+    private void validarProdutoEncomendado(Encomenda encomenda, UUID produtoId) {
+        boolean existe = encomenda.getLinhas().stream()
+                .anyMatch(linha -> linha.getProduto().getId().equals(produtoId));
+        if (!existe) {
+            throw new BusinessException("PRODUTO_FORA_DA_ENCOMENDA", "Produto nao pertence a encomenda indicada");
+        }
+    }
+
+    private void atualizarEstadoRececao(Encomenda encomenda, List<EntradaMercadoria> novasEntradas) {
+        List<EntradaMercadoria> todas = new ArrayList<>(entradaMercadoriaRepository.findByGuiaRemessaEncomendaId(encomenda.getId()));
+        novasEntradas.forEach(entrada -> {
+            if (!todas.contains(entrada)) {
+                todas.add(entrada);
+            }
+        });
+        Map<UUID, Integer> recebidoPorProduto = todas.stream()
+                .filter(entrada -> entrada.getProduto() != null)
+                .collect(Collectors.groupingBy(
+                        entrada -> entrada.getProduto().getId(),
+                        Collectors.summingInt(EntradaMercadoria::getQuantidadeRecebida)
+                ));
+        boolean todasLinhasRecebidas = encomenda.getLinhas().stream()
+                .allMatch(linha -> recebidoPorProduto.getOrDefault(linha.getProduto().getId(), 0) >= linha.getQuantidade());
+        if (todasLinhasRecebidas) {
+            encomenda.alterarEstado(obterOuCriarEstado(ESTADO_RECEBIDA, "Recebida"));
+        }
     }
 }

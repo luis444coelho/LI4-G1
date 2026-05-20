@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pt.miniFormiga.subsistemas.encomendas.ISubEncomendas;
 
+import java.util.List;
 import java.util.UUID;
 
 import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.*;
@@ -49,6 +50,15 @@ public class EncomendasController {
     @ApiResponse(responseCode = "201", description = "Encomenda criada")
     public EncomendaResponse criar(@Valid @RequestBody CriarEncomendaRequest request) {
         return encomendas.criarEncomenda(request);
+    }
+
+    @GetMapping("/sugestoes")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','ENCOMENDAS_WRITE','RELATORIOS_READ')")
+    @Operation(summary = "Gerar sugestoes automaticas de encomenda")
+    @ApiResponse(responseCode = "200", description = "Sugestoes geradas")
+    public List<SugestaoEncomendaResponse> sugestoes(@RequestParam UUID lojaId,
+                                                     @RequestParam(required = false) UUID fornecedorId) {
+        return encomendas.sugerirEncomendas(lojaId, fornecedorId);
     }
 
     @GetMapping("/{id}")

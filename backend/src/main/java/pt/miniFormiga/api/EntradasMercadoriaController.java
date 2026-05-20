@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pt.miniFormiga.subsistemas.encomendas.ISubEncomendas;
 
+import java.util.List;
 import java.util.UUID;
 
 import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.*;
@@ -37,7 +38,7 @@ public class EntradasMercadoriaController {
     @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','ENCOMENDAS_WRITE','STOCK_WRITE')")
     @Operation(summary = "Registar entrada de mercadoria")
     @ApiResponse(responseCode = "201", description = "Entrada registada")
-    public EntradaMercadoriaResponse registar(@Valid @RequestBody RegistarEntradaMercadoriaRequest request) {
+    public List<EntradaMercadoriaResponse> registar(@Valid @RequestBody RegistarEntradaMercadoriaRequest request) {
         return encomendas.registarEntradaMercadoria(request);
     }
 

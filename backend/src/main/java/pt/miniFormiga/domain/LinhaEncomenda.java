@@ -43,6 +43,9 @@ public class LinhaEncomenda extends EntidadeBase {
         this.produto = Objects.requireNonNull(produto, "Produto e obrigatorio");
         this.quantidade = quantidade;
         this.precoUnitario = Objects.requireNonNull(precoUnitario, "Preco unitario e obrigatorio");
+        if (this.precoUnitario.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Preco unitario nao pode ser negativo");
+        }
         this.encomenda.adicionarLinha(this);
         calcularTotal();
     }

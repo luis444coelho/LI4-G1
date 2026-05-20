@@ -150,28 +150,28 @@ Estado atual: fornecedores, condicoes comerciais, encomendas, estados e entradas
 
 Tarefas:
 
-- [ ] Implementar sugestoes automaticas de encomenda com base em alertas de stock ativos.
-- [ ] Implementar calculo da data esperada de processamento no momento da criacao da encomenda.
-- [ ] Aplicar RD-06: encomenda fora de segunda a sexta, 08:00-18:00, so processa no proximo dia util.
-- [ ] Guardar a data esperada de processamento na encomenda ou devolve-la no DTO.
-- [ ] Impedir criacao de encomenda sem linhas.
-- [ ] Validar quantidades positivas e preco unitario nao negativo.
-- [ ] Validar que produtos encomendados pertencem ao fornecedor ou tem condicao comercial definida.
-- [ ] Em entrada de mercadoria, suportar varias linhas/produtos por guia, de acordo com o UC-08 e o diagrama.
-- [ ] Registar discrepancia recebido vs encomendado de forma consultavel.
-- [ ] Atualizar estado da encomenda para `RECEBIDA` apenas quando todas as linhas forem recebidas, ou documentar entregas parciais.
+- [x] Implementar sugestoes automaticas de encomenda com base em alertas de stock ativos.
+- [x] Implementar calculo da data esperada de processamento no momento da criacao da encomenda.
+- [x] Aplicar RD-06: encomenda fora de segunda a sexta, 08:00-18:00, so processa no proximo dia util.
+- [x] Guardar a data esperada de processamento na encomenda ou devolve-la no DTO. A data fica em `Encomenda.dataProcessamento` e e devolvida em `EncomendaResponse`.
+- [x] Impedir criacao de encomenda sem linhas.
+- [x] Validar quantidades positivas e preco unitario nao negativo.
+- [x] Validar que produtos encomendados pertencem ao fornecedor ou tem condicao comercial definida.
+- [x] Em entrada de mercadoria, suportar varias linhas/produtos por guia, de acordo com o UC-08 e o diagrama.
+- [x] Registar discrepancia recebido vs encomendado de forma consultavel.
+- [x] Atualizar estado da encomenda para `RECEBIDA` apenas quando todas as linhas forem recebidas, ou documentar entregas parciais. Entregas parciais mantem o estado anterior.
 
 Testes obrigatorios:
 
-- [ ] Criar fornecedor.
-- [ ] Definir condicao comercial.
-- [ ] Criar encomenda com linhas validas.
-- [ ] Bloquear encomenda vazia.
-- [ ] Calcular processamento dentro do horario.
-- [ ] Calcular proximo dia util fora do horario.
-- [ ] Registar entrada de mercadoria e atualizar stock.
-- [ ] Registar discrepancia de entrega.
-- [ ] Estado da encomenda muda corretamente.
+- [x] Criar fornecedor.
+- [x] Definir condicao comercial.
+- [x] Criar encomenda com linhas validas.
+- [x] Bloquear encomenda vazia.
+- [x] Calcular processamento dentro do horario.
+- [x] Calcular proximo dia util fora do horario.
+- [x] Registar entrada de mercadoria e atualizar stock.
+- [x] Registar discrepancia de entrega.
+- [x] Estado da encomenda muda corretamente.
 
 ## 6. SubSincronizacao - Operacao Offline e Servidor Central
 

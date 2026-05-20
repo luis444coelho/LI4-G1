@@ -25,6 +25,10 @@ public class EntradaMercadoria extends EntidadeBase {
     @JoinColumn(name = "responsavel_id", nullable = false)
     private Utilizador responsavel;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "produto_id", nullable = false)
+    private Produto produto;
+
     @Column(nullable = false)
     private LocalDateTime dataHora;
 
@@ -49,9 +53,20 @@ public class EntradaMercadoria extends EntidadeBase {
                              int quantidadeRecebida,
                              int quantidadeEncomendada,
                              String observacoes) {
+        this(guiaRemessa, loja, responsavel, null, quantidadeRecebida, quantidadeEncomendada, observacoes);
+    }
+
+    public EntradaMercadoria(GuiaRemessa guiaRemessa,
+                             Loja loja,
+                             Utilizador responsavel,
+                             Produto produto,
+                             int quantidadeRecebida,
+                             int quantidadeEncomendada,
+                             String observacoes) {
         this.guiaRemessa = guiaRemessa;
         this.loja = loja;
         this.responsavel = responsavel;
+        this.produto = produto;
         this.quantidadeRecebida = quantidadeRecebida;
         this.quantidadeEncomendada = quantidadeEncomendada;
         this.observacoes = observacoes;
@@ -73,6 +88,10 @@ public class EntradaMercadoria extends EntidadeBase {
 
     public Utilizador getResponsavel() {
         return responsavel;
+    }
+
+    public Produto getProduto() {
+        return produto;
     }
 
     public LocalDateTime getDataHora() {

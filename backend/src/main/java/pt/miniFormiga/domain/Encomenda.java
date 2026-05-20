@@ -71,10 +71,17 @@ public class Encomenda extends EntidadeBase {
     }
 
     public void submeter() {
-        this.dataSubmissao = LocalDateTime.now();
+        submeter(LocalDateTime.now());
+    }
+
+    public void submeter(LocalDateTime dataSubmissao) {
+        if (linhas.isEmpty()) {
+            throw new IllegalStateException("Encomenda deve ter pelo menos uma linha");
+        }
+        this.dataSubmissao = dataSubmissao == null ? LocalDateTime.now() : dataSubmissao;
         this.dataProcessamento = fornecedor == null
-                ? dataSubmissao
-                : fornecedor.calcularDataProcessamento(dataSubmissao);
+                ? this.dataSubmissao
+                : fornecedor.calcularDataProcessamento(this.dataSubmissao);
         calcularTotal();
     }
 
