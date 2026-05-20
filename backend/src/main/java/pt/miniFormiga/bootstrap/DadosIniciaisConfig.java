@@ -32,6 +32,7 @@ public class DadosIniciaisConfig {
                                     FornecedorRepository fornecedorRepository,
                                     CondicaoComercialRepository condicaoComercialRepository,
                                     EstadoEncomendaRepository estadoEncomendaRepository,
+                                    EstadoSincronizacaoRepository estadoSincronizacaoRepository,
                                     PasswordEncoder passwordEncoder) {
         return args -> {
             Loja loja = lojaRepository.findAll().stream()
@@ -96,6 +97,10 @@ public class DadosIniciaisConfig {
             criarEstadoEncomendaSeNecessario(estadoEncomendaRepository, "ENVIADA", "Enviada");
             criarEstadoEncomendaSeNecessario(estadoEncomendaRepository, "RECEBIDA", "Recebida");
             criarEstadoEncomendaSeNecessario(estadoEncomendaRepository, "CANCELADA", "Cancelada");
+            criarEstadoSincronizacaoSeNecessario(estadoSincronizacaoRepository, "PENDENTE", "Pendente");
+            criarEstadoSincronizacaoSeNecessario(estadoSincronizacaoRepository, "EM_CURSO", "Em curso");
+            criarEstadoSincronizacaoSeNecessario(estadoSincronizacaoRepository, "CONCLUIDA", "Concluida");
+            criarEstadoSincronizacaoSeNecessario(estadoSincronizacaoRepository, "COM_CONFLITOS", "Concluida com conflitos");
 
             Fornecedor fornecedor = criarFornecedorSeNecessario(fornecedorRepository);
             criarCondicaoSeNecessaria(condicaoComercialRepository, fornecedor, agua);
@@ -149,6 +154,10 @@ public class DadosIniciaisConfig {
 
     private void criarEstadoEncomendaSeNecessario(EstadoEncomendaRepository repository, String codigo, String descricao) {
         repository.findByCodigo(codigo).orElseGet(() -> repository.save(new EstadoEncomenda(codigo, descricao)));
+    }
+
+    private void criarEstadoSincronizacaoSeNecessario(EstadoSincronizacaoRepository repository, String codigo, String descricao) {
+        repository.findByCodigo(codigo).orElseGet(() -> repository.save(new EstadoSincronizacao(codigo, descricao)));
     }
 
     private Fornecedor criarFornecedorSeNecessario(FornecedorRepository repository) {

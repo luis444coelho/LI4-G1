@@ -4,14 +4,17 @@ Este documento regista as decisões tomadas durante a implementação física qu
 
 ## Estado Analisado
 
-Foram analisadas as tarefas já assinaladas em `TAREFAS_IMPLEMENTACAO.md`, o estado atual do `backend`, o frontend React existente e os pontos implementados até à tarefa 3:
+Foram analisadas as tarefas já assinaladas em `TAREFAS_IMPLEMENTACAO.md`, o estado atual do `backend`, o frontend React existente e os pontos implementados até à tarefa 6:
 
 - alinhamento arquitetural inicial;
 - `SubUtilizadores` e autenticação;
 - `SubAuditoria`;
 - `SubPDV`, incluindo venda, pagamento, faturação e devolução.
+- `SubStock`, incluindo alertas, ajustes, inventário físico e localização.
+- `SubEncomendas`, incluindo fornecedores, encomendas e entrada de mercadoria.
+- `SubSincronizacao`, incluindo agendamento, payload, transporte REST/JSON, estados e conflitos.
 
-A última execução completa de testes do backend, após a implementação da tarefa 3, passou com sucesso: 97 testes executados, 0 falhas.
+A última execução completa de testes do backend, após a implementação da tarefa 6, passou com sucesso: 121 testes executados, 0 falhas.
 
 ## Decisões Implementadas
 
@@ -213,6 +216,36 @@ Motivo: o UC-08 e o diagrama descrevem a receção associada a guia de remessa c
 
 Impacto no relatório: a especificação de API deve indicar que `POST /entradas-mercadoria` devolve uma lista de entradas registadas e que o corpo do pedido é baseado em linhas de receção.
 
+### DM-19 - Sincronização implementada com transporte REST configurável
+
+Diferença face ao relatório: o UC-13 descreve a sincronização com um servidor central, mas não define o contrato físico exato do serviço central.
+
+Decisão tomada: o `SubSincronizacao` passou a persistir `Sincronizacao` e `EstadoSincronizacao`, criar estado `PENDENTE` no fecho de caixa, construir um payload REST/JSON com vendas, faturas, stock, ajustes, fechos, entradas de mercadoria e linhas recentes do log JSONL de auditoria, e enviar esse payload para o URL configurado em `mini-formiga.sincronizacao.central-url`.
+
+Motivo: cumprir a arquitetura monolítica modular e a decisão DA-03, mantendo a loja autónoma e permitindo ligar o servidor central real sem acoplar o domínio a uma implementação concreta de rede.
+
+Impacto no relatório: a secção de implementação deve indicar que o servidor central é um endpoint REST configurável. Se esse URL não estiver configurado ou a rede falhar, a sincronização permanece `PENDENTE` e recebe `proximaTentativa`, cumprindo RNF-02.
+
+### DM-20 - Conflitos de sincronização registados a partir da resposta do servidor central
+
+Diferença face ao relatório: DA-05 define `last-write-wins`, mas não especifica se a comparação é feita no cliente local ou no servidor central.
+
+Decisão tomada: o backend local envia `updatedAt` e `version` no payload. A resposta do transporte pode devolver conflitos já resolvidos por `last-write-wins`, que ficam guardados em `conflitosJson` e disponíveis em `/api/v1/sincronizacao/conflitos`.
+
+Motivo: numa arquitetura local-central, a decisão final sobre conflitos deve pertencer ao servidor central, que possui a visão consolidada. A loja mantém rastreabilidade e consulta posterior, como pedido no UC-13.
+
+Impacto no relatório: deve ficar claro que o módulo local prepara a informação necessária e regista o resultado da resolução; a implementação completa do algoritmo do lado central depende do serviço central configurado.
+
+### DM-21 - TLS tratado como responsabilidade de deployment
+
+Diferença face ao relatório: RNF-06/UC-13 mencionam comunicação cifrada, enquanto o backend local continua a correr em HTTP durante desenvolvimento.
+
+Decisão tomada: a aplicação documenta e prepara a sincronização por URL configurável, mas não força HTTPS no Spring Boot local. A cifra TLS 1.3 deve ser garantida no deployment por reverse proxy ou endpoint central HTTPS.
+
+Motivo: evita complicar a execução local e mantém coerência com a arquitetura descrita, em que lojas comunicam com um servidor central exposto por infraestrutura controlada.
+
+Impacto no relatório: a secção de implementação deve indicar que TLS é uma garantia de infraestrutura/deployment, não uma configuração demonstrada localmente no Spring Boot.
+
 ## Divergências Ainda Pendentes
 
 ### DP-01 - Frontend ainda usa dados mock
@@ -231,21 +264,21 @@ Diferença face ao relatório: RF-01 e RF-02 prometem dashboard, relatórios e e
 
 Decisão necessária: implementar o módulo de relatórios/dashboard antes dos testes finais ou assinalar estes requisitos como parcialmente satisfeitos.
 
-### DP-03 - Sincronização ainda é esqueleto
+### DP-03 - Servidor central de sincronização ainda não está implementado neste repositório
 
-Estado atual: `SincronizacaoFacade` expõe `agendarSincronizacao`, mas a lógica real de sincronização local-central, conflitos e `last-write-wins` ainda não está implementada.
+Estado atual: o lado local da sincronização já agenda, persiste estado, constrói payload, transmite por REST/JSON e regista conflitos. O repositório ainda não contém uma aplicação central separada que receba o payload, aplique merge real e devolva conflitos resolvidos.
 
-Diferença face ao relatório: RF-17, RNF-03, RNF-06 e UC-13 descrevem sincronização automática com deteção/resolução de conflitos.
+Diferença face ao relatório: RF-17, RNF-03 e UC-13 descrevem a sincronização local-central completa. A parte local está implementada; a parte central fica dependente do endpoint configurado.
 
-Decisão necessária: implementar a sincronização ou limitar a validação a um stub demonstrativo.
+Decisão necessária: implementar o serviço central de receção/merge ou documentar que, no âmbito físico atual, se valida o cliente local de sincronização e o contrato REST.
 
 ### DP-04 - TLS não está configurado no Spring Boot
 
-Estado atual: não existe configuração HTTPS/TLS no backend. A API corre em HTTP local.
+Estado atual: não existe configuração HTTPS/TLS no backend local. A API corre em HTTP durante desenvolvimento e a sincronização usa um URL central configurável.
 
 Diferença face ao relatório: RNF-06/UC-13 referem TLS 1.2+ ou TLS 1.3.
 
-Decisão necessária: configurar HTTPS no Spring Boot, usar reverse proxy em ambiente de implantação, ou documentar TLS como requisito de infraestrutura não implementado localmente.
+Decisão necessária: no relatório final, explicitar que TLS 1.3 é garantido pelo reverse proxy/endpoint central HTTPS em deployment, ou acrescentar configuração HTTPS no Spring Boot caso a demonstração exija cifra local.
 
 ### DP-05 - PIT e jqwik ainda não estão configurados
 

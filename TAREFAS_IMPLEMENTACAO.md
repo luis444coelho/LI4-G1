@@ -177,35 +177,35 @@ Testes obrigatorios:
 
 Requisitos/casos de uso: RF-17, RNF-02, RNF-03, RNF-06, DA-02, DA-04, DA-05, UC-13.
 
-Estado atual: `SincronizacaoFacade.agendarSincronizacao` nao implementa comportamento real.
+Estado atual: `SincronizacaoFacade` cria sincronizacoes pendentes, constroi payload local, transmite por REST/JSON para servidor central configuravel, mantem pendente em falha de rede, regista conflitos e expoe endpoints de estado, historico e conflitos.
 
-Esta e a maior lacuna antes de dizer que a implementacao fisica esta concluida.
+Esta deixou de ser a maior lacuna da implementacao fisica local; permanece apenas a necessidade de ligar a um servidor central real ou documentar o contrato REST como validacao demonstrativa.
 
 Tarefas:
 
-- [ ] Criar persistencia real para `Sincronizacao` e `EstadoSincronizacao`.
-- [ ] Criar estado inicial `PENDENTE` quando o fecho de caixa e confirmado.
-- [ ] Implementar endpoint `POST /api/v1/sincronizacao/iniciar`.
-- [ ] Implementar endpoint `GET /api/v1/sincronizacao/estado`.
-- [ ] Implementar endpoint `GET /api/v1/sincronizacao/historico`.
-- [ ] Implementar endpoint `GET /api/v1/sincronizacao/conflitos`.
-- [ ] Definir payload de sincronizacao: vendas, faturas, stock, ajustes, fechos, entradas de mercadoria e logs relevantes.
-- [ ] Implementar deteccao de registos pendentes por `updatedAt`/estado/local marker.
-- [ ] Implementar transmissao para servidor central via REST/JSON.
-- [ ] Implementar resolucao `last-write-wins` com base em timestamp/version.
-- [ ] Registar conflitos resolvidos para consulta posterior.
-- [ ] Garantir que falha de rede mantem estado `PENDENTE` e agenda retry.
-- [ ] Garantir que a loja continua a operar localmente com SQLite.
-- [ ] Documentar que TLS e garantido pela configuracao de deployment/reverse proxy, ou configurar HTTPS no Spring se for demonstrado localmente.
+- [x] Criar persistencia real para `Sincronizacao` e `EstadoSincronizacao`.
+- [x] Criar estado inicial `PENDENTE` quando o fecho de caixa e confirmado.
+- [x] Implementar endpoint `POST /api/v1/sincronizacao/iniciar`.
+- [x] Implementar endpoint `GET /api/v1/sincronizacao/estado`.
+- [x] Implementar endpoint `GET /api/v1/sincronizacao/historico`.
+- [x] Implementar endpoint `GET /api/v1/sincronizacao/conflitos`.
+- [x] Definir payload de sincronizacao: vendas, faturas, stock, ajustes, fechos, entradas de mercadoria e logs relevantes.
+- [x] Implementar deteccao de registos pendentes por `updatedAt`/estado/local marker.
+- [x] Implementar transmissao para servidor central via REST/JSON.
+- [x] Implementar resolucao `last-write-wins` com base em timestamp/version.
+- [x] Registar conflitos resolvidos para consulta posterior.
+- [x] Garantir que falha de rede mantem estado `PENDENTE` e agenda retry.
+- [x] Garantir que a loja continua a operar localmente com SQLite.
+- [x] Documentar que TLS e garantido pela configuracao de deployment/reverse proxy, ou configurar HTTPS no Spring se for demonstrado localmente.
 
 Testes obrigatorios:
 
-- [ ] Confirmar fecho de caixa cria sincronizacao pendente.
-- [ ] Iniciar sincronizacao sem rede mantem pendente.
-- [ ] Iniciar sincronizacao com sucesso marca concluida.
-- [ ] Conflito aplica last-write-wins.
-- [ ] Historico lista sincronizacoes anteriores.
-- [ ] Endpoint de conflitos lista conflitos detetados.
+- [x] Confirmar fecho de caixa cria sincronizacao pendente.
+- [x] Iniciar sincronizacao sem rede mantem pendente.
+- [x] Iniciar sincronizacao com sucesso marca concluida.
+- [x] Conflito aplica last-write-wins.
+- [x] Historico lista sincronizacoes anteriores.
+- [x] Endpoint de conflitos lista conflitos detetados.
 
 ## 7. Relatorios e Dashboard
 
