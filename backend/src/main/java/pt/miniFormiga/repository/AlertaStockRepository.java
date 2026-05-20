@@ -5,9 +5,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import pt.miniFormiga.domain.AlertaStock;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface AlertaStockRepository extends JpaRepository<AlertaStock, UUID> {
-    @EntityGraph(attributePaths = {"stock", "stock.produto", "stock.loja", "stock.nivelMinimo"})
-    List<AlertaStock> findByStockLojaIdAndLidoFalseOrderByDataHoraDesc(UUID lojaId);
+    @Override
+    @EntityGraph(attributePaths = {"stock", "stock.produto", "stock.loja", "stock.nivelMinimo", "destinatarios"})
+    Optional<AlertaStock> findById(UUID id);
+
+    boolean existsByStockIdAndResolvidoFalse(UUID stockId);
+
+    @EntityGraph(attributePaths = {"stock", "stock.produto", "stock.loja", "stock.nivelMinimo", "destinatarios"})
+    List<AlertaStock> findByStockLojaIdAndResolvidoFalseOrderByDataHoraDesc(UUID lojaId);
 }

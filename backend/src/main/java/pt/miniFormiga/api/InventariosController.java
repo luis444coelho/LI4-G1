@@ -91,7 +91,7 @@ public class InventariosController {
     @Operation(summary = "Listar discrepancias de inventario")
     @ApiResponse(responseCode = "200", description = "Discrepancias listadas")
     public List<LinhaInventarioResponse> listarDiscrepancias(@PathVariable UUID id) {
-        return linhaInventarioRepository.findByInventarioIdAndDiscrepanciaNot(id, 0).stream()
+        return stock.listarDiscrepanciasInventario(id).stream()
                 .map(LinhaInventarioResponse::from)
                 .toList();
     }

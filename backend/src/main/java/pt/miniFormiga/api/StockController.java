@@ -16,10 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pt.miniFormiga.domain.AjusteInventario;
-import pt.miniFormiga.domain.AlertaStock;
 import pt.miniFormiga.exception.RecursoNaoEncontradoException;
 import pt.miniFormiga.repository.AjusteInventarioRepository;
-import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.MotivoAjusteRepository;
 import pt.miniFormiga.repository.StockRepository;
 import pt.miniFormiga.subsistemas.stock.ISubStock;
@@ -39,18 +37,15 @@ public class StockController {
 
     private final ISubStock stock;
     private final StockRepository stockRepository;
-    private final AlertaStockRepository alertaStockRepository;
     private final AjusteInventarioRepository ajusteInventarioRepository;
     private final MotivoAjusteRepository motivoAjusteRepository;
 
     public StockController(ISubStock stock,
                            StockRepository stockRepository,
-                           AlertaStockRepository alertaStockRepository,
                            AjusteInventarioRepository ajusteInventarioRepository,
                            MotivoAjusteRepository motivoAjusteRepository) {
         this.stock = stock;
         this.stockRepository = stockRepository;
-        this.alertaStockRepository = alertaStockRepository;
         this.ajusteInventarioRepository = ajusteInventarioRepository;
         this.motivoAjusteRepository = motivoAjusteRepository;
     }
@@ -94,10 +89,15 @@ public class StockController {
     @Operation(summary = "Marcar alerta como lido")
     @ApiResponse(responseCode = "200", description = "Alerta marcado como lido")
     public AlertaStockResponse marcarAlertaLido(@PathVariable UUID alertaId) {
-        AlertaStock alerta = alertaStockRepository.findById(alertaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("AlertaStock", alertaId));
-        alerta.marcarComoLido();
-        return AlertaStockResponse.from(alertaStockRepository.save(alerta));
+        return AlertaStockResponse.from(stock.marcarAlertaLido(alertaId));
+    }
+
+    @PatchMapping("/alertas/{alertaId}/resolver")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','RELATORIOS_READ','STOCK_WRITE')")
+    @Operation(summary = "Resolver alerta de stock")
+    @ApiResponse(responseCode = "200", description = "Alerta resolvido")
+    public AlertaStockResponse resolverAlerta(@PathVariable UUID alertaId) {
+        return AlertaStockResponse.from(stock.resolverAlerta(alertaId));
     }
 
     @PostMapping("/ajustes")

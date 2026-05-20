@@ -25,6 +25,12 @@ public interface ISubStock {
 
     List<AlertaStock> getAlertasAtivos(UUID lojaId);
 
+    AlertaStock marcarAlertaLido(UUID alertaId);
+
+    AlertaStock resolverAlerta(UUID alertaId);
+
+    List<LinhaInventario> listarDiscrepanciasInventario(UUID inventarioId);
+
     record StockDTO(UUID produtoId, UUID lojaId, int quantidade, Integer nivelMinimo, boolean precisaReposicao) {
         public StockDTO(UUID produtoId, UUID lojaId, int quantidade) {
             this(produtoId, lojaId, quantidade, null, false);

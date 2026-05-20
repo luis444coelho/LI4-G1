@@ -183,6 +183,26 @@ Motivo: alinhar o comportamento físico com RD-02 e RNF-08.
 
 Impacto no relatório: deve ser possível referir esta regra como já implementada e coberta por testes.
 
+### DM-16 - Alertas de stock com ciclo de vida físico
+
+Diferença face ao relatório: o relatório e o diagrama identificam `AlertaStock`, mas não detalham completamente o seu ciclo de vida físico para além da notificação.
+
+Decisão tomada: `AlertaStock` passou a ter `lido`, `resolvido` e `dataResolucao`. A API mantém o endpoint para marcar como lido e acrescenta `/api/v1/stock/alertas/{alertaId}/resolver` para fechar o alerta.
+
+Motivo: evitar duplicação de alertas ativos para o mesmo stock e permitir que o alerta tenha um fim operacional claro, sem apagar histórico.
+
+Impacto no relatório: o UC-07 pode incluir o fluxo alternativo de resolução/fecho de alerta.
+
+### DM-17 - Inventário físico abre com snapshot de todos os produtos da loja
+
+Diferença face ao relatório: o UC-11 diz que o responsável regista contagens, mas não indicava se as linhas eram criadas manualmente uma a uma ou se o sistema apresentava todos os produtos.
+
+Decisão tomada: ao iniciar um inventário físico, o backend cria linhas para todos os registos de stock da loja, com snapshot da quantidade registada no sistema.
+
+Motivo: alinhar a implementação com o critério de verificação da US-20, em que o responsável acede ao inventário, regista contagens e o sistema calcula automaticamente discrepâncias face ao stock registado.
+
+Impacto no relatório: pode ser descrito como detalhe de implementação do UC-11; não contradiz o diagrama, apenas concretiza o fluxo.
+
 ## Divergências Ainda Pendentes
 
 ### DP-01 - Frontend ainda usa dados mock

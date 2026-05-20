@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import pt.miniFormiga.domain.Utilizador;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,4 +25,10 @@ public interface UtilizadorRepository extends JpaRepository<Utilizador, UUID> {
 
     @EntityGraph(attributePaths = {"perfil", "loja"})
     Page<Utilizador> findByLojaId(UUID lojaId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"perfil", "loja"})
+    List<Utilizador> findByAtivoTrueAndPerfilNomeIn(List<String> perfis);
+
+    @EntityGraph(attributePaths = {"perfil", "loja"})
+    List<Utilizador> findByAtivoTrueAndLojaIdAndPerfilNomeIn(UUID lojaId, List<String> perfis);
 }

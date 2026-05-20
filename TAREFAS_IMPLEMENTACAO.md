@@ -122,25 +122,25 @@ Estado atual: consultar stock, definir nivel minimo, alertas, ajustes e inventar
 
 Tarefas:
 
-- [ ] Evitar duplicacao de alertas ativos para o mesmo stock enquanto o alerta anterior nao for lido/resolvido.
-- [ ] Associar alertas aos perfis relevantes, conforme diagrama: gestor e gerente.
-- [ ] Acrescentar endpoint para resolver/fechar alerta, alem de marcar como lido, se o relatorio exigir ciclo de vida do alerta.
-- [ ] Garantir que `registarAjuste` nao permite stock negativo.
-- [ ] Garantir que inventario fisico lista todos os produtos da loja, nao apenas linhas adicionadas manualmente.
-- [ ] Expor discrepancias de inventario de forma diretamente compativel com UC-11.
-- [ ] Confirmar que localizacao de produto cobre corredor e prateleira, como RF-18/US-21.
+- [x] Evitar duplicacao de alertas ativos para o mesmo stock enquanto o alerta anterior nao for lido/resolvido. Implementado com estado `resolvido` e validacao por alerta nao resolvido.
+- [x] Associar alertas aos perfis relevantes, conforme diagrama: gestor e gerente.
+- [x] Acrescentar endpoint para resolver/fechar alerta, alem de marcar como lido, se o relatorio exigir ciclo de vida do alerta.
+- [x] Garantir que `registarAjuste` nao permite stock negativo.
+- [x] Garantir que inventario fisico lista todos os produtos da loja, nao apenas linhas adicionadas manualmente.
+- [x] Expor discrepancias de inventario de forma diretamente compativel com UC-11.
+- [x] Confirmar que localizacao de produto cobre corredor e prateleira, como RF-18/US-21.
 
 Testes obrigatorios:
 
-- [ ] Consulta de stock mostra quantidade e nivel minimo.
-- [ ] Definir nivel minimo abaixo do stock nao cria alerta.
-- [ ] Definir nivel minimo acima/igual ao stock cria alerta.
-- [ ] Venda que baixa stock abaixo do minimo cria alerta.
-- [ ] Ajuste positivo aumenta stock.
-- [ ] Ajuste negativo bloqueia stock negativo.
-- [ ] Inventario calcula discrepancia corretamente.
-- [ ] Fechar inventario impede novas linhas.
-- [ ] Atualizar localizacao de produto persiste corredor/prateleira.
+- [x] Consulta de stock mostra quantidade e nivel minimo.
+- [x] Definir nivel minimo abaixo do stock nao cria alerta.
+- [x] Definir nivel minimo acima/igual ao stock cria alerta.
+- [x] Venda que baixa stock abaixo do minimo cria alerta. Coberto pela combinacao `PDVFacadeTest` (finalizacao chama `SubStock`) + `StockFacadeTest` (descida abaixo do minimo emite alerta).
+- [x] Ajuste positivo aumenta stock.
+- [x] Ajuste negativo bloqueia stock negativo.
+- [x] Inventario calcula discrepancia corretamente.
+- [x] Fechar inventario impede novas linhas.
+- [x] Atualizar localizacao de produto persiste corredor/prateleira.
 
 ## 5. SubEncomendas - Fornecedores, Encomendas e Entrada de Mercadoria
 

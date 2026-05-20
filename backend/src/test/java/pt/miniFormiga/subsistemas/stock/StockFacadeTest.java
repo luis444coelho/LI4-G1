@@ -39,6 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentCaptor.forClass;
+import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -92,6 +94,7 @@ class StockFacadeTest {
     void atualizarStockComDeltaNegativoSuficienteAtualizaQuantidade() {
         Stock stock = stock(10);
         whenStock(stock);
+        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(false);
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), -4);
 
@@ -127,6 +130,7 @@ class StockFacadeTest {
         Stock stock = stock(12);
         new NivelMinimo(stock, 10);
         whenStock(stock);
+        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(false);
         when(alertaStockRepository.save(any(AlertaStock.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), -2);
@@ -150,6 +154,7 @@ class StockFacadeTest {
     void definirNivelMinimoComStockJaAbaixoEmiteAlertaImediatamente() {
         Stock stock = stock(5);
         whenStock(stock);
+        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(false);
         when(nivelMinimoRepository.findByStockId(stock.getId())).thenReturn(Optional.empty());
         when(nivelMinimoRepository.save(any(NivelMinimo.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -157,6 +162,52 @@ class StockFacadeTest {
 
         assertEquals(10, stock.getNivelMinimo().getQuantidade());
         verify(alertaStockRepository).save(any(AlertaStock.class));
+    }
+
+    @Test
+    void definirNivelMinimoAbaixoDoStockNaoCriaAlerta() {
+        Stock stock = stock(12);
+        whenStock(stock);
+        when(nivelMinimoRepository.findByStockId(stock.getId())).thenReturn(Optional.empty());
+        when(nivelMinimoRepository.save(any(NivelMinimo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        facade.definirNivelMinimo(stock.getProduto().getId(), stock.getLoja().getId(), 10);
+
+        assertEquals(10, stock.getNivelMinimo().getQuantidade());
+        verify(alertaStockRepository, never()).save(any());
+    }
+
+    @Test
+    void alertaAtivoExistenteImpedeDuplicacao() {
+        Stock stock = stock(5);
+        new NivelMinimo(stock, 10);
+        whenStock(stock);
+        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(true);
+
+        facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), 0);
+
+        verify(alertaStockRepository, never()).save(any());
+    }
+
+    @Test
+    void alertaNovoFicaAssociadoAGestorEGerenteDaLoja() {
+        Stock stock = stock(5);
+        new NivelMinimo(stock, 10);
+        Utilizador gestor = utilizador(stock.getLoja(), "GESTOR");
+        Utilizador gerente = utilizador(stock.getLoja(), "GERENTE");
+
+        whenStock(stock);
+        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(false);
+        when(utilizadorRepository.findByAtivoTrueAndPerfilNomeIn(List.of("GESTOR"))).thenReturn(List.of(gestor));
+        when(utilizadorRepository.findByAtivoTrueAndLojaIdAndPerfilNomeIn(stock.getLoja().getId(), List.of("GERENTE")))
+                .thenReturn(List.of(gerente));
+        when(alertaStockRepository.save(any(AlertaStock.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), 0);
+
+        ArgumentCaptor<AlertaStock> captor = forClass(AlertaStock.class);
+        verify(alertaStockRepository).save(captor.capture());
+        assertEquals(List.of(gestor, gerente), captor.getValue().getDestinatarios());
     }
 
     @Test
@@ -239,18 +290,104 @@ class StockFacadeTest {
     }
 
     @Test
+    void registarAjustePositivoAumentaStock() {
+        Stock stock = stock(10);
+        Utilizador utilizador = utilizador(stock.getLoja());
+        MotivoAjuste motivo = new MotivoAjuste("CORRECAO_ERRO", "Correcao de erro de registo");
+
+        whenStock(stock);
+        when(motivoAjusteRepository.findByCodigo("CORRECAO_ERRO")).thenReturn(Optional.of(motivo));
+        when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
+        when(ajusteInventarioRepository.save(any(AjusteInventario.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AjusteInventario ajuste = facade.registarAjuste(stock.getProduto().getId(), stock.getLoja().getId(), 4,
+                "CORRECAO_ERRO", utilizador.getId());
+
+        assertEquals(14, stock.getQuantidade());
+        assertEquals(4, ajuste.getQuantidade());
+    }
+
+    @Test
+    void registarAjusteNegativoNaoPermiteStockNegativo() {
+        Stock stock = stock(3);
+        Utilizador utilizador = utilizador(stock.getLoja());
+        MotivoAjuste motivo = new MotivoAjuste("QUEBRA", "Produto danificado ou partido");
+
+        whenStock(stock);
+        when(motivoAjusteRepository.findByCodigo("QUEBRA")).thenReturn(Optional.of(motivo));
+        when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
+
+        assertThrows(StockInsuficienteException.class,
+                () -> facade.registarAjuste(stock.getProduto().getId(), stock.getLoja().getId(), -4, "QUEBRA", utilizador.getId()));
+        verify(ajusteInventarioRepository, never()).save(any());
+    }
+
+    @Test
     void getAlertasAtivosRetornaApenasRepositorioOrdenado() {
         Loja loja = loja();
         Stock stock = new Stock(produto(), loja, 5);
         AlertaStock recente = new AlertaStock(stock, 5);
         AlertaStock antigo = new AlertaStock(stock, 7);
-        when(alertaStockRepository.findByStockLojaIdAndLidoFalseOrderByDataHoraDesc(loja.getId()))
+        when(alertaStockRepository.findByStockLojaIdAndResolvidoFalseOrderByDataHoraDesc(loja.getId()))
                 .thenReturn(List.of(recente, antigo));
 
         List<AlertaStock> alertas = facade.getAlertasAtivos(loja.getId());
 
         assertEquals(List.of(recente, antigo), alertas);
         assertFalse(alertas.get(0).isLido());
+    }
+
+    @Test
+    void resolverAlertaFechaCicloDeVida() {
+        AlertaStock alerta = new AlertaStock(stock(4), 4);
+        when(alertaStockRepository.findById(alerta.getId())).thenReturn(Optional.of(alerta));
+        when(alertaStockRepository.save(alerta)).thenReturn(alerta);
+
+        AlertaStock resolvido = facade.resolverAlerta(alerta.getId());
+
+        assertTrue(resolvido.isResolvido());
+        assertTrue(resolvido.isLido());
+        assertNotNull(resolvido.getDataResolucao());
+    }
+
+    @Test
+    void iniciarInventarioFisicoCriaLinhasParaTodoOStockDaLoja() {
+        Loja loja = loja();
+        Utilizador utilizador = utilizador(loja);
+        Stock agua = new Stock(produto("Agua"), loja, 8);
+        Stock pao = new Stock(produto("Pao"), loja, 4);
+
+        when(inventarioFisicoRepository.existsByLojaIdAndFechadoFalse(loja.getId())).thenReturn(false);
+        when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
+        when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
+        when(stockRepository.findByLojaId(loja.getId())).thenReturn(List.of(agua, pao));
+        when(inventarioFisicoRepository.save(any(InventarioFisico.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        InventarioFisico inventario = facade.iniciarInventarioFisico(loja.getId(), utilizador.getId());
+
+        assertEquals(2, inventario.getLinhas().size());
+        assertEquals(2, inventario.getTotalDiscrepancias());
+        assertEquals(List.of(agua.getProduto(), pao.getProduto()),
+                inventario.getLinhas().stream().map(LinhaInventario::getProduto).toList());
+    }
+
+    @Test
+    void registarContagemLinhaAtualizaLinhaExistenteDoInventario() {
+        Stock stock = stock(8);
+        InventarioFisico inventario = new InventarioFisico(stock.getLoja(), utilizador(stock.getLoja()));
+        LinhaInventario linha = new LinhaInventario(inventario, stock.getProduto(), 0, 8);
+
+        when(inventarioFisicoRepository.findById(inventario.getId())).thenReturn(Optional.of(inventario));
+        when(produtoRepository.findById(stock.getProduto().getId())).thenReturn(Optional.of(stock.getProduto()));
+        whenStock(stock);
+        when(linhaInventarioRepository.findByInventarioIdAndProdutoId(inventario.getId(), stock.getProduto().getId()))
+                .thenReturn(Optional.of(linha));
+        when(linhaInventarioRepository.save(linha)).thenReturn(linha);
+
+        LinhaInventario atualizada = facade.registarContagemLinha(inventario.getId(), stock.getProduto().getId(), 6);
+
+        assertEquals(6, atualizada.getQuantidadeContada());
+        assertEquals(-2, atualizada.getDiscrepancia());
     }
 
     private void whenStock(Stock stock) {
@@ -263,7 +400,11 @@ class StockFacadeTest {
     }
 
     private Produto produto() {
-        return new Produto("5600000000999", "Produto", new BigDecimal("1.00"), new BigDecimal("0.40"),
+        return produto("Produto");
+    }
+
+    private Produto produto(String nome) {
+        return new Produto("5600000000999", nome, new BigDecimal("1.00"), new BigDecimal("0.40"),
                 new TaxaIVA("Normal", new BigDecimal("23")), new Categoria("Categoria Stock", "Stock"));
     }
 
@@ -272,7 +413,11 @@ class StockFacadeTest {
     }
 
     private Utilizador utilizador(Loja loja) {
+        return utilizador(loja, "GERENTE");
+    }
+
+    private Utilizador utilizador(Loja loja, String perfil) {
         return new Utilizador("gerente.stock", "hash", "Gerente Stock",
-                new Perfil("GERENTE", List.of("STOCK_WRITE")), loja);
+                new Perfil(perfil, List.of("STOCK_WRITE")), loja);
     }
 }

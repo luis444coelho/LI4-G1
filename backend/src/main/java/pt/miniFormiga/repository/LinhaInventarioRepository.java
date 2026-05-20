@@ -14,4 +14,7 @@ public interface LinhaInventarioRepository extends JpaRepository<LinhaInventario
 
     @EntityGraph(attributePaths = {"produto"})
     List<LinhaInventario> findByInventarioIdAndDiscrepanciaNot(UUID inventarioId, int discrepancia);
+
+    @EntityGraph(attributePaths = {"inventario", "produto"})
+    Optional<LinhaInventario> findByInventarioIdAndProdutoId(UUID inventarioId, UUID produtoId);
 }

@@ -12,6 +12,7 @@ import pt.miniFormiga.domain.MotivoAjuste;
 import pt.miniFormiga.domain.Stock;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public final class StockDtos {
@@ -64,7 +65,10 @@ public final class StockDtos {
                                       UUID lojaId,
                                       LocalDateTime dataHora,
                                       int quantidadeNoMomento,
-                                      boolean lido) {
+                                      boolean lido,
+                                      boolean resolvido,
+                                      LocalDateTime dataResolucao,
+                                      List<UUID> destinatarios) {
         public static AlertaStockResponse from(AlertaStock alerta) {
             Stock stock = alerta.getStock();
             return new AlertaStockResponse(
@@ -74,7 +78,10 @@ public final class StockDtos {
                     stock.getLoja().getId(),
                     alerta.getDataHora(),
                     alerta.getQuantidadeNoMomento(),
-                    alerta.isLido()
+                    alerta.isLido(),
+                    alerta.isResolvido(),
+                    alerta.getDataResolucao(),
+                    alerta.getDestinatarios().stream().map(utilizador -> utilizador.getId()).toList()
             );
         }
     }

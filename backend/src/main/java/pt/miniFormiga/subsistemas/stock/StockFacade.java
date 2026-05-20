@@ -35,6 +35,9 @@ import java.util.UUID;
 @Transactional
 public class StockFacade implements ISubStock {
 
+    private static final List<String> PERFIS_GESTORES_ALERTA = List.of("GESTOR");
+    private static final List<String> PERFIS_LOJA_ALERTA = List.of("GERENTE");
+
     private final StockRepository stockRepository;
     private final NivelMinimoRepository nivelMinimoRepository;
     private final AlertaStockRepository alertaStockRepository;
@@ -134,7 +137,11 @@ public class StockFacade implements ISubStock {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Loja", lojaId));
         Utilizador utilizador = utilizadorRepository.findById(utilizadorId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Utilizador", utilizadorId));
-        return inventarioFisicoRepository.save(new InventarioFisico(loja, utilizador));
+        InventarioFisico inventario = new InventarioFisico(loja, utilizador);
+        stockRepository.findByLojaId(lojaId).forEach(stock ->
+                new LinhaInventario(inventario, stock.getProduto(), 0, stock.getQuantidade()));
+        inventario.calcularDiscrepancias();
+        return inventarioFisicoRepository.save(inventario);
     }
 
     @Override
@@ -150,7 +157,13 @@ public class StockFacade implements ISubStock {
         Produto produto = produtoRepository.findById(produtoId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", produtoId));
         Stock stock = obterStock(produtoId, inventario.getLoja().getId());
-        LinhaInventario linha = new LinhaInventario(inventario, produto, quantidade, stock.getQuantidade());
+        LinhaInventario linha = linhaInventarioRepository.findByInventarioIdAndProdutoId(inventarioId, produtoId)
+                .map(existente -> {
+                    existente.atualizarQuantidadeContada(quantidade);
+                    return existente;
+                })
+                .orElseGet(() -> new LinhaInventario(inventario, produto, quantidade, stock.getQuantidade()));
+        inventario.calcularDiscrepancias();
         return linhaInventarioRepository.save(linha);
     }
 
@@ -169,7 +182,29 @@ public class StockFacade implements ISubStock {
     @Override
     @Transactional(readOnly = true)
     public List<AlertaStock> getAlertasAtivos(UUID lojaId) {
-        return alertaStockRepository.findByStockLojaIdAndLidoFalseOrderByDataHoraDesc(lojaId);
+        return alertaStockRepository.findByStockLojaIdAndResolvidoFalseOrderByDataHoraDesc(lojaId);
+    }
+
+    @Override
+    public AlertaStock marcarAlertaLido(UUID alertaId) {
+        AlertaStock alerta = alertaStockRepository.findById(alertaId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("AlertaStock", alertaId));
+        alerta.marcarComoLido();
+        return alertaStockRepository.save(alerta);
+    }
+
+    @Override
+    public AlertaStock resolverAlerta(UUID alertaId) {
+        AlertaStock alerta = alertaStockRepository.findById(alertaId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("AlertaStock", alertaId));
+        alerta.resolver();
+        return alertaStockRepository.save(alerta);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LinhaInventario> listarDiscrepanciasInventario(UUID inventarioId) {
+        return linhaInventarioRepository.findByInventarioIdAndDiscrepanciaNot(inventarioId, 0);
     }
 
     private Stock obterStock(UUID produtoId, UUID lojaId) {
@@ -178,8 +213,24 @@ public class StockFacade implements ISubStock {
     }
 
     private void emitirAlertaSeNecessario(Stock stock) {
-        if (stock.precisaReposicao()) {
-            alertaStockRepository.save(new AlertaStock(stock, stock.getQuantidade()));
+        if (stock.precisaReposicao() && !alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())) {
+            AlertaStock alerta = new AlertaStock(stock, stock.getQuantidade());
+            destinatariosAlerta(stock).forEach(alerta::adicionarDestinatario);
+            alertaStockRepository.save(alerta);
         }
+    }
+
+    private List<Utilizador> destinatariosAlerta(Stock stock) {
+        List<Utilizador> destinatarios = new java.util.ArrayList<>();
+        List<Utilizador> gestores = utilizadorRepository.findByAtivoTrueAndPerfilNomeIn(PERFIS_GESTORES_ALERTA);
+        if (gestores != null) {
+            destinatarios.addAll(gestores);
+        }
+        List<Utilizador> gerentes = utilizadorRepository.findByAtivoTrueAndLojaIdAndPerfilNomeIn(
+                stock.getLoja().getId(), PERFIS_LOJA_ALERTA);
+        if (gerentes != null) {
+            destinatarios.addAll(gerentes);
+        }
+        return destinatarios.stream().distinct().toList();
     }
 }
