@@ -1,10 +1,19 @@
 import type { CSSProperties, FormEvent } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 
-import { getRole, roleList } from '../data/mockData'
+import { getRole, roleList, type RoleId } from '../data/mockData'
 import { Icon, LogoMark } from '../components/icons'
 import { Button, TextField } from '../components/ui'
+import { ApiError } from '../lib/api'
+import { roleDefaultPath, useAuth } from '../lib/auth'
+
+const demoUsers: Record<RoleId, string> = {
+  gestor: 'gestor.formiga',
+  gerente: 'gerente.braga',
+  funcionario: 'operador.braga',
+  armazem: 'armazem.braga',
+}
 
 export function ProfileSelectionPage() {
   return (
@@ -45,7 +54,7 @@ export function ProfileSelectionPage() {
           ))}
         </div>
 
-        <p className="auth-note">Demonstração · escolha o perfil para explorar</p>
+        <p className="auth-note">Demonstração · autenticação real por perfil</p>
       </div>
     </div>
   )
@@ -54,16 +63,40 @@ export function ProfileSelectionPage() {
 export function AuthenticationPage() {
   const { roleId } = useParams()
   const navigate = useNavigate()
+  const { login, session } = useAuth()
   const role = useMemo(() => getRole(roleId), [roleId])
+  const [username, setUsername] = useState(role ? demoUsers[role.id] : '')
   const [password, setPassword] = useState('miniformiga')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (role) {
+      setUsername(demoUsers[role.id])
+      setPassword('MiniFormiga2026!')
+    }
+  }, [role])
 
   if (!role) {
     return <Navigate to="/" replace />
   }
+  if (session) {
+    return <Navigate to={roleDefaultPath(session.roleId)} replace />
+  }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    navigate(role.defaultPath)
+    setError(null)
+    setLoading(true)
+    try {
+      const nextSession = await login(username, password)
+      navigate(roleDefaultPath(nextSession.roleId), { replace: true })
+    } catch (caught) {
+      const message = caught instanceof ApiError ? caught.message : 'Não foi possível autenticar.'
+      setError(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -102,6 +135,13 @@ export function AuthenticationPage() {
         </div>
 
         <TextField
+          label="UTILIZADOR"
+          icon="users"
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+        />
+
+        <TextField
           label="PALAVRA-PASSE"
           type="password"
           icon="lock"
@@ -109,11 +149,13 @@ export function AuthenticationPage() {
           onChange={(event) => setPassword(event.target.value)}
         />
 
-        <Button type="submit" className="auth-submit">
-          Entrar
+        {error ? <p className="auth-error">{error}</p> : null}
+
+        <Button type="submit" className="auth-submit" disabled={loading}>
+          {loading ? 'A entrar...' : 'Entrar'}
         </Button>
 
-        <p className="auth-note">Demonstração · qualquer palavra-passe funciona</p>
+        <p className="auth-note">Demonstração · credenciais reais preenchidas automaticamente</p>
       </form>
     </div>
   )

@@ -259,6 +259,14 @@ select {
   height: 40px;
 }
 
+.auth-error {
+  width: 100%;
+  margin: 12px 0 0;
+  color: #ff6b72;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .mf-screen {
   min-height: 100vh;
   padding: 6px;
@@ -409,10 +417,12 @@ select {
   height: 29px;
   border-radius: 8px;
   border: 1px solid var(--accent-border);
+  background: transparent;
   color: #6f7894;
   font-size: 13px;
   display: grid;
   place-items: center;
+  cursor: pointer;
 }
 
 .mf-main {
@@ -508,6 +518,13 @@ select {
   border: 1px solid #2a3042;
   border-radius: 13px;
   padding: 16px;
+}
+
+.mf-empty-state {
+  margin: 0;
+  color: #8e95af;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .mf-panel.is-tall {

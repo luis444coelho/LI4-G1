@@ -1,12 +1,114 @@
-import { dashboardMetrics, orderHistory, performanceByStore, salesByStore, stockAlerts, supplierRows, syncHistory, syncMetrics, usersRows } from '../data/mockData'
+import { useEffect, useMemo, useState } from 'react'
+
+import { orderHistory, supplierRows, syncHistory, syncMetrics, usersRows } from '../data/mockData'
 import { Button, Callout, InitialAvatar, MetricCard, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
 import { ReportsContent } from '../components/pageSections'
+import { apiRequest, type DashboardResponse, type RelatorioStockResponse } from '../lib/api'
+
+const currencyFormatter = new Intl.NumberFormat('pt-PT', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 2,
+})
+
+const numberFormatter = new Intl.NumberFormat('pt-PT')
+
+function money(value: number) {
+  return currencyFormatter.format(value)
+}
 
 export function GestorDashboardPage() {
+  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null)
+  const [stock, setStock] = useState<RelatorioStockResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let ignore = false
+    setLoading(true)
+    setError(null)
+
+    Promise.all([
+      apiRequest<DashboardResponse>('/dashboard'),
+      apiRequest<RelatorioStockResponse>('/relatorios/stock'),
+    ])
+      .then(([dashboardResponse, stockResponse]) => {
+        if (!ignore) {
+          setDashboard(dashboardResponse)
+          setStock(stockResponse)
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setError('Não foi possível carregar o dashboard.')
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  const metrics = useMemo(() => {
+    if (!dashboard) {
+      return []
+    }
+    return [
+      {
+        label: 'Vendas no período',
+        value: money(dashboard.totalVendas),
+        footnote: `${numberFormatter.format(dashboard.numeroVendas)} vendas`,
+        tone: dashboard.totalVendas > 0 ? 'success' as const : 'neutral' as const,
+      },
+      {
+        label: 'Margem',
+        value: money(dashboard.margem),
+        footnote: `Ticket médio ${money(dashboard.ticketMedio)}`,
+        tone: 'neutral' as const,
+      },
+      {
+        label: 'Lojas com vendas',
+        value: `${dashboard.numeroLojasComVendas} / ${dashboard.totalLojas}`,
+        footnote: 'Todas as lojas disponíveis',
+        tone: 'success' as const,
+      },
+      {
+        label: 'Alertas de stock',
+        value: String(dashboard.alertasAtivos),
+        footnote: `${stock?.produtosReposicao ?? 0} produtos em reposição`,
+        tone: dashboard.alertasAtivos > 0 ? 'danger' as const : 'success' as const,
+      },
+    ]
+  }, [dashboard, stock])
+
+  const maxSales = Math.max(1, ...(dashboard?.vendasPorLoja.map((item) => item.total) ?? [1]))
+  const stockAlerts = (stock?.itens ?? []).filter((item) => item.precisaReposicao).slice(0, 5)
+
+  if (loading) {
+    return (
+      <Panel>
+        <p className="mf-empty-state">A carregar dados...</p>
+      </Panel>
+    )
+  }
+
+  if (error || !dashboard) {
+    return (
+      <Callout tone="warning">
+        {error ?? 'Dashboard indisponível.'}
+      </Callout>
+    )
+  }
+
   return (
     <div className="mf-stack">
       <div className="mf-metrics-grid">
-        {dashboardMetrics.map((metric) => (
+        {metrics.map((metric) => (
           <MetricCard
             key={metric.label}
             label={metric.label}
@@ -18,13 +120,15 @@ export function GestorDashboardPage() {
       </div>
 
       <div className="mf-two-column">
-        <Panel title="Vendas por loja — hoje" className="is-tall">
+        <Panel title="Vendas por loja" className="is-tall">
           <div className="sales-bars">
-            {salesByStore.map((item) => (
-              <div key={item.store} className="sales-bar-column">
-                <span className="sales-bar-value">{item.amount}</span>
-                <div className="sales-bar" style={{ height: `${item.height}px`, background: item.color }} />
-                <span className="sales-bar-label">{item.store}</span>
+            {dashboard.vendasPorLoja.length === 0 ? (
+              <p className="mf-empty-state">Sem vendas no período.</p>
+            ) : dashboard.vendasPorLoja.map((item) => (
+              <div key={item.lojaId} className="sales-bar-column">
+                <span className="sales-bar-value">{money(item.total)}</span>
+                <div className="sales-bar" style={{ height: `${24 + (item.total / maxSales) * 54}px`, background: '#4777d8' }} />
+                <span className="sales-bar-label">{item.loja}</span>
               </div>
             ))}
           </div>
@@ -40,13 +144,13 @@ export function GestorDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {performanceByStore.map((row) => (
-                <tr key={row.store}>
-                  <td>{row.store}</td>
-                  <td>{row.sales}</td>
+              {dashboard.vendasPorLoja.map((row) => (
+                <tr key={row.lojaId}>
+                  <td>{row.loja}</td>
+                  <td>{money(row.total)}</td>
                   <td>
                     <StatusBadge tone="success" compact>
-                      {row.margin}
+                      {money(row.margem)}
                     </StatusBadge>
                   </td>
                 </tr>
@@ -60,21 +164,23 @@ export function GestorDashboardPage() {
         title="Alertas de stock"
         action={
           <StatusBadge tone="danger" compact>
-            4 alertas
+            {dashboard.alertasAtivos} alertas
           </StatusBadge>
         }
       >
         <div className="alert-list">
-          {stockAlerts.map((alert) => (
-            <div key={`${alert.product}-${alert.store}`} className="alert-row">
+          {stockAlerts.length === 0 ? (
+            <p className="mf-empty-state">Sem alertas ativos.</p>
+          ) : stockAlerts.map((alert) => (
+            <div key={`${alert.produtoId}-${alert.lojaId}`} className="alert-row">
               <div className="alert-left">
                 <span className="alert-dot" />
-                <span>{alert.product}</span>
+                <span>{alert.produto}</span>
               </div>
               <div className="alert-right">
-                <span className="muted">{alert.store}</span>
-                <span className="tone-danger">{alert.quantity}</span>
-                <span className="muted faint">{alert.minimum}</span>
+                <span className="muted">{alert.loja}</span>
+                <span className="tone-danger">{alert.quantidade} un</span>
+                <span className="muted faint">mín. {alert.nivelMinimo ?? '-'}</span>
               </div>
             </div>
           ))}
