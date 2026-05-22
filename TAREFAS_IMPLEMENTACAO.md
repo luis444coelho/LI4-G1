@@ -211,48 +211,48 @@ Testes obrigatorios:
 
 Requisitos/casos de uso: RF-01, RF-02, RF-09, RNF-11, US-01, US-03, US-06, UC-06.
 
-Estado atual: ha dados de vendas e fechos, mas faltam endpoints dedicados ao dashboard/relatorios/exportacao prometidos no relatorio.
+Estado atual: existe modulo de relatorios com dashboard, relatorios de vendas/stock/rentabilidade, exportacao CSV/PDF simples e filtros por loja, periodo e categoria.
 
 Tarefas:
 
-- [ ] Criar modulo/servico de relatorios.
-- [ ] Implementar `GET /api/v1/dashboard`.
-- [ ] Implementar `GET /api/v1/relatorios/vendas`.
-- [ ] Implementar `GET /api/v1/relatorios/stock`.
-- [ ] Implementar `GET /api/v1/relatorios/rentabilidade`.
-- [ ] Implementar `POST /api/v1/relatorios/exportar`.
-- [ ] Suportar filtros por loja, periodo e categoria.
-- [ ] Calcular vendas por loja.
-- [ ] Calcular margem/rentabilidade por produto e categoria.
-- [ ] Agregar alertas de stock ativos.
-- [ ] Exportar CSV.
-- [ ] Exportar PDF, ou ajustar relatorio se PDF ficar fora do ambito.
-- [ ] Garantir estrutura contabilistica minima: data, descricao, valor, IVA, loja.
+- [x] Criar modulo/servico de relatorios.
+- [x] Implementar `GET /api/v1/dashboard`.
+- [x] Implementar `GET /api/v1/relatorios/vendas`.
+- [x] Implementar `GET /api/v1/relatorios/stock`.
+- [x] Implementar `GET /api/v1/relatorios/rentabilidade`.
+- [x] Implementar `POST /api/v1/relatorios/exportar`.
+- [x] Suportar filtros por loja, periodo e categoria.
+- [x] Calcular vendas por loja.
+- [x] Calcular margem/rentabilidade por produto e categoria.
+- [x] Agregar alertas de stock ativos.
+- [x] Exportar CSV.
+- [x] Exportar PDF, ou ajustar relatorio se PDF ficar fora do ambito. Foi implementada exportacao PDF textual simples.
+- [x] Garantir estrutura contabilistica minima: data, descricao, valor, IVA, loja.
 
 Testes obrigatorios:
 
-- [ ] Dashboard devolve KPIs com vendas, margem, lojas e alertas.
-- [ ] Filtro por periodo altera resultados.
-- [ ] Relatorio de rentabilidade calcula margem corretamente.
-- [ ] Exportacao CSV contem colunas esperadas.
-- [ ] Exportacao sem dados devolve resposta controlada.
+- [x] Dashboard devolve KPIs com vendas, margem, lojas e alertas.
+- [x] Filtro por periodo altera resultados.
+- [x] Relatorio de rentabilidade calcula margem corretamente.
+- [x] Exportacao CSV contem colunas esperadas.
+- [x] Exportacao sem dados devolve resposta controlada.
 
 ## 8. Frontend Real
 
 Requisitos/casos de uso: todos os UC com interface; RNF-10; RF-04 se for mantido.
 
-Estado atual: frontend React tem rotas e paginas por perfil, mas usa `mockData`.
+Estado atual: frontend React tem rotas por perfil, autenticacao real via JWT, protecao de rotas e dashboard do gestor ligado a dados reais. Ainda ha paginas/formularios a depender de `mockData`. `npm run build`/`npm run lint` ficaram bloqueados no ambiente atual por Node.js 12, abaixo do minimo exigido pelas dependencias.
 
 Tarefas:
 
-- [ ] Instalar dependencias com `npm ci` ou `npm install`.
-- [ ] Confirmar `npm run build` e `npm run lint`.
-- [ ] Criar cliente HTTP centralizado para `/api/v1`.
-- [ ] Implementar login real com `/auth/login`.
-- [ ] Guardar token JWT e inclui-lo no header `Authorization`.
-- [ ] Redirecionar utilizador para pagina inicial conforme perfil.
-- [ ] Substituir `mockData` por chamadas reais progressivamente.
-- [ ] Implementar estados de loading, erro e vazio.
+- [x] Instalar dependencias com `npm ci` ou `npm install`.
+- [ ] Confirmar `npm run build` e `npm run lint`. Bloqueado localmente por Node.js 12; dependencias exigem Node 20+.
+- [x] Criar cliente HTTP centralizado para `/api/v1`.
+- [x] Implementar login real com `/auth/login`.
+- [x] Guardar token JWT e inclui-lo no header `Authorization`.
+- [x] Redirecionar utilizador para pagina inicial conforme perfil.
+- [x] Substituir `mockData` por chamadas reais progressivamente. Dashboard do gestor ja usa API real.
+- [ ] Implementar estados de loading, erro e vazio. Implementado no login/dashboard; falta propagar aos restantes fluxos.
 - [ ] Implementar formularios funcionais:
   - [ ] PDV: iniciar venda, adicionar produto, remover linha, finalizar, emitir fatura.
   - [ ] Devolucao: localizar venda e registar devolucao.
@@ -260,7 +260,7 @@ Tarefas:
   - [ ] Armazem: entrada de mercadoria, inventario fisico, localizacao/stock.
   - [ ] Gestor: dashboard, relatorios, fornecedores, encomendas, sincronizacao, utilizadores.
 - [ ] Confirmar responsividade mobile para RF-04/US-05, se mantido no ambito.
-- [ ] Adicionar protecao de rotas por perfil/permissao.
+- [x] Adicionar protecao de rotas por perfil/permissao.
 - [ ] Preparar fluxo offline do PDV, se o frontend tambem assumir operacao offline via browser.
 
 Testes obrigatorios:
@@ -319,7 +319,7 @@ Tarefas:
   - [ ] EncomendasController.
   - [ ] InventariosController.
   - [ ] SincronizacaoController, quando existir.
-  - [ ] RelatoriosController, quando existir.
+  - [x] RelatoriosController, quando existir.
 - [ ] Adicionar testes de seguranca:
   - [ ] sem token da 401;
   - [ ] token valido permite;
