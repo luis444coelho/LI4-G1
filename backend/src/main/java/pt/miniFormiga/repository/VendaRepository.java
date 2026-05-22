@@ -13,12 +13,15 @@ import java.util.UUID;
 
 public interface VendaRepository extends JpaRepository<Venda, UUID> {
     @Override
-    @EntityGraph(attributePaths = {"loja", "utilizador", "linhas", "linhas.produto", "linhas.produto.taxaIVA"})
+    @EntityGraph(attributePaths = {"loja", "utilizador", "meioPagamento", "linhas", "linhas.produto", "linhas.produto.taxaIVA"})
     Optional<Venda> findById(UUID id);
 
-    @EntityGraph(attributePaths = {"loja", "utilizador", "linhas", "linhas.produto"})
+    @EntityGraph(attributePaths = {"loja", "utilizador", "meioPagamento", "linhas", "linhas.produto", "linhas.produto.categoria", "linhas.produto.taxaIVA"})
     Page<Venda> findByLojaIdAndDataHoraBetween(UUID lojaId, LocalDateTime inicio, LocalDateTime fim, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"linhas", "linhas.produto"})
+    @EntityGraph(attributePaths = {"loja", "meioPagamento", "linhas", "linhas.produto", "linhas.produto.categoria", "linhas.produto.taxaIVA"})
     List<Venda> findByLojaIdAndAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(UUID lojaId, LocalDateTime inicio, LocalDateTime fim);
+
+    @EntityGraph(attributePaths = {"loja", "meioPagamento", "linhas", "linhas.produto", "linhas.produto.categoria", "linhas.produto.taxaIVA"})
+    List<Venda> findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(LocalDateTime inicio, LocalDateTime fim);
 }

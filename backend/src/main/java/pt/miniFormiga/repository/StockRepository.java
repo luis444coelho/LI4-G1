@@ -9,9 +9,13 @@ import java.util.List;
 import java.util.UUID;
 
 public interface StockRepository extends JpaRepository<Stock, UUID> {
-    @EntityGraph(attributePaths = {"produto", "loja", "nivelMinimo"})
+    @Override
+    @EntityGraph(attributePaths = {"produto", "produto.categoria", "loja", "nivelMinimo"})
+    List<Stock> findAll();
+
+    @EntityGraph(attributePaths = {"produto", "produto.categoria", "loja", "nivelMinimo"})
     Optional<Stock> findByProdutoIdAndLojaId(UUID produtoId, UUID lojaId);
 
-    @EntityGraph(attributePaths = {"produto", "loja", "nivelMinimo"})
+    @EntityGraph(attributePaths = {"produto", "produto.categoria", "loja", "nivelMinimo"})
     List<Stock> findByLojaId(UUID lojaId);
 }
