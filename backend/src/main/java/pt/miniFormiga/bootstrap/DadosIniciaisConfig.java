@@ -47,30 +47,28 @@ public class DadosIniciaisConfig {
                     Permissao.RELATORIOS_READ,
                     Permissao.SINCRONIZACAO_WRITE
             ));
-            criarPerfilSeNecessario(perfilRepository, "GERENTE", List.of(
+            Perfil gerente = criarPerfilSeNecessario(perfilRepository, "GERENTE", List.of(
                     Permissao.UTILIZADORES_READ,
                     Permissao.UTILIZADORES_WRITE,
                     Permissao.STOCK_WRITE,
                     Permissao.ENCOMENDAS_WRITE,
                     Permissao.RELATORIOS_READ
             ));
-            criarPerfilSeNecessario(perfilRepository, "FUNCIONARIO", List.of(Permissao.PDV_WRITE));
-            criarPerfilSeNecessario(perfilRepository, "RESPONSAVEL_ARMAZEM", List.of(
+            Perfil funcionario = criarPerfilSeNecessario(perfilRepository, "FUNCIONARIO", List.of(Permissao.PDV_WRITE));
+            Perfil responsavelArmazem = criarPerfilSeNecessario(perfilRepository, "RESPONSAVEL_ARMAZEM", List.of(
                     Permissao.STOCK_READ,
                     Permissao.STOCK_WRITE,
                     Permissao.ENCOMENDAS_WRITE
             ));
 
-            if (!utilizadorRepository.existsByUsername("gestor.formiga")) {
-                utilizadorRepository.save(new Utilizador(
-                        "gestor.formiga",
-                        passwordEncoder.encode("MiniFormiga2026!"),
-                        "Sr. Formiga",
-                        "gestor@mini-formiga.pt",
-                        gestor,
-                        loja
-                ));
-            }
+            criarUtilizadorSeNecessario(utilizadorRepository, passwordEncoder,
+                    "gestor.formiga", "Sr. Formiga", "gestor@mini-formiga.pt", gestor, loja);
+            criarUtilizadorSeNecessario(utilizadorRepository, passwordEncoder,
+                    "gerente.braga", "Gerente Braga", "gerente@mini-formiga.pt", gerente, loja);
+            criarUtilizadorSeNecessario(utilizadorRepository, passwordEncoder,
+                    "operador.braga", "Operador Braga", "operador@mini-formiga.pt", funcionario, loja);
+            criarUtilizadorSeNecessario(utilizadorRepository, passwordEncoder,
+                    "armazem.braga", "Responsavel Armazem", "armazem@mini-formiga.pt", responsavelArmazem, loja);
 
             TaxaIVA reduzida = criarTaxaSeNecessaria(taxaIVARepository, "Taxa Reduzida", new BigDecimal("6"));
             TaxaIVA intermedia = criarTaxaSeNecessaria(taxaIVARepository, "Taxa Intermedia", new BigDecimal("13"));
@@ -110,6 +108,25 @@ public class DadosIniciaisConfig {
     private Perfil criarPerfilSeNecessario(PerfilRepository repository, String nome, List<String> permissoes) {
         return repository.findByNome(nome)
                 .orElseGet(() -> repository.save(new Perfil(nome, permissoes)));
+    }
+
+    private void criarUtilizadorSeNecessario(UtilizadorRepository repository,
+                                             PasswordEncoder passwordEncoder,
+                                             String username,
+                                             String nome,
+                                             String email,
+                                             Perfil perfil,
+                                             Loja loja) {
+        if (!repository.existsByUsername(username)) {
+            repository.save(new Utilizador(
+                    username,
+                    passwordEncoder.encode("MiniFormiga2026!"),
+                    nome,
+                    email,
+                    perfil,
+                    loja
+            ));
+        }
     }
 
     private Categoria criarCategoriaSeNecessaria(CategoriaRepository repository, String nome, String descricao) {

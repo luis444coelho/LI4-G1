@@ -1,8 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react'
 
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 
 import type { RoleConfig } from '../data/mockData'
+import { useAuth } from '../lib/auth'
 import { cn } from '../lib/cn'
 import { Icon, LogoMark } from './icons'
 import { TopChip } from './ui'
@@ -15,6 +16,8 @@ interface AppShellProps {
 
 export function AppShell({ role, title, children }: AppShellProps) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { logout, session } = useAuth()
   const shellStyle = {
     '--accent': role.accent,
     '--accent-soft': role.accentSoft,
@@ -23,6 +26,11 @@ export function AppShell({ role, title, children }: AppShellProps) {
     '--icon-bg': role.iconBg,
     '--icon-border': role.iconBorder,
   } as CSSProperties
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/', { replace: true })
+  }
 
   return (
     <div className="mf-screen">
@@ -64,13 +72,13 @@ export function AppShell({ role, title, children }: AppShellProps) {
                 <LogoMark className="mf-user-mark" />
               </span>
               <div className="mf-user-text">
-                <span className="mf-user-brand">Mini-Formiga</span>
-                <span className="mf-user-role">{role.sidebarSubtitle}</span>
+                <span className="mf-user-brand">{session?.nome ?? 'Mini-Formiga'}</span>
+                <span className="mf-user-role">{session?.perfil ?? role.sidebarSubtitle}</span>
               </div>
             </div>
-            <Link to="/" className="mf-logout">
+            <button type="button" className="mf-logout" onClick={handleLogout}>
               Terminar sessão
-            </Link>
+            </button>
           </div>
         </aside>
 

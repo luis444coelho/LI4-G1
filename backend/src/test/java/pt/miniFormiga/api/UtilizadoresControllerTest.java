@@ -55,7 +55,7 @@ class UtilizadoresControllerTest {
         var response = controller.listar(outraLoja.getId(), pageable, authentication);
 
         assertEquals(1, response.getTotalElements());
-        assertEquals(lojaPropria.getId(), response.getContent().getFirst().lojaId());
+        assertEquals(lojaPropria.getId(), response.getContent().get(0).lojaId());
         verify(utilizadores).listarUtilizadoresPorLoja(lojaPropria.getId(), pageable);
     }
 }

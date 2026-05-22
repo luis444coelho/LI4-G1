@@ -17,4 +17,7 @@ public interface AlertaStockRepository extends JpaRepository<AlertaStock, UUID> 
 
     @EntityGraph(attributePaths = {"stock", "stock.produto", "stock.loja", "stock.nivelMinimo", "destinatarios"})
     List<AlertaStock> findByStockLojaIdAndResolvidoFalseOrderByDataHoraDesc(UUID lojaId);
+
+    @EntityGraph(attributePaths = {"stock", "stock.produto", "stock.produto.categoria", "stock.loja", "stock.nivelMinimo", "destinatarios"})
+    List<AlertaStock> findByResolvidoFalseOrderByDataHoraDesc();
 }
