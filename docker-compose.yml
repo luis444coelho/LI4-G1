@@ -7,17 +7,70 @@ services:
       POSTGRES_USER: miniFormiga
       POSTGRES_PASSWORD: miniFormiga_dev
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  backend-central:
+    image: maven:3.9.9-eclipse-temurin-21
+    container_name: mini-formiga-backend-central
+    working_dir: /app
+    command: ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Dserver.address=0.0.0.0"]
+    environment:
+      SPRING_PROFILES_ACTIVE: central
+      SERVER_PORT: 8081
+      DB_URL: jdbc:postgresql://postgres:5432/miniFormiga_central
+      DB_USERNAME: miniFormiga
+      DB_PASSWORD: miniFormiga_dev
+      JWT_SECRET: ${JWT_SECRET:-MiniFormigaDevSecretKeyForJwtHs256WithAtLeast32Bytes}
+      SYNC_TOKEN: ${SYNC_TOKEN:-MiniFormigaSyncDevToken}
+      DEMO_DATA_ENABLED: ${DEMO_DATA_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://0.0.0.0:3000}
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./backend:/app
+      - backend_m2:/root/.m2
+      - backend_logs:/app/logs
+    depends_on:
+      - postgres
+
+  backend-local:
+    image: maven:3.9.9-eclipse-temurin-21
+    container_name: mini-formiga-backend-local
+    working_dir: /app
+    command: ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Dserver.address=0.0.0.0"]
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SERVER_PORT: 8080
+      DB_URL: jdbc:sqlite:/data/mini-formiga-local.db
+      CENTRAL_SYNC_URL: http://backend-central:8081/api/v1/central/sincronizacao/receber
+      JWT_SECRET: ${JWT_SECRET:-MiniFormigaDevSecretKeyForJwtHs256WithAtLeast32Bytes}
+      SYNC_TOKEN: ${SYNC_TOKEN:-MiniFormigaSyncDevToken}
+      DEMO_DATA_ENABLED: ${DEMO_DATA_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://0.0.0.0:3000}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - backend_m2:/root/.m2
+      - backend_local_data:/data
+      - backend_logs:/app/logs
+    depends_on:
+      - backend-central
 
   frontend:
     build: ./frontend
     container_name: mini-formiga-frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080/api/v1
     ports:
       - "3000:3000"
     depends_on:
-      - postgres
+      - backend-local
 
 volumes:
   postgres_data:
+  backend_m2:
+  backend_local_data:
+  backend_logs:

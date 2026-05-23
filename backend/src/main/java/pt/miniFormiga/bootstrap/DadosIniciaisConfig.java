@@ -1,6 +1,7 @@
 package pt.miniFormiga.bootstrap;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +20,7 @@ public class DadosIniciaisConfig {
 
     @Bean
     @Transactional
+    @ConditionalOnProperty(name = "mini-formiga.demo-data.enabled", havingValue = "true", matchIfMissing = true)
     CommandLineRunner dadosIniciais(LojaRepository lojaRepository,
                                     PerfilRepository perfilRepository,
                                     UtilizadorRepository utilizadorRepository,

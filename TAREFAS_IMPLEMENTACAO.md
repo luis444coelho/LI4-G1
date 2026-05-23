@@ -280,30 +280,30 @@ Testes obrigatorios:
 
 Requisitos/decisoes: arquitetura local SQLite + central PostgreSQL, DA-01, DA-02, DA-03.
 
-Estado atual: existe SQLite local e perfil PostgreSQL central. Docker Compose inclui PostgreSQL e frontend, mas nao backend.
+Estado atual: existe SQLite local e perfil PostgreSQL central. Docker Compose inclui PostgreSQL, backend central, backend local e frontend. O backend local corre como instancia de loja com SQLite; o backend central corre como a mesma aplicacao Spring Boot no perfil `central`, com PostgreSQL, conforme a arquitetura monolitica modular definida no relatorio.
 
 Tarefas:
 
-- [ ] Adicionar backend ao `docker-compose.yml`, ou documentar explicitamente que o backend corre fora do compose.
-- [ ] Validar perfil `local` com SQLite.
-- [ ] Validar perfil `central` com PostgreSQL.
-- [ ] Garantir seed de dados suficiente para demonstracao e testes.
-- [ ] Separar dados demo de dados de teste.
-- [ ] Criar `.env.example` com `JWT_SECRET`, `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`.
-- [ ] Garantir que ficheiro SQLite e logs nao entram no commit se forem artefactos locais.
-- [ ] Documentar comandos de arranque:
-  - [ ] backend local;
-  - [ ] backend central;
-  - [ ] frontend;
-  - [ ] docker compose.
+- [x] Adicionar backend ao `docker-compose.yml`, ou documentar explicitamente que o backend corre fora do compose.
+- [x] Validar perfil `local` com SQLite.
+- [x] Validar perfil `central` com PostgreSQL.
+- [x] Garantir seed de dados suficiente para demonstracao e testes.
+- [x] Separar dados demo de dados de teste. O seed demo pode ser desativado com `DEMO_DATA_ENABLED=false`.
+- [x] Criar `.env.example` com `JWT_SECRET`, `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`.
+- [x] Garantir que ficheiro SQLite e logs nao entram no commit se forem artefactos locais.
+- [x] Documentar comandos de arranque:
+  - [x] backend local;
+  - [x] backend central;
+  - [x] frontend;
+  - [x] docker compose.
 
 Testes obrigatorios:
 
-- [ ] App arranca com SQLite.
-- [ ] App arranca com PostgreSQL.
-- [ ] Swagger abre.
-- [ ] Login demo funciona.
-- [ ] Frontend consegue chamar backend.
+- [x] App arranca com SQLite.
+- [x] App arranca com PostgreSQL.
+- [x] Swagger abre.
+- [x] Login demo funciona.
+- [x] Frontend consegue chamar backend. CORS configurado por `mini-formiga.cors.allowed-origins`/`CORS_ALLOWED_ORIGINS` para o frontend em porta separada.
 
 ## 10. Testes Automatizados
 
@@ -418,13 +418,13 @@ A implementacao fisica so deve ser considerada pronta para avancar para testes f
 
 - [ ] `mvn verify` passa.
 - [ ] `npm run build` passa.
-- [ ] Backend arranca com perfil local SQLite.
-- [ ] Backend arranca com perfil central PostgreSQL.
-- [ ] Frontend autentica contra backend real.
+- [x] Backend arranca com perfil local SQLite.
+- [x] Backend arranca com perfil central PostgreSQL.
+- [x] Frontend autentica contra backend real.
 - [ ] Fluxo PDV completo funciona sem mocks.
 - [x] Fecho de caixa agenda sincronizacao local+central.
-- [ ] Dashboard/relatorios usam dados reais.
-- [ ] Exportacao contabilistica existe ou esta explicitamente fora do ambito.
+- [x] Dashboard/relatorios usam dados reais.
+- [x] Exportacao contabilistica existe ou esta explicitamente fora do ambito.
 - [ ] Todos os Must Have estao `Completos` ou justificados no relatorio.
 - [ ] A matriz RF/RNF/RD esta preenchida.
 - [ ] O relatorio nao contem notas pendentes como "rever" ou "inserir depois".

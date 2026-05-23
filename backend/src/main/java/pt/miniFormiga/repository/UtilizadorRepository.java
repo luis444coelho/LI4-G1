@@ -13,22 +13,22 @@ import java.util.UUID;
 public interface UtilizadorRepository extends JpaRepository<Utilizador, UUID> {
     boolean existsByUsername(String username);
 
-    @EntityGraph(attributePaths = {"perfil", "loja"})
+    @EntityGraph(attributePaths = {"perfil", "perfil.permissoes", "loja"})
     Optional<Utilizador> findByUsername(String username);
 
     @Override
-    @EntityGraph(attributePaths = {"perfil", "loja"})
+    @EntityGraph(attributePaths = {"perfil", "perfil.permissoes", "loja"})
     Optional<Utilizador> findById(UUID id);
 
-    @EntityGraph(attributePaths = {"perfil", "loja"})
+    @EntityGraph(attributePaths = {"perfil", "perfil.permissoes", "loja"})
     Page<Utilizador> findAll(Pageable pageable);
 
-    @EntityGraph(attributePaths = {"perfil", "loja"})
+    @EntityGraph(attributePaths = {"perfil", "perfil.permissoes", "loja"})
     Page<Utilizador> findByLojaId(UUID lojaId, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"perfil", "loja"})
+    @EntityGraph(attributePaths = {"perfil", "perfil.permissoes", "loja"})
     List<Utilizador> findByAtivoTrueAndPerfilNomeIn(List<String> perfis);
 
-    @EntityGraph(attributePaths = {"perfil", "loja"})
+    @EntityGraph(attributePaths = {"perfil", "perfil.permissoes", "loja"})
     List<Utilizador> findByAtivoTrueAndLojaIdAndPerfilNomeIn(UUID lojaId, List<String> perfis);
 }

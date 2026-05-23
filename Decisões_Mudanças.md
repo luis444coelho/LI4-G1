@@ -13,8 +13,9 @@ Foram analisadas as tarefas já assinaladas em `TAREFAS_IMPLEMENTACAO.md`, o est
 - `SubStock`, incluindo alertas, ajustes, inventário físico e localização.
 - `SubEncomendas`, incluindo fornecedores, encomendas e entrada de mercadoria.
 - `SubSincronizacao`, incluindo agendamento, payload, transporte REST/JSON, endpoint central por perfil, estados e conflitos.
+- infraestrutura de execucao com o mesmo backend em perfil `local` e `central`, Docker Compose completo, seed demo configuravel e CORS para o frontend em porta separada.
 
-A última execução completa de testes do backend, após a implementação da tarefa 6, passou com sucesso: 130 testes executados, 0 falhas.
+A última execução completa de testes do backend passou com sucesso: 130 testes executados, 0 falhas.
 
 ## Decisões com Impacto Pendente no Relatório
 
@@ -24,6 +25,27 @@ Decisão tomada: fatura simplificada é permitida até 1000 EUR sem NIF; fatura 
 
 Impacto pendente: registar RD-02 como satisfeito na tabela de verificação do SRS (Capítulo 6), quando essa tabela for preenchida.
 
+### DM-16 - Execução local/central por perfis da mesma aplicação
+
+Decisão tomada: não foi criado um segundo projeto para o servidor central. O mesmo backend Spring Boot arranca em dois perfis:
+
+- `local`: instância de loja, SQLite, operação offline e envio de sincronização;
+- `central`: instância central, PostgreSQL, receção de sincronizações, histórico e consolidação.
+
+Impacto pendente: no relatório, quando for descrita a execução física, explicitar que "servidor central" significa uma segunda instância do mesmo monólito modular, não um microserviço nem um repositório separado.
+
+### DM-17 - Porta PostgreSQL do host em desenvolvimento
+
+Decisão tomada: no `docker-compose.yml`, o PostgreSQL continua a usar a porta `5432` dentro do container, mas fica exposto no host em `5433`.
+
+Impacto pendente: esta é apenas uma decisão de ambiente de desenvolvimento para evitar conflitos com PostgreSQL local. Não altera a arquitetura do relatório.
+
+### DM-18 - Seed demo configurável
+
+Decisão tomada: os dados demo são carregados por omissão, mas podem ser desligados com `DEMO_DATA_ENABLED=false`.
+
+Impacto pendente: no Capítulo 6, ao falar de testes, distinguir dados de demonstração de dados criados pelos testes automatizados.
+
 
 ## Divergências Ainda Pendentes
 
@@ -32,14 +54,6 @@ Impacto pendente: registar RD-02 como satisfeito na tabela de verificação do S
 Estado atual: o frontend React consome a API real nos fluxos principais de negócio: autenticação, dashboard, relatórios/stock, PDV, devolução, fecho de caixa, ajustes, utilizadores, fornecedores, encomendas, sincronização, entrada de mercadoria e inventário físico. `frontend/src/data/mockData.ts` existe apenas como configuração estática de perfis, rotas e ícones — não é fonte de dados operacionais.
 
 Ação necessária: preencher a secção "Interface" do Capítulo 5 (atualmente em branco) indicando que os fluxos principais consomem a API real e que a camada de apresentação conserva configuração estática para perfis, rotas e ícones.
-
-### DP-02 - Dashboard e relatórios sem endpoints dedicados
-
-Estado atual: existem dados de vendas, stock e fechos, mas não há controladores dedicados para `/api/v1/dashboard` e `/api/v1/relatorios/*`.
-
-Diferença face ao relatório: RF-01 e RF-02 especificam dashboard, relatórios e exportação.
-
-Ação necessária: implementar o módulo de relatórios/dashboard antes dos testes finais, ou assinalar RF-01 e RF-02 como parcialmente satisfeitos na tabela de verificação do SRS (Capítulo 6).
 
 ### DP-03 - Consolidação central baseada em metadados, não em snapshots completos
 

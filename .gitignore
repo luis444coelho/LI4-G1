@@ -1,5 +1,9 @@
 backend/target/
 backend/mini-formiga-local.db
+backend/*.db
+*.db
+logs/
+backend/logs/
 frontend/node_modules/
 frontend/dist/
 .idea/

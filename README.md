@@ -1,82 +1,92 @@
 # Mini-Formiga
 
-Guia rapido para correr o projeto (backend + frontend) e comandos principais.
+Guia rapido para correr o projeto. Para instrucoes completas, ver tambem `GUIA_EXECUCAO.md`.
 
 ## Pre-requisitos
 
-- Java 17+
+- Java 21
 - Maven 3.9+
-- Node.js 18+ (ou 20+)
-- Docker (opcional, para Postgres)
+- Node.js 20+
+- Docker e Docker Compose
 
 ## Estrutura
 
 - `backend/`: Spring Boot (perfil local com SQLite, perfil central com Postgres)
 - `frontend/`: React + Vite
 
-## Backend (Spring Boot)
+## Arranque rapido com Docker Compose
 
-### Perfil local (SQLite, porta 8080)
+O Compose arranca a arquitetura usada na implementacao fisica:
 
-```bash
-cd backend
-mvn spring-boot:run
-```
-
-### Perfil central (Postgres, porta 8081)
+- PostgreSQL central;
+- backend central no perfil `central`, porta `8081`;
+- backend local no perfil `local`, porta `8080`, com SQLite;
+- frontend React/Vite, porta `3000`.
 
 ```bash
-cd backend
-SPRING_PROFILES_ACTIVE=central mvn spring-boot:run
+docker compose up --build
 ```
 
-### Variaveis uteis (opcionais)
+URLs principais:
 
-- `SPRING_PROFILES_ACTIVE=local|central`
-- `SERVER_PORT=8080|8081`
-- `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` (para o perfil central)
-- `JWT_SECRET`, `JWT_EXPIRATION_MINUTES`
-- `SYNC_TOKEN`, `CENTRAL_SYNC_URL`
+- Frontend: `http://localhost:3000`
+- Backend local: `http://localhost:8080`
+- Backend central: `http://localhost:8081`
+- Swagger local: `http://localhost:8080/api/swagger-ui.html`
+- Swagger central: `http://localhost:8081/api/swagger-ui.html`
 
-As defaults estao em:
-- `backend/src/main/resources/application.properties`
-- `backend/src/main/resources/application-local.properties`
-- `backend/src/main/resources/application-central.properties`
+## Arranque manual
 
-## Base de dados (Postgres para perfil central)
+### 1. PostgreSQL central
 
 ```bash
 docker compose up -d postgres
 ```
 
-A base de dados local (perfil `local`) usa SQLite em `./mini-formiga-local.db`.
+O PostgreSQL fica exposto no host em `localhost:5433`, para evitar conflitos com instalacoes locais na porta `5432`.
 
-## Frontend (Vite)
+### 2. Backend central
+
+```bash
+cd backend
+SPRING_PROFILES_ACTIVE=central \
+SERVER_PORT=8081 \
+DB_URL=jdbc:postgresql://localhost:5433/miniFormiga_central \
+DB_USERNAME=miniFormiga \
+DB_PASSWORD=miniFormiga_dev \
+mvn spring-boot:run
+```
+
+### 3. Backend local da loja
+
+```bash
+cd backend
+SPRING_PROFILES_ACTIVE=local \
+SERVER_PORT=8080 \
+DB_URL=jdbc:sqlite:./mini-formiga-local.db \
+CENTRAL_SYNC_URL=http://localhost:8081/api/v1/central/sincronizacao/receber \
+mvn spring-boot:run
+```
+
+### 4. Frontend
 
 ```bash
 cd frontend
-npm install
-npm run dev
+npm ci
+VITE_API_BASE_URL=http://localhost:8080/api/v1 npm run dev -- --host 0.0.0.0 --port 3000
 ```
 
-- Frontend: http://localhost:3000
-- Backend local: http://localhost:8080
-- Backend central: http://localhost:8081
+## Variaveis uteis
 
-Nota: o Vite faz proxy de `/api` para `http://localhost:8080` (ver `frontend/vite.config.ts`).
+- `SPRING_PROFILES_ACTIVE=local|central`
+- `SERVER_PORT=8080|8081`
+- `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`
+- `JWT_SECRET`, `JWT_EXPIRATION_MINUTES`
+- `SYNC_TOKEN`, `CENTRAL_SYNC_URL`
+- `DEMO_DATA_ENABLED=true|false`
+- `CORS_ALLOWED_ORIGINS=http://localhost:3000`
 
-## Docker Compose (opcional)
-
-O `docker-compose.yml` sobe apenas:
-- Postgres (para o perfil `central`)
-- Frontend (dev server)
-
-```bash
-docker compose up -d
-```
-
-Se usares o frontend via Docker, o proxy para `localhost:8080` aponta para o container e nao para o host.
-Nesse caso, ou corres o frontend localmente com `npm run dev`, ou ajustas o proxy/base URL.
+Existe um exemplo em `.env.example`.
 
 ## Credenciais demo
 
@@ -103,6 +113,14 @@ MiniFormiga2026!
 ```bash
 cd backend
 mvn test
+```
+
+## Testes (frontend)
+
+```bash
+cd frontend
+npm run lint
+npm run build
 ```
 
 ## Limpeza rapida
