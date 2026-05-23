@@ -22,7 +22,6 @@ import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.repository.CondicaoComercialRepository;
 import pt.miniFormiga.repository.EncomendaRepository;
 import pt.miniFormiga.repository.EntradaMercadoriaRepository;
-import pt.miniFormiga.repository.EstadoEncomendaRepository;
 import pt.miniFormiga.repository.FornecedorRepository;
 import pt.miniFormiga.repository.GuiaRemessaRepository;
 import pt.miniFormiga.repository.LojaRepository;
@@ -51,7 +50,6 @@ class EncomendasFacadeTest {
     @Mock FornecedorRepository fornecedorRepository;
     @Mock CondicaoComercialRepository condicaoComercialRepository;
     @Mock EncomendaRepository encomendaRepository;
-    @Mock EstadoEncomendaRepository estadoEncomendaRepository;
     @Mock GuiaRemessaRepository guiaRemessaRepository;
     @Mock EntradaMercadoriaRepository entradaMercadoriaRepository;
     @Mock LojaRepository lojaRepository;
@@ -72,7 +70,6 @@ class EncomendasFacadeTest {
                 fornecedorRepository,
                 condicaoComercialRepository,
                 encomendaRepository,
-                estadoEncomendaRepository,
                 guiaRemessaRepository,
                 entradaMercadoriaRepository,
                 lojaRepository,
@@ -137,7 +134,6 @@ class EncomendasFacadeTest {
         EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
-        when(estadoEncomendaRepository.findByCodigo("PENDENTE")).thenReturn(Optional.of(pendente));
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(condicaoComercialRepository.findByFornecedorIdAndProdutoId(fornecedor.getId(), produto.getId()))
                 .thenReturn(Optional.of(condicao(produto)));
@@ -169,7 +165,6 @@ class EncomendasFacadeTest {
         LocalDateTime submissao = LocalDateTime.of(2026, 5, 20, 10, 0);
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
-        when(estadoEncomendaRepository.findByCodigo("PENDENTE")).thenReturn(Optional.of(pendente));
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(condicaoComercialRepository.findByFornecedorIdAndProdutoId(fornecedor.getId(), produto.getId()))
                 .thenReturn(Optional.of(condicao(produto)));
@@ -191,7 +186,6 @@ class EncomendasFacadeTest {
         LocalDateTime submissao = LocalDateTime.of(2026, 5, 22, 19, 0); // sexta-feira
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
-        when(estadoEncomendaRepository.findByCodigo("PENDENTE")).thenReturn(Optional.of(pendente));
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(condicaoComercialRepository.findByFornecedorIdAndProdutoId(fornecedor.getId(), produto.getId()))
                 .thenReturn(Optional.of(condicao(produto)));
@@ -212,7 +206,6 @@ class EncomendasFacadeTest {
         EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
-        when(estadoEncomendaRepository.findByCodigo("PENDENTE")).thenReturn(Optional.of(pendente));
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(condicaoComercialRepository.findByFornecedorIdAndProdutoId(fornecedor.getId(), produto.getId()))
                 .thenReturn(Optional.empty());
@@ -236,7 +229,6 @@ class EncomendasFacadeTest {
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(guiaRemessaRepository.findByNumero("GR-1")).thenReturn(Optional.empty());
         when(guiaRemessaRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(estadoEncomendaRepository.findByCodigo("RECEBIDA")).thenReturn(Optional.of(recebida));
         when(entradaMercadoriaRepository.save(any(EntradaMercadoria.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(entradaMercadoriaRepository.findByGuiaRemessaEncomendaId(encomenda.getId())).thenReturn(List.of());
 
@@ -278,7 +270,6 @@ class EncomendasFacadeTest {
         ));
 
         assertEquals("PENDENTE", encomenda.getEstado().getCodigo());
-        verify(estadoEncomendaRepository, never()).findByCodigo("RECEBIDA");
     }
 
     @Test
@@ -297,7 +288,6 @@ class EncomendasFacadeTest {
         when(produtoRepository.findById(sandes.getId())).thenReturn(Optional.of(sandes));
         when(guiaRemessaRepository.findByNumero("GR-3")).thenReturn(Optional.empty());
         when(guiaRemessaRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(estadoEncomendaRepository.findByCodigo("RECEBIDA")).thenReturn(Optional.of(recebida));
         when(entradaMercadoriaRepository.save(any(EntradaMercadoria.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(entradaMercadoriaRepository.findByGuiaRemessaEncomendaId(encomenda.getId())).thenReturn(List.of());
 

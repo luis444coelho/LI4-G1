@@ -8,7 +8,7 @@ import pt.miniFormiga.auditoria.AuditoriaService;
 import pt.miniFormiga.domain.CondicaoComercial;
 import pt.miniFormiga.domain.Encomenda;
 import pt.miniFormiga.domain.EntradaMercadoria;
-import pt.miniFormiga.domain.EstadoEncomenda;
+import pt.miniFormiga.domain.EstadoEncomendaCodigo;
 import pt.miniFormiga.domain.Fornecedor;
 import pt.miniFormiga.domain.GuiaRemessa;
 import pt.miniFormiga.domain.LinhaEncomenda;
@@ -21,7 +21,6 @@ import pt.miniFormiga.exception.RecursoNaoEncontradoException;
 import pt.miniFormiga.repository.CondicaoComercialRepository;
 import pt.miniFormiga.repository.EncomendaRepository;
 import pt.miniFormiga.repository.EntradaMercadoriaRepository;
-import pt.miniFormiga.repository.EstadoEncomendaRepository;
 import pt.miniFormiga.repository.FornecedorRepository;
 import pt.miniFormiga.repository.GuiaRemessaRepository;
 import pt.miniFormiga.repository.LojaRepository;
@@ -50,7 +49,6 @@ public class EncomendasFacade implements ISubEncomendas {
     private final FornecedorRepository fornecedorRepository;
     private final CondicaoComercialRepository condicaoComercialRepository;
     private final EncomendaRepository encomendaRepository;
-    private final EstadoEncomendaRepository estadoEncomendaRepository;
     private final GuiaRemessaRepository guiaRemessaRepository;
     private final EntradaMercadoriaRepository entradaMercadoriaRepository;
     private final LojaRepository lojaRepository;
@@ -62,7 +60,6 @@ public class EncomendasFacade implements ISubEncomendas {
     public EncomendasFacade(FornecedorRepository fornecedorRepository,
                             CondicaoComercialRepository condicaoComercialRepository,
                             EncomendaRepository encomendaRepository,
-                            EstadoEncomendaRepository estadoEncomendaRepository,
                             GuiaRemessaRepository guiaRemessaRepository,
                             EntradaMercadoriaRepository entradaMercadoriaRepository,
                             LojaRepository lojaRepository,
@@ -73,7 +70,6 @@ public class EncomendasFacade implements ISubEncomendas {
         this.fornecedorRepository = fornecedorRepository;
         this.condicaoComercialRepository = condicaoComercialRepository;
         this.encomendaRepository = encomendaRepository;
-        this.estadoEncomendaRepository = estadoEncomendaRepository;
         this.guiaRemessaRepository = guiaRemessaRepository;
         this.entradaMercadoriaRepository = entradaMercadoriaRepository;
         this.lojaRepository = lojaRepository;
@@ -201,7 +197,7 @@ public class EncomendasFacade implements ISubEncomendas {
             throw new BusinessException("FORNECEDOR_INATIVO", "Fornecedor inativo");
         }
 
-        EstadoEncomenda pendente = obterOuCriarEstado(ESTADO_PENDENTE, "Pendente");
+        EstadoEncomendaCodigo pendente = estado(ESTADO_PENDENTE);
         Encomenda encomenda = new Encomenda(loja, fornecedor, pendente);
         for (CriarLinhaEncomendaRequest linhaRequest : request.linhas()) {
             Produto produto = produtoRepository.findById(linhaRequest.produtoId())
@@ -219,8 +215,7 @@ public class EncomendasFacade implements ISubEncomendas {
     @Override
     public EncomendaResponse atualizarEstado(UUID id, AtualizarEstadoEncomendaRequest request) {
         Encomenda encomenda = obterEncomendaEntidade(id);
-        EstadoEncomenda estado = estadoEncomendaRepository.findByCodigo(request.estadoCodigo())
-                .orElseThrow(() -> new BusinessException("ESTADO_ENCOMENDA_INVALIDO", "Estado de encomenda invalido"));
+        EstadoEncomendaCodigo estado = estado(request.estadoCodigo());
         encomenda.alterarEstado(estado);
         auditoria.registar(TipoOperacao.ENCOMENDA_ESTADO_ATUALIZADO, null, "ENCOMENDA", "Estado de encomenda atualizado");
         return EncomendaResponse.from(encomenda);
@@ -230,11 +225,14 @@ public class EncomendasFacade implements ISubEncomendas {
     @Transactional(readOnly = true)
     public List<SugestaoEncomendaResponse> sugerirEncomendas(UUID lojaId, UUID fornecedorId) {
         return stock.getAlertasAtivos(lojaId).stream()
-                .flatMap(alerta -> condicoesParaSugestao(alerta.getStock().getProduto().getId(), fornecedorId).stream()
+                .flatMap(alerta -> condicoesParaSugestao(alerta.getProduto().getId(), fornecedorId).stream()
                         .map(condicao -> {
-                            int nivelMinimo = alerta.getStock().getNivelMinimo() == null
+                            Integer nivelMinimoConfigurado = alerta.getProdutoLoja() == null
+                                    ? alerta.getProduto().getNivelMinimo()
+                                    : alerta.getProdutoLoja().getNivelMinimo();
+                            int nivelMinimo = nivelMinimoConfigurado == null
                                     ? 0
-                                    : alerta.getStock().getNivelMinimo().getQuantidade();
+                                    : nivelMinimoConfigurado;
                             int quantidadeSugerida = Math.max(condicao.getQuantidadeMinima(),
                                     Math.max(1, nivelMinimo - alerta.getQuantidadeNoMomento() + condicao.getQuantidadeMinima()));
                             return new SugestaoEncomendaResponse(
@@ -242,9 +240,9 @@ public class EncomendasFacade implements ISubEncomendas {
                                     condicao.getFornecedor().getNome(),
                                     condicao.getProduto().getId(),
                                     condicao.getProduto().getNome(),
-                                    alerta.getStock().getLoja().getId(),
+                                    lojaId,
                                     alerta.getQuantidadeNoMomento(),
-                                    alerta.getStock().getNivelMinimo() == null ? null : alerta.getStock().getNivelMinimo().getQuantidade(),
+                                    nivelMinimoConfigurado,
                                     quantidadeSugerida,
                                     condicao.getPrecoUnitario()
                             );
@@ -314,9 +312,12 @@ public class EncomendasFacade implements ISubEncomendas {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Encomenda", id));
     }
 
-    private EstadoEncomenda obterOuCriarEstado(String codigo, String descricao) {
-        return estadoEncomendaRepository.findByCodigo(codigo)
-                .orElseGet(() -> estadoEncomendaRepository.save(new EstadoEncomenda(codigo, descricao)));
+    private EstadoEncomendaCodigo estado(String codigo) {
+        try {
+            return EstadoEncomendaCodigo.valueOf(codigo);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new BusinessException("ESTADO_ENCOMENDA_INVALIDO", "Estado de encomenda invalido");
+        }
     }
 
     private CondicaoComercial obterCondicaoFornecedorProduto(UUID fornecedorId, UUID produtoId) {
@@ -381,7 +382,7 @@ public class EncomendasFacade implements ISubEncomendas {
         boolean todasLinhasRecebidas = encomenda.getLinhas().stream()
                 .allMatch(linha -> recebidoPorProduto.getOrDefault(linha.getProduto().getId(), 0) >= linha.getQuantidade());
         if (todasLinhasRecebidas) {
-            encomenda.alterarEstado(obterOuCriarEstado(ESTADO_RECEBIDA, "Recebida"));
+            encomenda.alterarEstado(estado(ESTADO_RECEBIDA));
         }
     }
 }

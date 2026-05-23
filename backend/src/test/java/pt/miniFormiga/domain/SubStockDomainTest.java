@@ -71,7 +71,7 @@ class SubStockDomainTest {
         assertEquals("QUEBRA", motivo.getCodigo());
         assertEquals("Produto danificado", motivo.getDescricao());
         assertEquals(stock, ajuste.getStock());
-        assertEquals(motivo, ajuste.getMotivo());
+        assertEquals(MotivoAjusteCodigo.QUEBRA, ajuste.getMotivo());
         assertEquals(utilizador, ajuste.getResponsavel());
         assertEquals("produto partido", ajuste.getObservacoes());
         assertNotNull(ajuste.getDataHora());

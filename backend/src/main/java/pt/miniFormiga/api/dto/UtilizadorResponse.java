@@ -27,7 +27,7 @@ public record UtilizadorResponse(
                 utilizador.getEmail(),
                 utilizador.isAtivo(),
                 utilizador.getPerfil().getNome(),
-                utilizador.getPerfil().getId(),
+                null,
                 utilizador.getLoja().getId(),
                 utilizador.getLoja().getNome(),
                 utilizador.getPerfil().getPermissoes(),

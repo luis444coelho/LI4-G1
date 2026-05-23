@@ -27,7 +27,7 @@ public final class PdvDtos {
     public record AtualizarProdutoRequest(String nome, String descricao, @DecimalMin("0.01") BigDecimal precoVenda, @DecimalMin("0.00") BigDecimal precoCusto,
                                           UUID categoriaId, UUID taxaIvaId, UUID fornecedorPrincipalId, Boolean ativo) { }
     public record AdicionarLinhaRequest(@NotNull UUID produtoId, @Min(1) int quantidade) { }
-    public record FinalizarVendaRequest(@NotNull UUID meioPagamentoId) { }
+    public record FinalizarVendaRequest(@NotBlank String meioPagamento) { }
     public record EmitirFaturaRequest(String nifCliente, String nomeCliente) { }
     public record ProcessarDevolucaoRequest(@NotNull UUID produtoId, @Min(1) int quantidade) { }
     public record RegistarFechoCaixaRequest(LocalDate data) { }
@@ -56,7 +56,7 @@ public final class PdvDtos {
         public static VendaDTO from(Venda venda) {
             return new VendaDTO(venda.getId(), venda.getLoja().getId(), venda.getUtilizador().getId(),
                     venda.getDataHora(), venda.isAnulada(),
-                    venda.getMeioPagamento() == null ? null : venda.getMeioPagamento().getTipo(),
+                    venda.getMeioPagamento() == null ? null : venda.getMeioPagamento().name(),
                     venda.getTotalSemIVA(), venda.getTotalIVA(), venda.getTotalComIVA(),
                     venda.getLinhas().stream().map(LinhaVendaDTO::from).toList());
         }
@@ -87,6 +87,10 @@ public final class PdvDtos {
     public record MeioPagamentoDTO(UUID id, String tipo, String descricao) {
         public static MeioPagamentoDTO from(MeioPagamento meioPagamento) {
             return new MeioPagamentoDTO(meioPagamento.getId(), meioPagamento.getTipo(), meioPagamento.getDescricao());
+        }
+
+        public static MeioPagamentoDTO from(MeioPagamentoTipo meioPagamento) {
+            return new MeioPagamentoDTO(null, meioPagamento.name(), meioPagamento.name());
         }
     }
 }

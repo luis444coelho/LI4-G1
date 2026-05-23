@@ -3,6 +3,8 @@ package pt.miniFormiga.domain;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -29,9 +31,9 @@ public class Venda extends EntidadeBase {
     @JoinColumn(name = "utilizador_id", nullable = false)
     private Utilizador utilizador;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "meio_pagamento_id")
-    private MeioPagamento meioPagamento;
+    @Enumerated(EnumType.STRING)
+    @Column
+    private MeioPagamentoTipo meioPagamento;
 
     @Column(nullable = false)
     private LocalDateTime dataHora;
@@ -58,7 +60,7 @@ public class Venda extends EntidadeBase {
         this(loja, utilizador, null);
     }
 
-    public Venda(Loja loja, Utilizador utilizador, MeioPagamento meioPagamento) {
+    public Venda(Loja loja, Utilizador utilizador, MeioPagamentoTipo meioPagamento) {
         this.loja = loja;
         this.utilizador = utilizador;
         this.meioPagamento = meioPagamento;
@@ -104,6 +106,10 @@ public class Venda extends EntidadeBase {
     }
 
     public void finalizar(MeioPagamento meioPagamento) {
+        finalizar(meioPagamento == null ? null : MeioPagamentoTipo.valueOf(meioPagamento.getTipo()));
+    }
+
+    public void finalizar(MeioPagamentoTipo meioPagamento) {
         if (anulada) {
             throw new IllegalStateException("Venda anulada nao pode ser finalizada");
         }
@@ -145,7 +151,7 @@ public class Venda extends EntidadeBase {
         return utilizador;
     }
 
-    public MeioPagamento getMeioPagamento() {
+    public MeioPagamentoTipo getMeioPagamento() {
         return meioPagamento;
     }
 

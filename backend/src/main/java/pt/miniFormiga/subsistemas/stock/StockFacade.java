@@ -8,12 +8,12 @@ import pt.miniFormiga.domain.AlertaStock;
 import pt.miniFormiga.domain.InventarioFisico;
 import pt.miniFormiga.domain.LinhaInventario;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.MotivoAjuste;
-import pt.miniFormiga.domain.NivelMinimo;
+import pt.miniFormiga.domain.MotivoAjusteCodigo;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
-import pt.miniFormiga.domain.Stock;
-import pt.miniFormiga.domain.TipoOperacao;
+import pt.miniFormiga.domain.ProdutoLoja;
 import pt.miniFormiga.domain.Utilizador;
+import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.exception.RecursoNaoEncontradoException;
 import pt.miniFormiga.exception.StockInsuficienteException;
@@ -22,10 +22,6 @@ import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.InventarioFisicoRepository;
 import pt.miniFormiga.repository.LinhaInventarioRepository;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.MotivoAjusteRepository;
-import pt.miniFormiga.repository.NivelMinimoRepository;
-import pt.miniFormiga.repository.ProdutoRepository;
-import pt.miniFormiga.repository.StockRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
 
 import java.util.List;
@@ -35,68 +31,51 @@ import java.util.UUID;
 @Transactional
 public class StockFacade implements ISubStock {
 
-    private static final List<String> PERFIS_GESTORES_ALERTA = List.of("GESTOR");
-    private static final List<String> PERFIS_LOJA_ALERTA = List.of("GERENTE");
-
-    private final StockRepository stockRepository;
-    private final NivelMinimoRepository nivelMinimoRepository;
     private final AlertaStockRepository alertaStockRepository;
     private final AjusteInventarioRepository ajusteInventarioRepository;
-    private final MotivoAjusteRepository motivoAjusteRepository;
     private final InventarioFisicoRepository inventarioFisicoRepository;
     private final LinhaInventarioRepository linhaInventarioRepository;
     private final LojaRepository lojaRepository;
-    private final ProdutoRepository produtoRepository;
     private final UtilizadorRepository utilizadorRepository;
     private final AuditoriaService auditoria;
+    private final StockStore stockStore;
 
-    public StockFacade(StockRepository stockRepository,
-                       NivelMinimoRepository nivelMinimoRepository,
-                       AlertaStockRepository alertaStockRepository,
+    public StockFacade(AlertaStockRepository alertaStockRepository,
                        AjusteInventarioRepository ajusteInventarioRepository,
-                       MotivoAjusteRepository motivoAjusteRepository,
                        InventarioFisicoRepository inventarioFisicoRepository,
                        LinhaInventarioRepository linhaInventarioRepository,
                        LojaRepository lojaRepository,
-                       ProdutoRepository produtoRepository,
                        UtilizadorRepository utilizadorRepository,
-                       AuditoriaService auditoria) {
-        this.stockRepository = stockRepository;
-        this.nivelMinimoRepository = nivelMinimoRepository;
+                       AuditoriaService auditoria,
+                       StockStore stockStore) {
         this.alertaStockRepository = alertaStockRepository;
         this.ajusteInventarioRepository = ajusteInventarioRepository;
-        this.motivoAjusteRepository = motivoAjusteRepository;
         this.inventarioFisicoRepository = inventarioFisicoRepository;
         this.linhaInventarioRepository = linhaInventarioRepository;
         this.lojaRepository = lojaRepository;
-        this.produtoRepository = produtoRepository;
         this.utilizadorRepository = utilizadorRepository;
         this.auditoria = auditoria;
+        this.stockStore = stockStore;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<StockDTO> consultarStock(UUID lojaId) {
-        return stockRepository.findByLojaId(lojaId).stream()
-                .map(stock -> new StockDTO(
-                        stock.getProduto().getId(),
-                        stock.getLoja().getId(),
-                        stock.getQuantidade(),
-                        stock.getNivelMinimo() == null ? null : stock.getNivelMinimo().getQuantidade(),
-                        stock.precisaReposicao()
+        return stockStore.listar(lojaId).stream()
+                .map(item -> new StockDTO(
+                        item.produtoId(),
+                        item.lojaId(),
+                        item.quantidade(),
+                        item.nivelMinimo(),
+                        item.precisaReposicao()
                 ))
                 .toList();
     }
 
     @Override
     public void atualizarStock(UUID produtoId, UUID lojaId, int delta) {
-        Stock stock = obterStock(produtoId, lojaId);
-        int novaQuantidade = stock.getQuantidade() + delta;
-        if (novaQuantidade < 0) {
-            throw new StockInsuficienteException(produtoId, stock.getQuantidade(), Math.abs(delta));
-        }
-        stock.atualizarQuantidade(delta);
-        emitirAlertaSeNecessario(stock);
+        StockItem item = stockStore.atualizarStock(produtoId, lojaId, delta);
+        emitirAlertaSeNecessario(item);
     }
 
     @Override
@@ -104,26 +83,19 @@ public class StockFacade implements ISubStock {
         if (quantidade < 0) {
             throw new BusinessException("NIVEL_MINIMO_INVALIDO", "Nivel minimo nao pode ser negativo");
         }
-        Stock stock = obterStock(produtoId, lojaId);
-        NivelMinimo nivelMinimo = nivelMinimoRepository.findByStockId(stock.getId())
-                .orElseGet(() -> new NivelMinimo(stock, quantidade));
-        nivelMinimo.atualizarQuantidade(quantidade);
-        nivelMinimoRepository.save(nivelMinimo);
-        emitirAlertaSeNecessario(stock);
+        StockItem item = stockStore.definirNivelMinimo(produtoId, lojaId, quantidade);
+        emitirAlertaSeNecessario(item);
     }
 
     @Override
     public AjusteInventario registarAjuste(UUID produtoId, UUID lojaId, int quantidade, String motivo, UUID utilizadorId) {
-        Stock stock = obterStock(produtoId, lojaId);
-        MotivoAjuste motivoAjuste = motivoAjusteRepository.findByCodigo(motivo)
-                .orElseThrow(() -> new BusinessException("MOTIVO_AJUSTE_INVALIDO", "Motivo de ajuste invalido"));
+        MotivoAjusteCodigo motivoAjuste = motivo(motivo);
         Utilizador utilizador = utilizadorRepository.findById(utilizadorId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Utilizador", utilizadorId));
 
         atualizarStock(produtoId, lojaId, quantidade);
-        AjusteInventario ajuste = ajusteInventarioRepository.save(
-                new AjusteInventario(stock, motivoAjuste, utilizador, quantidade, motivo)
-        );
+        StockItem item = stockStore.obter(produtoId, lojaId);
+        AjusteInventario ajuste = ajusteInventarioRepository.save(criarAjuste(item, motivoAjuste, utilizador, quantidade, motivo));
         auditoria.registar(TipoOperacao.AJUSTE_STOCK, utilizadorId, "STOCK", "Ajuste de stock registado");
         return ajuste;
     }
@@ -138,8 +110,8 @@ public class StockFacade implements ISubStock {
         Utilizador utilizador = utilizadorRepository.findById(utilizadorId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Utilizador", utilizadorId));
         InventarioFisico inventario = new InventarioFisico(loja, utilizador);
-        stockRepository.findByLojaId(lojaId).forEach(stock ->
-                new LinhaInventario(inventario, stock.getProduto(), 0, stock.getQuantidade()));
+        stockStore.listar(lojaId).forEach(item ->
+                new LinhaInventario(inventario, item.produto(), 0, item.quantidade()));
         inventario.calcularDiscrepancias();
         return inventarioFisicoRepository.save(inventario);
     }
@@ -154,15 +126,13 @@ public class StockFacade implements ISubStock {
         if (inventario.isFechado()) {
             throw new BusinessException("INVENTARIO_FECHADO", "Inventario fisico ja esta fechado");
         }
-        Produto produto = produtoRepository.findById(produtoId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", produtoId));
-        Stock stock = obterStock(produtoId, inventario.getLoja().getId());
+        StockItem item = stockStore.obter(produtoId, inventario.getLoja().getId());
         LinhaInventario linha = linhaInventarioRepository.findByInventarioIdAndProdutoId(inventarioId, produtoId)
                 .map(existente -> {
                     existente.atualizarQuantidadeContada(quantidade);
                     return existente;
                 })
-                .orElseGet(() -> new LinhaInventario(inventario, produto, quantidade, stock.getQuantidade()));
+                .orElseGet(() -> new LinhaInventario(inventario, item.produto(), quantidade, item.quantidade()));
         inventario.calcularDiscrepancias();
         return linhaInventarioRepository.save(linha);
     }
@@ -182,7 +152,10 @@ public class StockFacade implements ISubStock {
     @Override
     @Transactional(readOnly = true)
     public List<AlertaStock> getAlertasAtivos(UUID lojaId) {
-        return alertaStockRepository.findByStockLojaIdAndResolvidoFalseOrderByDataHoraDesc(lojaId);
+        if (lojaId != null) {
+            return alertaStockRepository.findByLojaIdAndResolvidoFalseOrderByDataHoraDesc(lojaId);
+        }
+        return alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc();
     }
 
     @Override
@@ -204,33 +177,49 @@ public class StockFacade implements ISubStock {
     @Override
     @Transactional(readOnly = true)
     public List<LinhaInventario> listarDiscrepanciasInventario(UUID inventarioId) {
-        return linhaInventarioRepository.findByInventarioIdAndDiscrepanciaNot(inventarioId, 0);
+        return linhaInventarioRepository.findByInventarioId(inventarioId).stream()
+                .filter(linha -> linha.getDiscrepancia() != 0)
+                .toList();
     }
 
-    private Stock obterStock(UUID produtoId, UUID lojaId) {
-        return stockRepository.findByProdutoIdAndLojaId(produtoId, lojaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Stock", produtoId));
-    }
-
-    private void emitirAlertaSeNecessario(Stock stock) {
-        if (stock.precisaReposicao() && !alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())) {
-            AlertaStock alerta = new AlertaStock(stock, stock.getQuantidade());
-            destinatariosAlerta(stock).forEach(alerta::adicionarDestinatario);
+    private void emitirAlertaSeNecessario(StockItem item) {
+        boolean alertaAberto = item.produtoLoja() == null
+                ? alertaStockRepository.existsByProdutoIdAndResolvidoFalse(item.produtoId())
+                : alertaStockRepository.existsByProdutoLojaIdAndResolvidoFalse(item.produtoLoja().getId());
+        if (item.precisaReposicao() && !alertaAberto) {
+            AlertaStock alerta = item.produtoLoja() == null
+                    ? new AlertaStock(item.produto(), item.quantidade())
+                    : new AlertaStock(item.produtoLoja(), item.quantidade());
             alertaStockRepository.save(alerta);
         }
     }
 
-    private List<Utilizador> destinatariosAlerta(Stock stock) {
+    private AjusteInventario criarAjuste(StockItem item,
+                                         MotivoAjusteCodigo motivo,
+                                         Utilizador utilizador,
+                                         int quantidade,
+                                         String observacoes) {
+        ProdutoLoja produtoLoja = item.produtoLoja();
+        if (produtoLoja != null) {
+            return new AjusteInventario(produtoLoja, motivo, utilizador, quantidade, observacoes);
+        }
+        Produto produto = item.produto();
+        return new AjusteInventario(produto, motivo, utilizador, quantidade, observacoes);
+    }
+
+    private MotivoAjusteCodigo motivo(String codigo) {
+        try {
+            return MotivoAjusteCodigo.valueOf(codigo);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new BusinessException("MOTIVO_AJUSTE_INVALIDO", "Motivo de ajuste invalido");
+        }
+    }
+
+    @SuppressWarnings("unused")
+    private List<Utilizador> destinatariosAlerta(UUID lojaId) {
         List<Utilizador> destinatarios = new java.util.ArrayList<>();
-        List<Utilizador> gestores = utilizadorRepository.findByAtivoTrueAndPerfilNomeIn(PERFIS_GESTORES_ALERTA);
-        if (gestores != null) {
-            destinatarios.addAll(gestores);
-        }
-        List<Utilizador> gerentes = utilizadorRepository.findByAtivoTrueAndLojaIdAndPerfilNomeIn(
-                stock.getLoja().getId(), PERFIS_LOJA_ALERTA);
-        if (gerentes != null) {
-            destinatarios.addAll(gerentes);
-        }
+        destinatarios.addAll(utilizadorRepository.findByAtivoTrueAndPerfilIn(List.of(PerfilUtilizador.GESTOR)));
+        destinatarios.addAll(utilizadorRepository.findByAtivoTrueAndLojaIdAndPerfilIn(lojaId, List.of(PerfilUtilizador.GERENTE)));
         return destinatarios.stream().distinct().toList();
     }
 }

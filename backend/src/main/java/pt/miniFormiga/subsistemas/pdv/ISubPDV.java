@@ -21,7 +21,7 @@ public interface ISubPDV {
     Page<ProdutoDTO> listarProdutos(UUID lojaId, Pageable pageable);
     Venda registarVenda(UUID lojaId, UUID utilizadorId);
     LinhaVenda adicionarLinhaVenda(UUID vendaId, UUID produtoId, Integer quantidade);
-    Venda finalizarVenda(UUID vendaId, UUID meioPagamentoId);
+    Venda finalizarVenda(UUID vendaId, String meioPagamento);
     void anularVenda(UUID vendaId);
     void anularLinhaVenda(UUID vendaId, UUID linhaId);
     Fatura emitirFatura(UUID vendaId, String nifCliente, String nomeCliente);

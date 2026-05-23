@@ -66,8 +66,9 @@ class DiagramaMetodosDomainTest {
         Utilizador utilizador = criarUtilizador(loja);
         Produto produto = criarProduto();
         MeioPagamento numerario = new MeioPagamento("NUMERARIO", "Numerario");
-        Venda venda = new Venda(loja, utilizador, numerario);
+        Venda venda = new Venda(loja, utilizador);
         LinhaVenda linhaVenda = new LinhaVenda(venda, produto, 2);
+        venda.finalizar(numerario);
 
         venda.calcularTotais();
 
@@ -82,7 +83,7 @@ class DiagramaMetodosDomainTest {
 
         assertTrue(fatura.isEmitida());
         assertEquals(venda.getTotalComIVA(), fatura.getTotalComIVA());
-        assertTrue(new String(fatura.gerarPDF(), StandardCharsets.UTF_8).contains("Fatura A/2026/0001"));
+        assertTrue(new String(fatura.gerarPDF(), StandardCharsets.UTF_8).contains("Fatura A/2026/1"));
 
         FechoCaixa fechoCaixa = new FechoCaixa(loja, utilizador, LocalDate.of(2026, 4, 29), List.of(venda));
         fechoCaixa.confirmar();

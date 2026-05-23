@@ -6,13 +6,13 @@ import pt.miniFormiga.domain.AlertaStock;
 import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Produto;
-import pt.miniFormiga.domain.Stock;
 import pt.miniFormiga.domain.Venda;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.StockRepository;
 import pt.miniFormiga.repository.VendaRepository;
+import pt.miniFormiga.subsistemas.stock.StockItem;
+import pt.miniFormiga.subsistemas.stock.StockStore;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,18 +38,18 @@ public class RelatoriosFacade implements ISubRelatorios {
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
     private final VendaRepository vendaRepository;
-    private final StockRepository stockRepository;
     private final AlertaStockRepository alertaStockRepository;
     private final LojaRepository lojaRepository;
+    private final StockStore stockStore;
 
     public RelatoriosFacade(VendaRepository vendaRepository,
-                            StockRepository stockRepository,
                             AlertaStockRepository alertaStockRepository,
-                            LojaRepository lojaRepository) {
+                            LojaRepository lojaRepository,
+                            StockStore stockStore) {
         this.vendaRepository = vendaRepository;
-        this.stockRepository = stockRepository;
         this.alertaStockRepository = alertaStockRepository;
         this.lojaRepository = lojaRepository;
+        this.stockStore = stockStore;
     }
 
     @Override
@@ -99,10 +99,9 @@ public class RelatoriosFacade implements ISubRelatorios {
     public RelatorioStockResponse relatorioStock(RelatorioFiltro filtro) {
         RelatorioFiltro normalizado = normalizar(filtro);
         List<StockItemResponse> itens = buscarStocks(normalizado).stream()
-                .filter(stock -> pertenceCategoria(stock.getProduto(), normalizado.categoriaId()))
+                .filter(item -> pertenceCategoria(item.produto(), normalizado.categoriaId()))
                 .sorted(Comparator
-                        .comparing((Stock stock) -> stock.getLoja().getNome())
-                        .thenComparing(stock -> stock.getProduto().getNome()))
+                        .comparing((StockItem item) -> item.produto().getNome()))
                 .map(this::stockResponse)
                 .toList();
 
@@ -179,19 +178,14 @@ public class RelatoriosFacade implements ISubRelatorios {
         return vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(inicio, fimExclusivo);
     }
 
-    private List<Stock> buscarStocks(RelatorioFiltro filtro) {
-        if (filtro.lojaId() != null) {
-            return stockRepository.findByLojaId(filtro.lojaId());
-        }
-        return stockRepository.findAll();
+    private List<StockItem> buscarStocks(RelatorioFiltro filtro) {
+        return stockStore.listar(filtro.lojaId());
     }
 
     private List<AlertaStock> alertasAtivos(RelatorioFiltro filtro) {
-        List<AlertaStock> alertas = filtro.lojaId() == null
-                ? alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()
-                : alertaStockRepository.findByStockLojaIdAndResolvidoFalseOrderByDataHoraDesc(filtro.lojaId());
+        List<AlertaStock> alertas = alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc();
         return alertas.stream()
-                .filter(alerta -> pertenceCategoria(alerta.getStock().getProduto(), filtro.categoriaId()))
+                .filter(alerta -> pertenceCategoria(alerta.getProduto(), filtro.categoriaId()))
                 .toList();
     }
 
@@ -306,20 +300,23 @@ public class RelatoriosFacade implements ISubRelatorios {
         );
     }
 
-    private StockItemResponse stockResponse(Stock stock) {
-        BigDecimal valor = stock.getProduto().getPrecoCusto()
-                .multiply(BigDecimal.valueOf(stock.getQuantidade()));
+    private StockItemResponse stockResponse(StockItem item) {
+        Produto produto = item.produto();
+        BigDecimal valor = produto.getPrecoCusto()
+                .multiply(BigDecimal.valueOf(item.quantidade()));
+        UUID lojaId = item.lojaId();
+        String loja = item.lojaNome() != null ? item.lojaNome() : lojaId == null ? null : lojaRepository.findById(lojaId).map(Loja::getNome).orElse(null);
         return new StockItemResponse(
-                stock.getProduto().getId(),
-                stock.getProduto().getNome(),
-                stock.getProduto().getCategoria().getNome(),
-                stock.getLoja().getId(),
-                stock.getLoja().getNome(),
-                stock.getQuantidade(),
-                stock.getNivelMinimo() == null ? null : stock.getNivelMinimo().getQuantidade(),
-                stock.precisaReposicao(),
+                produto.getId(),
+                produto.getNome(),
+                produto.getCategoria().getNome(),
+                lojaId,
+                loja,
+                item.quantidade(),
+                item.nivelMinimo(),
+                item.precisaReposicao(),
                 dinheiro(valor),
-                stock.getDataUltimaAtualizacao()
+                item.atualizadoEm()
         );
     }
 

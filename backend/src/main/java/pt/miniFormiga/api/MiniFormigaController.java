@@ -275,7 +275,7 @@ public class MiniFormigaController {
 
     public record AjusteInventarioResponse(UUID id, int quantidade, String observacoes, UUID stockId) {
         static AjusteInventarioResponse from(AjusteInventario ajusteInventario) {
-            return new AjusteInventarioResponse(ajusteInventario.getId(), ajusteInventario.getQuantidade(), ajusteInventario.getObservacoes(), ajusteInventario.getStock().getId());
+            return new AjusteInventarioResponse(ajusteInventario.getId(), ajusteInventario.getQuantidade(), ajusteInventario.getObservacoes(), ajusteInventario.getProduto().getId());
         }
     }
 

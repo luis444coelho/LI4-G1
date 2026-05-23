@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,7 +30,10 @@ public class LinhaVenda extends EntidadeBase {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal precoUnitario;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 5, scale = 2)
+    private BigDecimal taxaIvaPercentagem;
+
+    @Transient
     private BigDecimal totalLinha = BigDecimal.ZERO;
 
     @Column(nullable = false)
@@ -50,6 +54,7 @@ public class LinhaVenda extends EntidadeBase {
         this.produto = Objects.requireNonNull(produto, "Produto e obrigatorio");
         this.quantidade = quantidade;
         this.precoUnitario = Objects.requireNonNull(precoUnitario, "Preco unitario e obrigatorio");
+        this.taxaIvaPercentagem = produto.getTaxaIVA().getPercentagem();
         this.anulada = false;
         calcularTotal();
         this.venda.adicionarLinha(this);
@@ -84,6 +89,10 @@ public class LinhaVenda extends EntidadeBase {
 
     public BigDecimal getPrecoUnitario() {
         return precoUnitario;
+    }
+
+    public BigDecimal getTaxaIvaPercentagem() {
+        return taxaIvaPercentagem;
     }
 
     public BigDecimal getTotalLinha() {

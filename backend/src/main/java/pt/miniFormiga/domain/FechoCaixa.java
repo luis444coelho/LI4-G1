@@ -81,7 +81,7 @@ public class FechoCaixa extends EntidadeBase {
             BigDecimal totalVenda = venda.getTotalComIVA();
             totalGeral = totalGeral.add(totalVenda);
 
-            String tipo = venda.getMeioPagamento() == null ? "" : venda.getMeioPagamento().getTipo();
+            String tipo = venda.getMeioPagamento() == null ? "" : venda.getMeioPagamento().name();
             String tipoNormalizado = tipo.toUpperCase(Locale.ROOT).replace("_", "").replace(" ", "");
             if ("NUMERARIO".equals(tipoNormalizado)) {
                 totalNumerario = totalNumerario.add(totalVenda);

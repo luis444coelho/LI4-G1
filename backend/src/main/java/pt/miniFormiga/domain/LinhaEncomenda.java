@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,7 +30,7 @@ public class LinhaEncomenda extends EntidadeBase {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal precoUnitario;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Transient
     private BigDecimal totalLinha = BigDecimal.ZERO;
 
     protected LinhaEncomenda() {

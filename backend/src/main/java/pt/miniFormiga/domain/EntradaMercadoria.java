@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.time.LocalDateTime;
 
@@ -36,9 +37,9 @@ public class EntradaMercadoria extends EntidadeBase {
     private int quantidadeRecebida;
 
     @Column(nullable = false)
-    private int quantidadeEncomendada;
+    private int quantidadeEncomendadaSnapshot;
 
-    @Column(nullable = false)
+    @Transient
     private int discrepancia;
 
     @Column(length = 2000)
@@ -68,14 +69,14 @@ public class EntradaMercadoria extends EntidadeBase {
         this.responsavel = responsavel;
         this.produto = produto;
         this.quantidadeRecebida = quantidadeRecebida;
-        this.quantidadeEncomendada = quantidadeEncomendada;
+        this.quantidadeEncomendadaSnapshot = quantidadeEncomendada;
         this.observacoes = observacoes;
         registar();
     }
 
     public void registar() {
         this.dataHora = LocalDateTime.now();
-        this.discrepancia = quantidadeRecebida - quantidadeEncomendada;
+        this.discrepancia = quantidadeRecebida - quantidadeEncomendadaSnapshot;
     }
 
     public GuiaRemessa getGuiaRemessa() {
@@ -103,7 +104,7 @@ public class EntradaMercadoria extends EntidadeBase {
     }
 
     public int getQuantidadeEncomendada() {
-        return quantidadeEncomendada;
+        return quantidadeEncomendadaSnapshot;
     }
 
     public int getDiscrepancia() {

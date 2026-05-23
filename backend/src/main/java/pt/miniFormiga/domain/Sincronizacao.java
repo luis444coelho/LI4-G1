@@ -2,6 +2,8 @@ package pt.miniFormiga.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -18,9 +20,9 @@ public class Sincronizacao extends EntidadeBase {
     @JoinColumn(name = "loja_id", nullable = false)
     private Loja loja;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "estado_id", nullable = false)
-    private EstadoSincronizacao estado;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EstadoSincronizacaoCodigo estado;
 
     @Column(nullable = false)
     private LocalDateTime dataHoraInicio;
@@ -52,10 +54,14 @@ public class Sincronizacao extends EntidadeBase {
     }
 
     public Sincronizacao(Loja loja) {
-        this(loja, new EstadoSincronizacao("PENDENTE", "Pendente"));
+        this(loja, EstadoSincronizacaoCodigo.PENDENTE);
     }
 
     public Sincronizacao(Loja loja, EstadoSincronizacao estado) {
+        this(loja, estado == null ? null : EstadoSincronizacaoCodigo.valueOf(estado.getCodigo()));
+    }
+
+    public Sincronizacao(Loja loja, EstadoSincronizacaoCodigo estado) {
         this.loja = loja;
         this.estado = estado;
         this.dataHoraInicio = LocalDateTime.now();
@@ -64,6 +70,10 @@ public class Sincronizacao extends EntidadeBase {
     }
 
     public void iniciar(EstadoSincronizacao estadoEmCurso, String payloadJson, int quantidadeRegistos) {
+        iniciar(EstadoSincronizacaoCodigo.valueOf(estadoEmCurso.getCodigo()), payloadJson, quantidadeRegistos);
+    }
+
+    public void iniciar(EstadoSincronizacaoCodigo estadoEmCurso, String payloadJson, int quantidadeRegistos) {
         this.estado = estadoEmCurso;
         this.dataHoraInicio = LocalDateTime.now();
         this.dataHoraFim = null;
@@ -74,6 +84,10 @@ public class Sincronizacao extends EntidadeBase {
     }
 
     public void concluir(EstadoSincronizacao estadoFinal, String payloadJson, int quantidadeRegistos, String conflitosJson, int conflitosResolvidos) {
+        concluir(EstadoSincronizacaoCodigo.valueOf(estadoFinal.getCodigo()), payloadJson, quantidadeRegistos, conflitosJson, conflitosResolvidos);
+    }
+
+    public void concluir(EstadoSincronizacaoCodigo estadoFinal, String payloadJson, int quantidadeRegistos, String conflitosJson, int conflitosResolvidos) {
         this.estado = estadoFinal;
         this.payloadJson = payloadJson;
         this.quantidadeRegistos = quantidadeRegistos;
@@ -85,6 +99,10 @@ public class Sincronizacao extends EntidadeBase {
     }
 
     public void falharMantendoPendente(EstadoSincronizacao pendente, String payloadJson, int quantidadeRegistos, String mensagemErro, LocalDateTime proximaTentativa) {
+        falharMantendoPendente(EstadoSincronizacaoCodigo.valueOf(pendente.getCodigo()), payloadJson, quantidadeRegistos, mensagemErro, proximaTentativa);
+    }
+
+    public void falharMantendoPendente(EstadoSincronizacaoCodigo pendente, String payloadJson, int quantidadeRegistos, String mensagemErro, LocalDateTime proximaTentativa) {
         this.estado = pendente;
         this.payloadJson = payloadJson;
         this.quantidadeRegistos = quantidadeRegistos;
@@ -97,7 +115,7 @@ public class Sincronizacao extends EntidadeBase {
         return loja;
     }
 
-    public EstadoSincronizacao getEstado() {
+    public EstadoSincronizacaoCodigo getEstado() {
         return estado;
     }
 

@@ -4,23 +4,31 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Entity
 @Table(name = "alertas_stock")
 public class AlertaStock extends EntidadeBase {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "stock_id", nullable = false)
-    private Stock stock;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "produto_id")
+    private Produto produto;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "produto_loja_id")
+    private ProdutoLoja produtoLoja;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "loja_id")
+    private Loja loja;
+
+    @Transient
+    private Stock stockLegado;
 
     @Column(nullable = false)
     private LocalDateTime dataHora;
@@ -37,23 +45,27 @@ public class AlertaStock extends EntidadeBase {
     @Column
     private LocalDateTime dataResolucao;
 
-    @ManyToMany
-    @JoinTable(
-            name = "alerta_stock_destinatarios",
-            joinColumns = @JoinColumn(name = "alerta_id"),
-            inverseJoinColumns = @JoinColumn(name = "utilizador_id")
-    )
-    private List<Utilizador> destinatarios = new ArrayList<>();
-
     protected AlertaStock() {
     }
 
     public AlertaStock(Stock stock, int quantidadeNoMomento) {
-        this.stock = stock;
+        this(stock.getProduto(), quantidadeNoMomento);
+        this.stockLegado = stock;
+        this.loja = stock.getLoja();
+    }
+
+    public AlertaStock(Produto produto, int quantidadeNoMomento) {
+        this.produto = produto;
         this.dataHora = LocalDateTime.now();
         this.quantidadeNoMomento = quantidadeNoMomento;
         this.lido = false;
         this.resolvido = false;
+    }
+
+    public AlertaStock(ProdutoLoja produtoLoja, int quantidadeNoMomento) {
+        this(produtoLoja.getProduto(), quantidadeNoMomento);
+        this.produtoLoja = produtoLoja;
+        this.loja = produtoLoja.getLoja();
     }
 
     public void marcarComoLido() {
@@ -67,13 +79,23 @@ public class AlertaStock extends EntidadeBase {
     }
 
     public void adicionarDestinatario(Utilizador utilizador) {
-        if (utilizador != null && !destinatarios.contains(utilizador)) {
-            destinatarios.add(utilizador);
-        }
+        // Destinatarios sao derivados por perfil/regra, nao persistidos.
+    }
+
+    public Produto getProduto() {
+        return produto == null && produtoLoja != null ? produtoLoja.getProduto() : produto;
+    }
+
+    public ProdutoLoja getProdutoLoja() {
+        return produtoLoja;
+    }
+
+    public Loja getLoja() {
+        return loja == null && produtoLoja != null ? produtoLoja.getLoja() : loja;
     }
 
     public Stock getStock() {
-        return stock;
+        return stockLegado;
     }
 
     public LocalDateTime getDataHora() {
@@ -97,6 +119,6 @@ public class AlertaStock extends EntidadeBase {
     }
 
     public List<Utilizador> getDestinatarios() {
-        return Collections.unmodifiableList(destinatarios);
+        return List.of();
     }
 }

@@ -10,7 +10,9 @@ import java.util.UUID;
 public interface FaturaRepository extends JpaRepository<Fatura, UUID> {
     boolean existsByVendaId(UUID vendaId);
 
+    java.util.Optional<Fatura> findFirstByLojaIdAndSerieOrderByNumeroDesc(UUID lojaId, String serie);
+
     @Override
-    @EntityGraph(attributePaths = {"venda"})
+    @EntityGraph(attributePaths = {"venda", "venda.loja", "venda.linhas", "venda.linhas.produto", "venda.linhas.produto.taxaIVA"})
     Optional<Fatura> findById(UUID id);
 }

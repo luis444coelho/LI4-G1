@@ -8,20 +8,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.miniFormiga.domain.EntidadeBase;
-import pt.miniFormiga.domain.EstadoSincronizacao;
+import pt.miniFormiga.domain.EstadoSincronizacaoCodigo;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Sincronizacao;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.exception.RecursoNaoEncontradoException;
 import pt.miniFormiga.repository.AjusteInventarioRepository;
 import pt.miniFormiga.repository.EntradaMercadoriaRepository;
-import pt.miniFormiga.repository.EstadoSincronizacaoRepository;
 import pt.miniFormiga.repository.FaturaRepository;
 import pt.miniFormiga.repository.FechoCaixaRepository;
 import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
-import pt.miniFormiga.repository.StockRepository;
 import pt.miniFormiga.repository.VendaRepository;
+import pt.miniFormiga.subsistemas.stock.StockStore;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -49,11 +48,10 @@ public class SincronizacaoFacade implements ISubSincronizacao {
     private static final String COM_CONFLITOS = "COM_CONFLITOS";
 
     private final SincronizacaoRepository sincronizacaoRepository;
-    private final EstadoSincronizacaoRepository estadoRepository;
     private final LojaRepository lojaRepository;
     private final VendaRepository vendaRepository;
     private final FaturaRepository faturaRepository;
-    private final StockRepository stockRepository;
+    private final StockStore stockStore;
     private final AjusteInventarioRepository ajusteRepository;
     private final FechoCaixaRepository fechoRepository;
     private final EntradaMercadoriaRepository entradaRepository;
@@ -64,22 +62,20 @@ public class SincronizacaoFacade implements ISubSincronizacao {
     private String auditFile;
 
     public SincronizacaoFacade(SincronizacaoRepository sincronizacaoRepository,
-                               EstadoSincronizacaoRepository estadoRepository,
                                LojaRepository lojaRepository,
                                VendaRepository vendaRepository,
                                FaturaRepository faturaRepository,
-                               StockRepository stockRepository,
+                               StockStore stockStore,
                                AjusteInventarioRepository ajusteRepository,
                                FechoCaixaRepository fechoRepository,
                                EntradaMercadoriaRepository entradaRepository,
                                SincronizacaoTransporte transporte,
                                ObjectMapper objectMapper) {
         this.sincronizacaoRepository = sincronizacaoRepository;
-        this.estadoRepository = estadoRepository;
         this.lojaRepository = lojaRepository;
         this.vendaRepository = vendaRepository;
         this.faturaRepository = faturaRepository;
-        this.stockRepository = stockRepository;
+        this.stockStore = stockStore;
         this.ajusteRepository = ajusteRepository;
         this.fechoRepository = fechoRepository;
         this.entradaRepository = entradaRepository;
@@ -91,28 +87,28 @@ public class SincronizacaoFacade implements ISubSincronizacao {
     public void agendarSincronizacao(UUID lojaId) {
         Loja loja = lojaRepository.findById(lojaId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Loja", lojaId));
-        sincronizacaoRepository.findFirstByLojaIdAndEstadoCodigoOrderByDataHoraInicioDesc(lojaId, PENDENTE)
-                .orElseGet(() -> sincronizacaoRepository.save(new Sincronizacao(loja, estado(PENDENTE, "Pendente"))));
+        sincronizacaoRepository.findFirstByLojaIdAndEstadoOrderByDataHoraInicioDesc(lojaId, estado(PENDENTE))
+                .orElseGet(() -> sincronizacaoRepository.save(new Sincronizacao(loja, estado(PENDENTE))));
     }
 
     @Override
     public SincronizacaoResponse iniciarSincronizacao(UUID lojaId) {
         Sincronizacao sincronizacao = sincronizacaoRepository
-                .findFirstByLojaIdAndEstadoCodigoOrderByDataHoraInicioDesc(lojaId, PENDENTE)
+                .findFirstByLojaIdAndEstadoOrderByDataHoraInicioDesc(lojaId, estado(PENDENTE))
                 .orElseGet(() -> {
                     agendarSincronizacao(lojaId);
-                    return sincronizacaoRepository.findFirstByLojaIdAndEstadoCodigoOrderByDataHoraInicioDesc(lojaId, PENDENTE)
+                    return sincronizacaoRepository.findFirstByLojaIdAndEstadoOrderByDataHoraInicioDesc(lojaId, estado(PENDENTE))
                             .orElseThrow(() -> new BusinessException("SINCRONIZACAO_NAO_AGENDADA", "Nao foi possivel agendar sincronizacao"));
                 });
 
         SincronizacaoPayload payload = construirPayload(lojaId);
         String payloadJson = toJson(payload);
-        sincronizacao.iniciar(estado(EM_CURSO, "Em curso"), payloadJson, payload.quantidadeRegistos());
+        sincronizacao.iniciar(estado(EM_CURSO), payloadJson, payload.quantidadeRegistos());
 
         ResultadoTransmissao resultado = transporte.transmitir(payload);
         if (!resultado.sucesso()) {
             sincronizacao.falharMantendoPendente(
-                    estado(PENDENTE, "Pendente"),
+                    estado(PENDENTE),
                     payloadJson,
                     payload.quantidadeRegistos(),
                     resultado.mensagemErro() == null ? "Falha de comunicacao com servidor central" : resultado.mensagemErro(),
@@ -123,7 +119,7 @@ public class SincronizacaoFacade implements ISubSincronizacao {
 
         int conflitos = resultado.conflitos() == null ? 0 : resultado.conflitos().size();
         sincronizacao.concluir(
-                conflitos == 0 ? estado(CONCLUIDA, "Concluida") : estado(COM_CONFLITOS, "Concluida com conflitos"),
+                conflitos == 0 ? estado(CONCLUIDA) : estado(COM_CONFLITOS),
                 payloadJson,
                 payload.quantidadeRegistos(),
                 toJson(resultado.conflitos() == null ? List.of() : resultado.conflitos()),
@@ -158,7 +154,7 @@ public class SincronizacaoFacade implements ISubSincronizacao {
 
     private SincronizacaoPayload construirPayload(UUID lojaId) {
         LocalDateTime desde = sincronizacaoRepository
-                .findFirstByLojaIdAndEstadoCodigoInOrderByDataHoraFimDesc(lojaId, List.of(CONCLUIDA, COM_CONFLITOS))
+                .findFirstByLojaIdAndEstadoInOrderByDataHoraFimDesc(lojaId, List.of(estado(CONCLUIDA), estado(COM_CONFLITOS)))
                 .map(Sincronizacao::getDataHoraFim)
                 .orElse(null);
         Predicate<EntidadeBase> pendente = entidade -> desde == null || entidade.getUpdatedAt() == null || entidade.getUpdatedAt().isAfter(desde);
@@ -172,8 +168,12 @@ public class SincronizacaoFacade implements ISubSincronizacao {
                 .filter(pendente)
                 .map(entidade -> registo("FATURA", entidade))
                 .toList());
-        registos.put("stock", stockRepository.findByLojaId(lojaId).stream().filter(pendente).map(entidade -> registo("STOCK", entidade)).toList());
-        registos.put("ajustes", ajusteRepository.findByStockLojaId(lojaId, Pageable.unpaged()).getContent().stream()
+        registos.put("stock", stockStore.listar(lojaId).stream()
+                .map(item -> item.entidadeStock())
+                .filter(pendente)
+                .map(entidade -> registo("STOCK", entidade))
+                .toList());
+        registos.put("ajustes", ajusteRepository.findAll(Pageable.unpaged()).getContent().stream()
                 .filter(pendente).map(entidade -> registo("AJUSTE_STOCK", entidade)).toList());
         registos.put("fechos", fechoRepository.findByLojaId(lojaId, Pageable.unpaged()).getContent().stream()
                 .filter(pendente).map(entidade -> registo("FECHO_CAIXA", entidade)).toList());
@@ -187,9 +187,8 @@ public class SincronizacaoFacade implements ISubSincronizacao {
         return new RegistoSincronizacao(tipo, entidade.getId(), entidade.getUpdatedAt(), entidade.getVersion());
     }
 
-    private EstadoSincronizacao estado(String codigo, String descricao) {
-        return estadoRepository.findByCodigo(codigo)
-                .orElseGet(() -> estadoRepository.save(new EstadoSincronizacao(codigo, descricao)));
+    private EstadoSincronizacaoCodigo estado(String codigo) {
+        return EstadoSincronizacaoCodigo.valueOf(codigo);
     }
 
     private List<String> logsAuditoria() {

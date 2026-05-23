@@ -7,17 +7,17 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 import pt.miniFormiga.domain.EstadoSincronizacao;
+import pt.miniFormiga.domain.EstadoSincronizacaoCodigo;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Sincronizacao;
 import pt.miniFormiga.repository.AjusteInventarioRepository;
 import pt.miniFormiga.repository.EntradaMercadoriaRepository;
-import pt.miniFormiga.repository.EstadoSincronizacaoRepository;
 import pt.miniFormiga.repository.FaturaRepository;
 import pt.miniFormiga.repository.FechoCaixaRepository;
 import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
-import pt.miniFormiga.repository.StockRepository;
 import pt.miniFormiga.repository.VendaRepository;
+import pt.miniFormiga.subsistemas.stock.StockStore;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,11 +41,10 @@ import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.R
 class SincronizacaoFacadeTest {
 
     private SincronizacaoRepository sincronizacaoRepository;
-    private EstadoSincronizacaoRepository estadoRepository;
     private LojaRepository lojaRepository;
     private VendaRepository vendaRepository;
     private FaturaRepository faturaRepository;
-    private StockRepository stockRepository;
+    private StockStore stockStore;
     private AjusteInventarioRepository ajusteRepository;
     private FechoCaixaRepository fechoRepository;
     private EntradaMercadoriaRepository entradaRepository;
@@ -56,22 +55,20 @@ class SincronizacaoFacadeTest {
     @BeforeEach
     void setUp() {
         sincronizacaoRepository = mock(SincronizacaoRepository.class);
-        estadoRepository = mock(EstadoSincronizacaoRepository.class);
         lojaRepository = mock(LojaRepository.class);
         vendaRepository = mock(VendaRepository.class);
         faturaRepository = mock(FaturaRepository.class);
-        stockRepository = mock(StockRepository.class);
+        stockStore = mock(StockStore.class);
         ajusteRepository = mock(AjusteInventarioRepository.class);
         fechoRepository = mock(FechoCaixaRepository.class);
         entradaRepository = mock(EntradaMercadoriaRepository.class);
         transporte = mock(SincronizacaoTransporte.class);
         facade = new SincronizacaoFacade(
                 sincronizacaoRepository,
-                estadoRepository,
                 lojaRepository,
                 vendaRepository,
                 faturaRepository,
-                stockRepository,
+                stockStore,
                 ajusteRepository,
                 fechoRepository,
                 entradaRepository,
@@ -79,14 +76,12 @@ class SincronizacaoFacadeTest {
                 new ObjectMapper().findAndRegisterModules()
         );
         loja = new Loja("Loja Sync", "Rua Sync", "123456789");
-        when(estadoRepository.findByCodigo(any())).thenAnswer(invocation ->
-                Optional.of(new EstadoSincronizacao(invocation.getArgument(0), invocation.getArgument(0))));
     }
 
     @Test
     void agendarSincronizacaoCriaPendente() {
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
-        when(sincronizacaoRepository.findFirstByLojaIdAndEstadoCodigoOrderByDataHoraInicioDesc(loja.getId(), "PENDENTE"))
+        when(sincronizacaoRepository.findFirstByLojaIdAndEstadoOrderByDataHoraInicioDesc(loja.getId(), EstadoSincronizacaoCodigo.PENDENTE))
                 .thenReturn(Optional.empty());
         when(sincronizacaoRepository.save(any(Sincronizacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -177,15 +172,15 @@ class SincronizacaoFacadeTest {
     }
 
     private void prepararPendentesVazios(Sincronizacao pendente) {
-        when(sincronizacaoRepository.findFirstByLojaIdAndEstadoCodigoOrderByDataHoraInicioDesc(loja.getId(), "PENDENTE"))
+        when(sincronizacaoRepository.findFirstByLojaIdAndEstadoOrderByDataHoraInicioDesc(loja.getId(), EstadoSincronizacaoCodigo.PENDENTE))
                 .thenReturn(Optional.of(pendente));
-        when(sincronizacaoRepository.findFirstByLojaIdAndEstadoCodigoInOrderByDataHoraFimDesc(eq(loja.getId()), any()))
+        when(sincronizacaoRepository.findFirstByLojaIdAndEstadoInOrderByDataHoraFimDesc(eq(loja.getId()), any()))
                 .thenReturn(Optional.empty());
         when(vendaRepository.findByLojaIdAndDataHoraBetween(eq(loja.getId()), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of()));
         when(faturaRepository.findAll()).thenReturn(List.of());
-        when(stockRepository.findByLojaId(loja.getId())).thenReturn(List.of());
-        when(ajusteRepository.findByStockLojaId(eq(loja.getId()), any())).thenReturn(new PageImpl<>(List.of()));
+        when(stockStore.listar(loja.getId())).thenReturn(List.of());
+        when(ajusteRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
         when(fechoRepository.findByLojaId(eq(loja.getId()), any())).thenReturn(new PageImpl<>(List.of()));
         when(entradaRepository.findByLojaId(eq(loja.getId()), any())).thenReturn(new PageImpl<>(List.of()));
     }

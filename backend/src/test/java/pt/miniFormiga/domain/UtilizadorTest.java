@@ -39,9 +39,9 @@ class UtilizadorTest {
         Utilizador utilizador = new Utilizador("operador3", "$2a$10$hash", "Luis", perfil, loja);
 
         assertEquals(loja, utilizador.getLoja());
-        assertEquals(perfil, utilizador.getPerfil());
+        assertEquals(PerfilUtilizador.FUNCIONARIO, utilizador.getPerfil());
         assertTrue(loja.getUtilizadores().contains(utilizador));
-        assertTrue(perfil.getUtilizadores().contains(utilizador));
+        assertTrue(perfil.getUtilizadores().isEmpty());
     }
 
     @Test

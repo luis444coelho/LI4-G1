@@ -4,8 +4,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -17,14 +19,15 @@ import java.util.Objects;
 public class Fatura extends EntidadeBase {
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "venda_id", nullable = false)
+    @JoinColumn(name = "id", nullable = false)
+    @MapsId
     private Venda venda;
 
-    @Column(nullable = false)
-    private String numero;
+    @Column(name = "loja_id")
+    private java.util.UUID lojaId;
 
-    @Column(nullable = false, unique = true)
-    private String numeroFatura;
+    @Column(nullable = false)
+    private int numero;
 
     @Column(nullable = false)
     private String serie;
@@ -41,13 +44,13 @@ public class Fatura extends EntidadeBase {
     @Column
     private String nomeCliente;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Transient
     private BigDecimal totalSemIVA = BigDecimal.ZERO;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Transient
     private BigDecimal totalIVA = BigDecimal.ZERO;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Transient
     private BigDecimal totalComIVA = BigDecimal.ZERO;
 
     @Column(nullable = false)
@@ -58,10 +61,10 @@ public class Fatura extends EntidadeBase {
 
     public Fatura(Venda venda, String numero, String serie, String tipo, String nifCliente, String nomeCliente) {
         this.venda = Objects.requireNonNull(venda, "Venda e obrigatoria");
-        this.numero = Objects.requireNonNull(numero, "Numero da fatura e obrigatorio");
+        this.lojaId = venda.getLoja() == null ? null : venda.getLoja().getId();
+        this.numero = Integer.parseInt(Objects.requireNonNull(numero, "Numero da fatura e obrigatorio"));
         this.serie = Objects.requireNonNull(serie, "Serie da fatura e obrigatoria");
         this.tipo = Objects.requireNonNull(tipo, "Tipo da fatura e obrigatorio");
-        this.numeroFatura = this.serie + "/" + this.numero;
         this.nifCliente = nifCliente;
         this.nomeCliente = nomeCliente;
         this.dataEmissao = LocalDateTime.now();
@@ -107,11 +110,19 @@ public class Fatura extends EntidadeBase {
     }
 
     public String getNumero() {
+        return String.format("%05d", numero);
+    }
+
+    public int getNumeroSequencial() {
         return numero;
     }
 
     public String getNumeroFatura() {
-        return numeroFatura;
+        return serie + "/" + getNumero();
+    }
+
+    public java.util.UUID getLojaId() {
+        return lojaId;
     }
 
     public String getSerie() {

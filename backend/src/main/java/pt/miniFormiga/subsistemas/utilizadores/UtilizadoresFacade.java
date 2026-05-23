@@ -7,11 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.miniFormiga.auditoria.AuditoriaService;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.PerfilRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
 
 import java.util.UUID;
@@ -23,18 +22,15 @@ public class UtilizadoresFacade implements ISubUtilizadores {
     private static final int LIMITE_TENTATIVAS_FALHADAS = 5;
 
     private final UtilizadorRepository utilizadorRepository;
-    private final PerfilRepository perfilRepository;
     private final LojaRepository lojaRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditoriaService auditoriaService;
 
     public UtilizadoresFacade(UtilizadorRepository utilizadorRepository,
-                              PerfilRepository perfilRepository,
                               LojaRepository lojaRepository,
                               PasswordEncoder passwordEncoder,
                               AuditoriaService auditoriaService) {
         this.utilizadorRepository = utilizadorRepository;
-        this.perfilRepository = perfilRepository;
         this.lojaRepository = lojaRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditoriaService = auditoriaService;
@@ -71,8 +67,7 @@ public class UtilizadoresFacade implements ISubUtilizadores {
             throw new RegraNegocioException("Username ja existe");
         }
 
-        Perfil perfil = perfilRepository.findById(command.perfilId())
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Perfil nao encontrado"));
+        PerfilUtilizador perfil = perfil(command.perfil());
         Loja loja = lojaRepository.findById(command.lojaId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Loja nao encontrada"));
         Utilizador utilizador = new Utilizador(
@@ -111,10 +106,7 @@ public class UtilizadoresFacade implements ISubUtilizadores {
     @Override
     public Utilizador atualizarUtilizador(UUID id, AtualizarUtilizadorCommand command) {
         Utilizador utilizador = obterUtilizador(id);
-        Perfil perfil = command.perfilId() == null
-                ? null
-                : perfilRepository.findById(command.perfilId())
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Perfil nao encontrado"));
+        PerfilUtilizador perfil = command.perfil() == null ? null : perfil(command.perfil());
         Loja loja = command.lojaId() == null
                 ? null
                 : lojaRepository.findById(command.lojaId())
@@ -141,5 +133,13 @@ public class UtilizadoresFacade implements ISubUtilizadores {
         Utilizador utilizador = obterUtilizador(id);
         utilizador.desativar();
         auditoriaService.registar(TipoOperacao.UTILIZADOR_DESATIVADO, utilizador.getId(), "UTILIZADOR_DESATIVADO", "Utilizador desativado");
+    }
+
+    private PerfilUtilizador perfil(String valor) {
+        try {
+            return PerfilUtilizador.valueOf(valor);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new RecursoNaoEncontradoException("Perfil nao encontrado");
+        }
     }
 }

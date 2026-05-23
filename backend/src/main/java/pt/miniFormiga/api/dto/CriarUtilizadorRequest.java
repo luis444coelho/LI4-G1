@@ -12,7 +12,7 @@ public record CriarUtilizadorRequest(
         @NotBlank @Size(min = 8, max = 120) String password,
         @NotBlank @Size(max = 120) String nome,
         @Email @Size(max = 160) String email,
-        @NotNull UUID perfilId,
+        @NotBlank String perfil,
         @NotNull UUID lojaId
 ) {
 }

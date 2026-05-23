@@ -61,7 +61,7 @@ public class VendasController {
     @Operation(summary = "Finalizar venda")
     @ApiResponse(responseCode = "200", description = "Venda finalizada")
     public VendaDTO finalizar(@PathVariable UUID id, @Valid @RequestBody FinalizarVendaRequest request) {
-        return VendaDTO.from(pdv.finalizarVenda(id, request.meioPagamentoId()));
+        return VendaDTO.from(pdv.finalizarVenda(id, request.meioPagamento()));
     }
 
     @PostMapping("/{id}/anular")

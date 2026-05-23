@@ -2,43 +2,36 @@ package pt.miniFormiga.api;
 
 import org.junit.jupiter.api.Test;
 import pt.miniFormiga.domain.Categoria;
-import pt.miniFormiga.domain.LocalizacaoProduto;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.TaxaIVA;
-import pt.miniFormiga.repository.LocalizacaoProdutoRepository;
-import pt.miniFormiga.repository.ProdutoRepository;
 import pt.miniFormiga.subsistemas.stock.StockDtos.LocalizacaoRequest;
 import pt.miniFormiga.subsistemas.stock.StockDtos.LocalizacaoResponse;
+import pt.miniFormiga.subsistemas.stock.StockItem;
+import pt.miniFormiga.subsistemas.stock.StockStore;
 
 import java.math.BigDecimal;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ProdutoLocalizacaoControllerTest {
 
     @Test
     void atualizarLocalizacaoProdutoPersisteCorredorEPrateleira() {
-        ProdutoRepository produtoRepository = mock(ProdutoRepository.class);
-        LocalizacaoProdutoRepository localizacaoRepository = mock(LocalizacaoProdutoRepository.class);
+        StockStore stockStore = mock(StockStore.class);
         Produto produto = produto();
-        ProdutoLocalizacaoController controller = new ProdutoLocalizacaoController(produtoRepository, localizacaoRepository);
+        ProdutoLocalizacaoController controller = new ProdutoLocalizacaoController(stockStore);
 
-        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
-        when(localizacaoRepository.findByProdutoId(produto.getId())).thenReturn(Optional.empty());
-        when(localizacaoRepository.save(any(LocalizacaoProduto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stockStore.atualizarLocalizacao(produto.getId(), null, "C2", "P5"))
+                .thenReturn(new StockItem(produto, null, null, 0, null, "C2", "P5", null, null));
 
         LocalizacaoResponse response = controller.atualizarLocalizacao(
-                produto.getId(), new LocalizacaoRequest("C2", "P5"));
+                produto.getId(), null, new LocalizacaoRequest("C2", "P5"));
 
         assertEquals(produto.getId(), response.produtoId());
         assertEquals("C2", response.corredor());
         assertEquals("P5", response.prateleira());
-        verify(localizacaoRepository).save(any(LocalizacaoProduto.class));
     }
 
     private Produto produto() {
