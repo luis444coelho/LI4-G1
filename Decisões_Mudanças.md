@@ -12,9 +12,9 @@ Foram analisadas as tarefas já assinaladas em `TAREFAS_IMPLEMENTACAO.md`, o est
 - `SubPDV`, incluindo venda, pagamento, faturação e devolução.
 - `SubStock`, incluindo alertas, ajustes, inventário físico e localização.
 - `SubEncomendas`, incluindo fornecedores, encomendas e entrada de mercadoria.
-- `SubSincronizacao`, incluindo agendamento, payload, transporte REST/JSON, estados e conflitos.
+- `SubSincronizacao`, incluindo agendamento, payload, transporte REST/JSON, endpoint central por perfil, estados e conflitos.
 
-A última execução completa de testes do backend, após a implementação da tarefa 6, passou com sucesso: 121 testes executados, 0 falhas.
+A última execução completa de testes do backend, após a implementação da tarefa 6, passou com sucesso: 130 testes executados, 0 falhas.
 
 ## Decisões Implementadas
 
@@ -218,23 +218,33 @@ Impacto no relatório: a especificação de API deve indicar que `POST /entradas
 
 ### DM-19 - Sincronização implementada com transporte REST configurável
 
-Diferença face ao relatório: o UC-13 descreve a sincronização com um servidor central, mas não define o contrato físico exato do serviço central.
+Diferença face ao relatório: o UC-13 descreve a sincronização com um servidor central, mas não define se esse servidor é outro programa ou outra instância da mesma aplicação.
 
-Decisão tomada: o `SubSincronizacao` passou a persistir `Sincronizacao` e `EstadoSincronizacao`, criar estado `PENDENTE` no fecho de caixa, construir um payload REST/JSON com vendas, faturas, stock, ajustes, fechos, entradas de mercadoria e linhas recentes do log JSONL de auditoria, e enviar esse payload para o URL configurado em `mini-formiga.sincronizacao.central-url`.
+Decisão tomada: o backend passou a ser um monólito modular multi-perfil. No perfil `local`, usa SQLite, constrói o payload de sincronização e envia-o para `mini-formiga.sincronizacao.central-url`. No perfil `central`, usa PostgreSQL e expõe `POST /api/v1/central/sincronizacao/receber` para receber payloads das lojas.
 
-Motivo: cumprir a arquitetura monolítica modular e a decisão DA-03, mantendo a loja autónoma e permitindo ligar o servidor central real sem acoplar o domínio a uma implementação concreta de rede.
+Motivo: cumprir a arquitetura monolítica modular sem criar um segundo projeto. A diferença entre loja e servidor central passa a ser uma diferença de configuração/perfil de execução, não de código-base.
 
-Impacto no relatório: a secção de implementação deve indicar que o servidor central é um endpoint REST configurável. Se esse URL não estiver configurado ou a rede falhar, a sincronização permanece `PENDENTE` e recebe `proximaTentativa`, cumprindo RNF-02.
+Impacto no relatório: a secção de implementação deve indicar que existem duas instâncias possíveis da mesma aplicação: uma instância `local` por loja e uma instância `central` no servidor central. Se o URL central falhar, a sincronização local permanece `PENDENTE` e recebe `proximaTentativa`, cumprindo RNF-02.
 
-### DM-20 - Conflitos de sincronização registados a partir da resposta do servidor central
+### DM-20 - Conflitos de sincronização resolvidos no perfil central
 
-Diferença face ao relatório: DA-05 define `last-write-wins`, mas não especifica se a comparação é feita no cliente local ou no servidor central.
+Diferença face ao relatório: DA-05 define `last-write-wins`, mas não especifica onde a comparação é feita.
 
-Decisão tomada: o backend local envia `updatedAt` e `version` no payload. A resposta do transporte pode devolver conflitos já resolvidos por `last-write-wins`, que ficam guardados em `conflitosJson` e disponíveis em `/api/v1/sincronizacao/conflitos`.
+Decisão tomada: o backend local envia `updatedAt` e `version` no payload. A instância central compara esses metadados com os registos centrais existentes, aplica `last-write-wins`, guarda a sincronização consolidada e devolve conflitos resolvidos. A instância local guarda esses conflitos em `conflitosJson` e expõe-nos em `/api/v1/sincronizacao/conflitos`.
 
 Motivo: numa arquitetura local-central, a decisão final sobre conflitos deve pertencer ao servidor central, que possui a visão consolidada. A loja mantém rastreabilidade e consulta posterior, como pedido no UC-13.
 
-Impacto no relatório: deve ficar claro que o módulo local prepara a informação necessária e regista o resultado da resolução; a implementação completa do algoritmo do lado central depende do serviço central configurado.
+Impacto no relatório: deve ficar claro que a resolução de conflitos é responsabilidade do perfil `central`, enquanto o perfil `local` prepara o payload e regista o resultado.
+
+### DM-22 - Sincronização central protegida por token técnico
+
+Diferença face ao relatório: o relatório indica autenticação por JWT para endpoints de utilizador, mas não detalha autenticação máquina-a-máquina entre loja e servidor central.
+
+Decisão tomada: o endpoint central de receção de sincronização é permitido ao nível do filtro HTTP, mas valida o cabeçalho `X-Sync-Token` contra a propriedade `mini-formiga.sincronizacao.token`.
+
+Motivo: o cliente local de sincronização usa `RestTemplate`, não uma sessão de utilizador. O token técnico evita expor o endpoint central sem proteção e mantém a simplicidade da comunicação entre instâncias do mesmo sistema.
+
+Impacto no relatório: a especificação de API deve indicar que `POST /api/v1/central/sincronizacao/receber` usa autenticação técnica por `X-Sync-Token`, além de TLS em deployment.
 
 ### DM-21 - TLS tratado como responsabilidade de deployment
 
@@ -264,13 +274,13 @@ Diferença face ao relatório: RF-01 e RF-02 prometem dashboard, relatórios e e
 
 Decisão necessária: implementar o módulo de relatórios/dashboard antes dos testes finais ou assinalar estes requisitos como parcialmente satisfeitos.
 
-### DP-03 - Servidor central de sincronização ainda não está implementado neste repositório
+### DP-03 - Consolidação central ainda é baseada no payload de metadados
 
-Estado atual: o lado local da sincronização já agenda, persiste estado, constrói payload, transmite por REST/JSON e regista conflitos. O repositório ainda não contém uma aplicação central separada que receba o payload, aplique merge real e devolva conflitos resolvidos.
+Estado atual: o perfil `central` recebe o payload, regista a sincronização consolidada e resolve conflitos por `updatedAt`/`version`. O payload atual contém metadados e logs, mas não serializa ainda o estado completo de cada entidade para recriar registos em falta.
 
-Diferença face ao relatório: RF-17, RNF-03 e UC-13 descrevem a sincronização local-central completa. A parte local está implementada; a parte central fica dependente do endpoint configurado.
+Diferença face ao relatório: RF-17, RNF-03 e UC-13 descrevem consolidação de dados entre loja e servidor central. A infraestrutura local-central existe, mas a materialização completa de entidades ausentes no servidor central ainda exigiria expandir o payload com dados de negócio completos.
 
-Decisão necessária: implementar o serviço central de receção/merge ou documentar que, no âmbito físico atual, se valida o cliente local de sincronização e o contrato REST.
+Decisão necessária: para uma demonstração completa de consolidação, expandir o payload com snapshots completos das entidades ou documentar que a validação atual cobre contrato, estados, retry e conflitos por metadados.
 
 ### DP-04 - TLS não está configurado no Spring Boot
 

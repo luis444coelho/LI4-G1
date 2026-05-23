@@ -177,9 +177,9 @@ Testes obrigatorios:
 
 Requisitos/casos de uso: RF-17, RNF-02, RNF-03, RNF-06, DA-02, DA-04, DA-05, UC-13.
 
-Estado atual: `SincronizacaoFacade` cria sincronizacoes pendentes, constroi payload local, transmite por REST/JSON para servidor central configuravel, mantem pendente em falha de rede, regista conflitos e expoe endpoints de estado, historico e conflitos.
+Estado atual: a mesma aplicacao Spring Boot suporta dois perfis: `local`, com SQLite e envio de sincronizacao, e `central`, com PostgreSQL e rececao/consolidacao do payload das lojas. `SincronizacaoFacade` cria sincronizacoes pendentes, constroi payload local, transmite por REST/JSON para o endpoint central configuravel, mantem pendente em falha de rede, regista conflitos e expoe endpoints de estado, historico e conflitos.
 
-Esta deixou de ser a maior lacuna da implementacao fisica local; permanece apenas a necessidade de ligar a um servidor central real ou documentar o contrato REST como validacao demonstrativa.
+Esta deixou de ser a maior lacuna da implementacao fisica: o servidor central existe como perfil `central` do mesmo monolito modular, nao como segundo projeto separado.
 
 Tarefas:
 
@@ -189,6 +189,7 @@ Tarefas:
 - [x] Implementar endpoint `GET /api/v1/sincronizacao/estado`.
 - [x] Implementar endpoint `GET /api/v1/sincronizacao/historico`.
 - [x] Implementar endpoint `GET /api/v1/sincronizacao/conflitos`.
+- [x] Implementar endpoint central `POST /api/v1/central/sincronizacao/receber` ativo no perfil `central`.
 - [x] Definir payload de sincronizacao: vendas, faturas, stock, ajustes, fechos, entradas de mercadoria e logs relevantes.
 - [x] Implementar deteccao de registos pendentes por `updatedAt`/estado/local marker.
 - [x] Implementar transmissao para servidor central via REST/JSON.
@@ -197,6 +198,7 @@ Tarefas:
 - [x] Garantir que falha de rede mantem estado `PENDENTE` e agenda retry.
 - [x] Garantir que a loja continua a operar localmente com SQLite.
 - [x] Documentar que TLS e garantido pela configuracao de deployment/reverse proxy, ou configurar HTTPS no Spring se for demonstrado localmente.
+- [ ] Expandir payload central com snapshots completos das entidades se for exigida demonstracao de recriacao de registos ausentes na BD central. Atualmente a consolidacao central valida contrato, estados, retry e conflitos por metadados `updatedAt`/`version`.
 
 Testes obrigatorios:
 
@@ -204,6 +206,7 @@ Testes obrigatorios:
 - [x] Iniciar sincronizacao sem rede mantem pendente.
 - [x] Iniciar sincronizacao com sucesso marca concluida.
 - [x] Conflito aplica last-write-wins.
+- [x] Servidor central recebe payload e regista sincronizacao consolidada.
 - [x] Historico lista sincronizacoes anteriores.
 - [x] Endpoint de conflitos lista conflitos detetados.
 
@@ -389,7 +392,7 @@ Tarefas:
 - [ ] Atualizar diagramas se o codigo final divergir:
   - [ ] `SubAuditoria` como subsistema ou servico transversal.
   - [ ] endpoints reais.
-  - [ ] sincronizacao real.
+  - [ ] sincronizacao local+central por perfis.
   - [ ] relatorios/exportacao.
 
 ## Ordem Recomendada de Execucao
@@ -402,7 +405,7 @@ Usar esta ordem para evitar dependencias partidas:
 4. PDV e faturacao robustos.
 5. Stock/alertas/inventario robustos.
 6. Encomendas com regra RD-06 e entradas multi-linha.
-7. Sincronizacao real.
+7. Sincronizacao local+central por perfis.
 8. Relatorios/dashboard/exportacao.
 9. Frontend ligado a API.
 10. Docker/configuracao final.
@@ -419,7 +422,7 @@ A implementacao fisica so deve ser considerada pronta para avancar para testes f
 - [ ] Backend arranca com perfil central PostgreSQL.
 - [ ] Frontend autentica contra backend real.
 - [ ] Fluxo PDV completo funciona sem mocks.
-- [ ] Fecho de caixa agenda sincronizacao real.
+- [x] Fecho de caixa agenda sincronizacao local+central.
 - [ ] Dashboard/relatorios usam dados reais.
 - [ ] Exportacao contabilistica existe ou esta explicitamente fora do ambito.
 - [ ] Todos os Must Have estao `Completos` ou justificados no relatorio.
