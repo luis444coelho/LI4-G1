@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import type { ReactNode } from 'react'
 
 import { AUTH_STORAGE_KEY, apiRequest, type LoginResponse } from './api'
-import { roles, type RoleId } from '../data/mockData'
+import type { RoleId } from '../data/mockData'
+import { perfilToRoleId } from './authRoutes'
 
 export interface AuthSession extends LoginResponse {
   roleId: RoleId
@@ -44,31 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+// Hook export is intentionally colocated with AuthProvider to keep the auth contract in one module.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
     throw new Error('useAuth deve ser usado dentro de AuthProvider')
   }
   return context
-}
-
-export function perfilToRoleId(perfil: string): RoleId {
-  switch (perfil) {
-    case 'GESTOR':
-      return 'gestor'
-    case 'GERENTE':
-      return 'gerente'
-    case 'FUNCIONARIO':
-      return 'funcionario'
-    case 'RESPONSAVEL_ARMAZEM':
-      return 'armazem'
-    default:
-      return 'funcionario'
-  }
-}
-
-export function roleDefaultPath(roleId: RoleId) {
-  return roles[roleId].defaultPath
 }
 
 function loadSession() {

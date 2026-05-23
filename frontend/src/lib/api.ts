@@ -59,6 +59,237 @@ export interface RelatorioStockResponse {
   itens: StockItemResponse[]
 }
 
+export interface PageResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export interface ProdutoResponse {
+  id: string
+  codigoBarras: string
+  nome: string
+  descricao?: string
+  precoVenda: number
+  precoCusto: number
+  margem: number
+  categoria: string
+  taxaIva: number
+  ativo: boolean
+}
+
+export interface LinhaVendaResponse {
+  id: string
+  produtoId: string
+  produto: string
+  quantidade: number
+  precoUnitario: number
+  totalLinha: number
+  anulada: boolean
+}
+
+export interface VendaResponse {
+  id: string
+  lojaId: string
+  operadorId: string
+  dataHora: string
+  anulada: boolean
+  meioPagamento: string | null
+  subtotal: number
+  iva: number
+  total: number
+  linhas: LinhaVendaResponse[]
+}
+
+export interface FaturaResponse {
+  id: string
+  vendaId: string
+  numeroFatura: string
+  serie: string
+  tipo: string
+  nifCliente?: string
+  nomeCliente?: string
+  dataEmissao: string
+  totalSemIva: number
+  totalIva: number
+  totalComIva: number
+}
+
+export interface MeioPagamentoResponse {
+  id: string
+  tipo: string
+  descricao: string
+}
+
+export interface StockResponse {
+  produtoId: string
+  produto: string
+  lojaId: string
+  quantidade: number
+  nivelMinimo: number | null
+  precisaReposicao: boolean
+}
+
+export interface AlertaStockResponse {
+  id: string
+  produtoId: string
+  produto: string
+  lojaId: string
+  dataHora: string
+  quantidadeNoMomento: number
+  lido: boolean
+  resolvido: boolean
+}
+
+export interface AjusteInventarioResponse {
+  id: string
+  produtoId: string
+  produto: string
+  lojaId: string
+  quantidade: number
+  motivo: string
+  utilizadorId: string
+  dataHora: string
+}
+
+export interface MotivoAjusteResponse {
+  id: string
+  codigo: string
+  descricao: string
+}
+
+export interface FechoCaixaResponse {
+  id: string
+  lojaId: string
+  gerenteId: string
+  data: string
+  totalNumerario: number
+  totalCartao: number
+  totalMbway: number
+  totalGeral: number
+  observacoesDiscrepancia?: string
+  confirmado: boolean
+}
+
+export interface UtilizadorResponse {
+  id: string
+  username: string
+  nome: string
+  email: string
+  perfil: string
+  perfilId?: string
+  loja: string
+  lojaId: string
+  ativo: boolean
+}
+
+export interface PerfilResponse {
+  id: string
+  nome: string
+  permissoes: string[]
+}
+
+export interface LojaResponse {
+  id: string
+  nome: string
+  morada: string
+  nif: string
+  ativa: boolean
+}
+
+export interface FornecedorResponse {
+  id: string
+  nome: string
+  nif: string
+  morada: string
+  telefone: string
+  email: string
+  ativo: boolean
+  horarioInicioArmazem: string
+  horarioFimArmazem: string
+}
+
+export interface EncomendaResponse {
+  id: string
+  lojaId: string
+  fornecedorId: string
+  fornecedor: string
+  estado: string
+  dataSubmissao: string
+  dataProcessamento: string
+  totalEstimado: number
+  linhas: Array<{ id: string; produtoId: string; produto: string; quantidade: number; precoUnitario: number; totalLinha: number }>
+}
+
+export interface SugestaoEncomendaResponse {
+  fornecedorId: string
+  fornecedor: string
+  produtoId: string
+  produto: string
+  lojaId: string
+  quantidadeAtual: number
+  nivelMinimo: number | null
+  quantidadeSugerida: number
+  precoUnitario: number
+}
+
+export interface EntradaMercadoriaResponse {
+  id: string
+  encomendaId: string
+  lojaId: string
+  responsavelId: string
+  produtoId: string
+  produto: string
+  guiaNumero: string
+  dataHora: string
+  quantidadeRecebida: number
+  quantidadeEncomendada: number
+  discrepancia: number
+  observacoes?: string
+}
+
+export interface InventarioFisicoResponse {
+  id: string
+  lojaId: string
+  utilizadorId: string
+  dataInicio: string
+  dataFecho?: string
+  fechado: boolean
+  totalDiscrepancias: number
+}
+
+export interface LinhaInventarioResponse {
+  id: string
+  produtoId: string
+  produto: string
+  quantidadeContada: number
+  quantidadeSistema: number
+  discrepancia: number
+}
+
+export interface SincronizacaoResponse {
+  id: string
+  lojaId: string
+  estado: string
+  inicio: string
+  fim?: string
+  proximaTentativa?: string
+  quantidadeRegistos: number
+  conflitosResolvidos: number
+  mensagemErro?: string
+}
+
+export interface ConflitoSincronizacaoResponse {
+  sincronizacaoId: string
+  lojaId: string
+  dataHora: string
+  estado: string
+  conflitosResolvidos: number
+  conflitosJson?: string
+}
+
 export class ApiError extends Error {
   status: number
   code?: string

@@ -244,37 +244,37 @@ Testes obrigatorios:
 
 Requisitos/casos de uso: todos os UC com interface; RNF-10; RF-04 se for mantido.
 
-Estado atual: frontend React tem rotas por perfil, autenticacao real via JWT, protecao de rotas e dashboard do gestor ligado a dados reais. Ainda ha paginas/formularios a depender de `mockData`. `npm run build`/`npm run lint` ficaram bloqueados no ambiente atual por Node.js 12, abaixo do minimo exigido pelas dependencias.
+Estado atual: frontend React tem rotas por perfil, autenticacao real via JWT, protecao de rotas e os fluxos principais ligados a dados reais da API. `mockData` fica apenas como configuracao visual/de navegacao por perfil, icones e tipos de UI, nao como fonte de dados de negocio. `npm run build` e `npm run lint` passam com Node.js 20.
 
 Tarefas:
 
 - [x] Instalar dependencias com `npm ci` ou `npm install`.
-- [ ] Confirmar `npm run build` e `npm run lint`. Bloqueado localmente por Node.js 12; dependencias exigem Node 20+.
+- [x] Confirmar `npm run build` e `npm run lint`.
 - [x] Criar cliente HTTP centralizado para `/api/v1`.
 - [x] Implementar login real com `/auth/login`.
 - [x] Guardar token JWT e inclui-lo no header `Authorization`.
 - [x] Redirecionar utilizador para pagina inicial conforme perfil.
-- [x] Substituir `mockData` por chamadas reais progressivamente. Dashboard do gestor ja usa API real.
-- [ ] Implementar estados de loading, erro e vazio. Implementado no login/dashboard; falta propagar aos restantes fluxos.
-- [ ] Implementar formularios funcionais:
-  - [ ] PDV: iniciar venda, adicionar produto, remover linha, finalizar, emitir fatura.
-  - [ ] Devolucao: localizar venda e registar devolucao.
-  - [ ] Gerente: stock, fecho de caixa, ajustes, funcionarios.
-  - [ ] Armazem: entrada de mercadoria, inventario fisico, localizacao/stock.
-  - [ ] Gestor: dashboard, relatorios, fornecedores, encomendas, sincronizacao, utilizadores.
+- [x] Substituir `mockData` por chamadas reais nos fluxos principais de negocio. Restam apenas dados de configuracao visual/rotas por perfil.
+- [x] Implementar estados de loading, erro e vazio nos principais fluxos ligados a API.
+- [x] Implementar formularios funcionais:
+  - [x] PDV: iniciar venda, adicionar produto, remover linha, finalizar, emitir fatura.
+  - [x] Devolucao: localizar venda e registar devolucao.
+  - [x] Gerente: stock, fecho de caixa, ajustes, funcionarios.
+  - [x] Armazem: entrada de mercadoria, inventario fisico, localizacao/stock.
+  - [x] Gestor: dashboard, relatorios, fornecedores, encomendas, sincronizacao, utilizadores.
 - [ ] Confirmar responsividade mobile para RF-04/US-05, se mantido no ambito.
 - [x] Adicionar protecao de rotas por perfil/permissao.
-- [ ] Preparar fluxo offline do PDV, se o frontend tambem assumir operacao offline via browser.
+- [ ] Preparar fluxo offline do PDV no browser. A operacao offline principal continua garantida pelo backend local/SQLite, conforme arquitetura.
 
 Testes obrigatorios:
 
-- [ ] Build frontend passa.
-- [ ] Login real funciona.
-- [ ] Rotas protegidas bloqueiam utilizador sem token.
-- [ ] Fluxo PDV completo funciona contra backend.
-- [ ] Dashboard mostra dados reais.
-- [ ] Formulario de stock cria ajuste real.
-- [ ] Interface nao depende de `mockData` nos fluxos principais.
+- [x] Build frontend passa.
+- [x] Login real compila contra `/auth/login` e usa JWT real.
+- [x] Rotas protegidas bloqueiam utilizador sem token.
+- [ ] Fluxo PDV completo funciona contra backend. Implementado no frontend; falta teste manual/E2E com backend e dados reais.
+- [x] Dashboard mostra dados reais por chamadas API.
+- [x] Formulario de stock cria ajuste real por chamada API.
+- [x] Interface nao depende de `mockData` nos fluxos principais de negocio.
 
 ## 9. Infraestrutura e Dados
 

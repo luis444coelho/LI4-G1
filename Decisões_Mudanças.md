@@ -258,13 +258,15 @@ Impacto no relatório: a secção de implementação deve indicar que TLS é uma
 
 ## Divergências Ainda Pendentes
 
-### DP-01 - Frontend ainda usa dados mock
+### DP-01 - Frontend real ligado a API, com `mockData` residual de configuracao
 
-Estado atual: o frontend React existe e tem páginas por perfil, mas ainda importa dados de `frontend/src/data/mockData.ts`.
+Estado atual: o frontend React consome a API real nos fluxos principais de negocio: autenticacao, dashboard, relatorios/stock, PDV, devolucao, fecho de caixa, ajustes, utilizadores, fornecedores, encomendas, sincronizacao, entrada de mercadoria e inventario fisico.
 
-Diferença face ao relatório: o relatório apresenta a interface como parte do sistema implementado, com API REST documentada. Neste momento, a interface é essencialmente navegável/mockada e ainda não consome os endpoints reais.
+Diferença face ao relatório: `frontend/src/data/mockData.ts` continua a existir, mas apenas como configuracao visual/de navegacao por perfil, icones e tipos de UI. Ja nao e fonte dos dados operacionais principais.
 
-Decisão necessária: integrar progressivamente o frontend com o backend ou documentar a interface como protótipo funcional parcial.
+Decisão tomada: manter esses dados como configuracao estatica de apresentacao, porque representam metadados da interface e nao informacao de negocio. A validacao funcional deve incidir nos endpoints reais e nos formularios ligados a API.
+
+Impacto no relatório: a secção de implementação da interface pode indicar que os fluxos principais usam API real, mas que a camada de apresentacao conserva configuracao estatica para perfis, rotas e icones.
 
 ### DP-02 - Dashboard e relatórios ainda não têm endpoints dedicados
 
@@ -329,4 +331,4 @@ Decisão necessária: reduzir o alcance do relatório para conformidade simplifi
 
 As mudanças implementadas mantêm o espírito do relatório e, na maior parte dos casos, tornam a especificação mais concreta e testável. As principais diferenças reais são a criação da entidade `Devolucao`, a formalização de `SubAuditoria`, os endpoints auxiliares de utilizadores e a exceção de bloqueio pessimista para numeração fiscal.
 
-Os maiores desvios ainda por resolver não estão no `SubPDV` nem na autenticação, mas sim em funcionalidades de integração e validação final: frontend ligado à API, dashboard/relatórios, sincronização real, TLS e ferramentas avançadas de testes.
+Os maiores desvios ainda por resolver não estão no `SubPDV`, na autenticação nem no frontend principal, mas sim em funcionalidades de integração e validação final: consolidação central completa de snapshots, TLS em deployment e ferramentas avançadas de testes.

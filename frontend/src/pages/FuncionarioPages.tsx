@@ -1,18 +1,130 @@
-import { saleRows } from '../data/mockData'
+import { useEffect, useMemo, useState } from 'react'
+
 import { Button, Callout, Panel, SelectField, TextField } from '../components/ui'
+import { apiRequest, type FaturaResponse, type MeioPagamentoResponse, type PageResponse, type ProdutoResponse, type VendaResponse } from '../lib/api'
+import { useAuth } from '../lib/auth'
+
+const money = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
 
 export function FuncionarioSalePage() {
+  const { session } = useAuth()
+  const [sale, setSale] = useState<VendaResponse | null>(null)
+  const [products, setProducts] = useState<ProdutoResponse[]>([])
+  const [payments, setPayments] = useState<MeioPagamentoResponse[]>([])
+  const [query, setQuery] = useState('')
+  const [quantity, setQuantity] = useState(1)
+  const [paymentId, setPaymentId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let ignore = false
+    Promise.all([
+      apiRequest<PageResponse<ProdutoResponse>>(`/produtos?lojaId=${session?.lojaId}&size=100`),
+      apiRequest<MeioPagamentoResponse[]>('/meios-pagamento'),
+    ]).then(([productPage, paymentRows]) => {
+      if (ignore) return
+      setProducts(productPage.content)
+      setPayments(paymentRows)
+      setPaymentId(paymentRows[0]?.id ?? '')
+    }).catch(() => {
+      if (!ignore) setError('Não foi possível carregar produtos/meios de pagamento.')
+    })
+    return () => {
+      ignore = true
+    }
+  }, [session?.lojaId])
+
+  const matchingProduct = useMemo(() => {
+    const term = query.trim().toLowerCase()
+    if (!term) return null
+    return products.find((product) => product.codigoBarras === query.trim() || product.nome.toLowerCase().includes(term)) ?? null
+  }, [products, query])
+
+  async function ensureSale() {
+    if (sale) return sale
+    const created = await apiRequest<VendaResponse>('/vendas', {
+      method: 'POST',
+      body: JSON.stringify({ lojaId: session?.lojaId, utilizadorId: session?.utilizadorId }),
+    })
+    setSale(created)
+    return created
+  }
+
+  async function addLine() {
+    setLoading(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const product = matchingProduct
+      if (!product) throw new Error('Produto não encontrado.')
+      const currentSale = await ensureSale()
+      const updated = await apiRequest<VendaResponse>(`/vendas/${currentSale.id}/linhas`, {
+        method: 'POST',
+        body: JSON.stringify({ produtoId: product.id, quantidade: quantity }),
+      })
+      setSale(updated)
+      setQuery('')
+      setQuantity(1)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao adicionar produto.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function removeLine(lineId: string) {
+    if (!sale) return
+    const updated = await apiRequest<VendaResponse>(`/vendas/${sale.id}/linhas/${lineId}`, { method: 'DELETE' })
+    setSale(updated)
+  }
+
+  async function finalizeSale() {
+    if (!sale || !paymentId) return
+    setLoading(true)
+    setError(null)
+    try {
+      const finalized = await apiRequest<VendaResponse>(`/vendas/${sale.id}/finalizar`, {
+        method: 'POST',
+        body: JSON.stringify({ meioPagamentoId: paymentId }),
+      })
+      await apiRequest<FaturaResponse>(`/vendas/${finalized.id}/fatura`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+      setSale(null)
+      setMessage('Venda finalizada e fatura emitida.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao finalizar venda.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function cancelSale() {
+    if (!sale) return
+    await apiRequest<void>(`/vendas/${sale.id}/anular`, { method: 'POST' })
+    setSale(null)
+    setMessage('Venda anulada.')
+  }
+
   return (
     <div className="sale-layout">
       <div className="sale-left">
         <div className="sale-search-row">
-          <TextField placeholder="Código de barras ou pesquisa rápida..." className="grow" />
-          <Button variant="secondary" className="scan-button">
-            Scan ▷
+          <TextField placeholder="Código de barras ou pesquisa rápida..." className="grow" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <TextField type="number" min={1} value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className="small-field" />
+          <Button variant="secondary" className="scan-button" onClick={addLine} disabled={loading || !matchingProduct}>
+            Adicionar
           </Button>
         </div>
+        {matchingProduct ? <p className="mf-section-note">Selecionado: {matchingProduct.nome} · {money.format(matchingProduct.precoVenda)}</p> : null}
+        {error ? <Callout tone="warning">{error}</Callout> : null}
+        {message ? <Callout tone="info">{message}</Callout> : null}
 
         <Panel className="sale-table-panel">
+          {!sale?.linhas.length ? <p className="mf-empty-state">Sem artigos na venda.</p> : null}
           <table className="mf-table compact sale">
             <thead>
               <tr>
@@ -22,23 +134,19 @@ export function FuncionarioSalePage() {
               </tr>
             </thead>
             <tbody>
-              {saleRows.map((row) => (
-                <tr key={row.product}>
+              {(sale?.linhas ?? []).filter((row) => !row.anulada).map((row) => (
+                <tr key={row.id}>
                   <td>
                     <div className="sale-product">
-                      <strong>{row.product}</strong>
-                      <span className="muted">
-                        {row.price} · {row.iva}
-                      </span>
+                      <strong>{row.produto}</strong>
+                      <span className="muted">{money.format(row.precoUnitario)}</span>
                     </div>
                   </td>
-                  <td className="muted">{row.quantity}</td>
+                  <td className="muted">{row.quantidade}</td>
                   <td>
                     <div className="sale-subtotal">
-                      <strong>{row.subtotal}</strong>
-                      <button type="button" className="sale-remove">
-                        ×
-                      </button>
+                      <strong>{money.format(row.totalLinha)}</strong>
+                      <button type="button" className="sale-remove" onClick={() => removeLine(row.id)}>×</button>
                     </div>
                   </td>
                 </tr>
@@ -51,38 +159,23 @@ export function FuncionarioSalePage() {
       <div className="sale-right">
         <Panel title="MEIO DE PAGAMENTO">
           <div className="payment-stack">
-            <button type="button" className="payment-button">
-              Numerário
-            </button>
-            <button type="button" className="payment-button">
-              Cartão
-            </button>
-            <button type="button" className="payment-button">
-              MB Way
-            </button>
+            {payments.map((payment) => (
+              <button key={payment.id} type="button" className="payment-button" onClick={() => setPaymentId(payment.id)}>
+                {payment.descricao || payment.tipo}
+              </button>
+            ))}
           </div>
         </Panel>
 
         <Panel>
           <div className="summary-list sale-summary">
-            <div className="summary-row">
-              <span className="muted">Subtotal</span>
-              <span className="muted">€4.19</span>
-            </div>
-            <div className="summary-row">
-              <span className="muted">IVA discriminado</span>
-              <span className="muted">€0.63</span>
-            </div>
-            <div className="summary-row total">
-              <strong>Total</strong>
-              <strong>€4.82</strong>
-            </div>
+            <div className="summary-row"><span className="muted">Subtotal</span><span className="muted">{money.format(sale?.subtotal ?? 0)}</span></div>
+            <div className="summary-row"><span className="muted">IVA discriminado</span><span className="muted">{money.format(sale?.iva ?? 0)}</span></div>
+            <div className="summary-row total"><strong>Total</strong><strong>{money.format(sale?.total ?? 0)}</strong></div>
           </div>
 
-          <Button className="full-width mt-large">Finalizar venda</Button>
-          <Button variant="secondary" className="full-width mt-compact">
-            Cancelar
-          </Button>
+          <Button className="full-width mt-large" onClick={finalizeSale} disabled={!sale?.linhas.length || !paymentId || loading}>Finalizar venda</Button>
+          <Button variant="secondary" className="full-width mt-compact" onClick={cancelSale} disabled={!sale || loading}>Cancelar</Button>
         </Panel>
       </div>
     </div>
@@ -90,24 +183,43 @@ export function FuncionarioSalePage() {
 }
 
 export function FuncionarioReturnPage() {
+  const [saleId, setSaleId] = useState('')
+  const [sale, setSale] = useState<VendaResponse | null>(null)
+  const [productId, setProductId] = useState('')
+  const [quantity, setQuantity] = useState(1)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function findSale() {
+    setError(null)
+    setSale(await apiRequest<VendaResponse>(`/vendas/${saleId}`))
+  }
+
+  async function returnProduct() {
+    if (!sale || !productId) return
+    await apiRequest<VendaResponse>(`/vendas/${sale.id}/devolucao`, {
+      method: 'POST',
+      body: JSON.stringify({ produtoId: productId, quantidade: quantity }),
+    })
+    setMessage('Devolução registada e stock reposto.')
+  }
+
   return (
     <div className="narrow-page">
       <div className="mf-stack">
         <Panel title="Pesquisar venda original">
-          <TextField placeholder="N.º da venda ou data..." />
-          <div className="sale-reference">
-            <strong>#V-2801 — 18/04 15:30</strong>
-            <span className="muted">Sandwich queijo · Leite UHT · Água 0.5L · Total: €6.48 · Cartão</span>
-          </div>
+          <TextField placeholder="ID da venda" value={saleId} onChange={(event) => setSaleId(event.target.value)} />
+          <Button className="mt-compact" onClick={findSale} disabled={!saleId}>Pesquisar</Button>
+          {sale ? <div className="sale-reference"><strong>{sale.id}</strong><span className="muted">Total: {money.format(sale.total)} · {sale.meioPagamento}</span></div> : null}
         </Panel>
 
         <Panel title="Artigo a devolver">
-          <SelectField label="Produto" value="Sandwich queijo (€2.99)" options={['Sandwich queijo (€2.99)']} onChange={() => undefined} />
-          <TextField label="Quantidade" type="number" defaultValue="1" className="small-field" />
-          <Callout tone="warning" className="mt-compact">
-            Stock será reposto e nota de crédito emitida. Registado no log de auditoria.
-          </Callout>
-          <Button className="full-width mt-large">Confirmar devolução</Button>
+          <SelectField label="Produto" value={productId} options={['', ...(sale?.linhas ?? []).map((line) => line.produtoId)]} onChange={(event) => setProductId(event.target.value)} />
+          <TextField label="Quantidade" type="number" min={1} value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className="small-field" />
+          <Callout tone="warning" className="mt-compact">Stock será reposto e operação registada no log de auditoria.</Callout>
+          {error ? <Callout tone="warning">{error}</Callout> : null}
+          {message ? <Callout tone="info">{message}</Callout> : null}
+          <Button className="full-width mt-large" onClick={returnProduct} disabled={!sale || !productId}>Confirmar devolução</Button>
         </Panel>
       </div>
     </div>

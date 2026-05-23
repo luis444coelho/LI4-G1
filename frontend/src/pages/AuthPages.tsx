@@ -1,12 +1,13 @@
 import type { CSSProperties, FormEvent } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 
 import { getRole, roleList, type RoleId } from '../data/mockData'
 import { Icon, LogoMark } from '../components/icons'
 import { Button, TextField } from '../components/ui'
 import { ApiError } from '../lib/api'
-import { roleDefaultPath, useAuth } from '../lib/auth'
+import { useAuth } from '../lib/auth'
+import { roleDefaultPath } from '../lib/authRoutes'
 
 const demoUsers: Record<RoleId, string> = {
   gestor: 'gestor.formiga',
@@ -66,16 +67,9 @@ export function AuthenticationPage() {
   const { login, session } = useAuth()
   const role = useMemo(() => getRole(roleId), [roleId])
   const [username, setUsername] = useState(role ? demoUsers[role.id] : '')
-  const [password, setPassword] = useState('miniformiga')
+  const [password, setPassword] = useState('MiniFormiga2026!')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (role) {
-      setUsername(demoUsers[role.id])
-      setPassword('MiniFormiga2026!')
-    }
-  }, [role])
 
   if (!role) {
     return <Navigate to="/" replace />
