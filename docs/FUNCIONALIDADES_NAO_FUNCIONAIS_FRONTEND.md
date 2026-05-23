@@ -4,6 +4,8 @@ Este documento foi criado a partir do estado real do codigo, comparando chamadas
 
 Data da analise: 2026-05-23.
 
+Ultima atualizacao: 2026-05-23, apos nova iteracao de implementacao, atualizacao da toolchain local e validacao de testes.
+
 ## Nota Sobre Autenticacao
 
 A autenticacao demo funciona no backend com:
@@ -26,25 +28,38 @@ Se o login falhar no browser, a causa mais provavel nao e falta de `.env`. O bac
 - frontend antigo em cache no browser;
 - backend a correr com uma BD SQLite antiga sem seed demo.
 
-## Funcionalidades Parcialmente ou Nao Funcionais
+## Funcionalidades Ainda Parcialmente ou Nao Funcionais
+
+Resumo da iteracao mais recente:
+
+- relatorios passaram a suportar tipos `STOCK`, `VENDAS` e `RENTABILIDADE`, filtros reais e exportacao CSV/PDF;
+- stock passou a permitir gerir niveis minimos, alertas e localizacao de produto;
+- sincronizacao passou a mostrar estado atual, historico, conflitos e acao de iniciar sincronizacao;
+- PDV passou a recolher NIF/nome para fatura completa;
+- gerente passou a criar/editar funcionarios da loja;
+- inventario passou a recarregar discrepancias ja registadas.
+- backend passou a expor corretamente `/api/swagger-ui/**` sem autenticacao, alem de `/api/docs`.
+- `mvn clean verify`, `npm run lint`, `npm run build` e arranque Docker Compose foram validados com a toolchain local.
 
 ### 1. Relatorios e Exportacao no Frontend
 
 Estado atual:
 
-- A pagina de relatorios carrega apenas `/relatorios/stock`.
-- Os filtros de loja, periodo e categoria sao estaticos.
-- Os botoes `Gerar relatorio`, `Exportar CSV` e `Exportar PDF` nao chamam a API.
+- A pagina de relatorios permite escolher `Stock`, `Vendas` ou `Rentabilidade`.
+- Os filtros de loja, periodo e categoria sao carregados da API.
+- `Gerar relatorio` chama o endpoint adequado: `/relatorios/stock`, `/relatorios/vendas` ou `/relatorios/rentabilidade`.
+- `Exportar CSV` e `Exportar PDF` chamam `POST /relatorios/exportar` com autenticacao e descarregam o ficheiro devolvido.
 
-Impacto:
+Impacto residual:
 
-- Nao e possivel gerar relatorios filtrados pelo frontend.
-- Nao e possivel exportar CSV/PDF pela interface, apesar de o backend ter endpoint para exportacao.
+- Falta teste manual/E2E em browser com backend local/central a correr.
 
 Ficheiros relevantes:
 
 - `frontend/src/components/pageSections.tsx`
+- `frontend/src/lib/api.ts`
 - `backend/src/main/java/pt/miniFormiga/api/RelatoriosController.java`
+- `backend/src/main/java/pt/miniFormiga/api/CategoriasController.java`
 
 ### 2. Encomendas do Gestor Dependem de Sugestoes
 
@@ -89,11 +104,12 @@ Estado atual:
 
 - A pagina de armazem para entrada de mercadoria lista encomendas existentes e regista rececao multi-linha.
 - Se nao houver encomendas criadas com linhas, nao ha forma util de testar a rececao pela interface.
-- Depois de registar entrada, a pagina nao mostra historico de entradas nem atualiza claramente a encomenda apresentada.
+- Depois de registar entrada, a pagina recarrega as encomendas, limpa quantidades locais e apresenta mensagem de sucesso/erro.
 
 Impacto:
 
-- UC-08 so fica testavel se primeiro existir uma encomenda criada por API ou por uma sugestao no frontend.
+- UC-08 continua a depender de existir uma encomenda criada por API ou por uma sugestao no frontend.
+- Continua sem historico dedicado de entradas de mercadoria na interface.
 
 Ficheiros relevantes:
 
@@ -105,30 +121,30 @@ Ficheiros relevantes:
 Estado atual:
 
 - O backend tem `GET/PUT /api/v1/produtos/{id}/localizacao`.
-- O frontend nao chama estes endpoints.
-- Nao existe formulario para editar corredor e prateleira.
+- A vista de stock chama estes endpoints.
+- Existe formulario para selecionar produto e editar corredor/prateleira.
 
-Impacto:
+Impacto residual:
 
-- RF-18/US-21 existem no backend, mas nao sao utilizaveis pela interface.
+- Falta teste manual/E2E em browser para confirmar o fluxo completo com dados reais.
 
 Ficheiros relevantes:
 
 - `backend/src/main/java/pt/miniFormiga/api/ProdutoLocalizacaoController.java`
-- `frontend/src/pages/ArmazemPages.tsx`
+- `frontend/src/components/pageSections.tsx`
 
 ### 6. Alertas de Stock Nao Têm Ciclo de Vida na Interface
 
 Estado atual:
 
 - O backend suporta listar, marcar como lido e resolver alertas.
-- O frontend apenas mostra uma indicacao derivada do stock/relatorio.
-- Nao ha botoes para marcar alerta como lido ou resolvido.
-- Nao ha formulario para definir nivel minimo diretamente a partir da vista de stock.
+- A vista de stock lista alertas ativos da loja.
+- Existem botoes para marcar alerta como lido e resolver.
+- A tabela de stock permite editar e guardar nivel minimo por produto.
 
-Impacto:
+Impacto residual:
 
-- RF-05 funciona parcialmente na UI: ve-se estado de reposicao, mas nao se gere o ciclo de vida do alerta.
+- Falta teste manual/E2E em browser para confirmar permissoes por perfil e atualizacao visual apos cada acao.
 
 Ficheiros relevantes:
 
@@ -140,11 +156,12 @@ Ficheiros relevantes:
 Estado atual:
 
 - A pagina do gerente lista funcionarios.
-- Os botoes `Novo funcionario` e `Editar` nao executam nenhuma acao.
+- O gerente pode criar funcionario para a sua loja.
+- O gerente pode editar nome, email, perfil operacional, estado e password.
 
-Impacto:
+Impacto residual:
 
-- US-11/RF-10 estao mais completos no backend e na area do gestor, mas a interface do gerente nao permite criar/editar funcionarios da loja.
+- Falta teste manual/E2E em browser para validar todas as combinacoes de perfis e permissoes.
 
 Ficheiro relevante:
 
@@ -154,13 +171,12 @@ Ficheiro relevante:
 
 Estado atual:
 
-- Ao finalizar venda, o frontend chama `/vendas/{id}/fatura` com corpo vazio.
-- Nao existem campos para NIF ou nome do cliente.
+- Ao finalizar venda, o frontend chama `/vendas/{id}/fatura` com `nifCliente` e `nomeCliente` quando preenchidos.
+- Existem campos para NIF e nome do cliente no painel de finalizacao.
 
-Impacto:
+Impacto residual:
 
-- E possivel emitir fatura simplificada.
-- Nao e possivel emitir fatura completa pela interface quando o cliente pede NIF ou quando o valor exige fatura completa.
+- Falta teste manual/E2E em browser para confirmar fatura completa em vendas acima do limite e com NIF.
 
 Ficheiros relevantes:
 
@@ -172,13 +188,13 @@ Ficheiros relevantes:
 Estado atual:
 
 - A devolucao exige que o utilizador introduza manualmente o UUID da venda.
-- A selecao de produto mostra IDs de produto, nao nomes.
+- A selecao de produto mostra nomes de produto.
 - O frontend nao tem pesquisa por numero de fatura/recibo.
-- Algumas falhas de devolucao nao sao tratadas com `try/catch`, podendo gerar erro silencioso ou erro no console.
+- Falhas de pesquisa e devolucao sao tratadas com mensagens de erro.
 
 Impacto:
 
-- O backend suporta devolucao, mas o fluxo de utilizador no frontend ainda nao e adequado para uso real de PDV.
+- O backend suporta devolucao, mas o fluxo ainda nao e ideal para uso real de PDV porque falta pesquisa por numero de fatura/recibo.
 
 Ficheiro relevante:
 
@@ -189,13 +205,13 @@ Ficheiro relevante:
 Estado atual:
 
 - O frontend mostra historico de sincronizacoes.
-- Nao existe botao para chamar `POST /sincronizacao/iniciar`.
-- Nao existe vista para `GET /sincronizacao/conflitos`.
-- Nao existe estado visual de tentativa/retry.
+- Existe botao para chamar `POST /sincronizacao/iniciar`.
+- Existe vista para `GET /sincronizacao/conflitos`.
+- Existe estado visual da sincronizacao atual e proxima tentativa quando aplicavel.
 
-Impacto:
+Impacto residual:
 
-- UC-13 esta implementado no backend, mas a UI do gestor nao permite iniciar ou inspecionar a sincronizacao de forma completa.
+- Falta teste manual/E2E em browser com backend local/central a correr.
 
 Ficheiros relevantes:
 
@@ -207,12 +223,13 @@ Ficheiros relevantes:
 Estado atual:
 
 - A pagina de inventario lista stock e permite registar contagens.
-- Quando existe inventario aberto, o frontend nao carrega as linhas ja registadas nem as discrepancias a partir de `/inventarios/{id}/discrepancias`.
-- Ao recarregar a pagina, as contagens registadas podem desaparecer da vista local, embora existam no backend.
+- Quando existe inventario aberto, o frontend carrega discrepancias a partir de `/inventarios/{id}/discrepancias`.
+- Ao iniciar inventario, registar contagem ou fechar inventario, a pagina apresenta feedback de sucesso/erro.
 
 Impacto:
 
-- UC-11 fica parcialmente funcional, mas a experiencia e inconsistente apos refresh/navegacao.
+- UC-11 ficou mais consistente para discrepancias.
+- Linhas com discrepancia zero ainda nao sao reidratadas apos refresh porque o backend so expoe `/discrepancias`; para resolver totalmente, falta endpoint/listagem de todas as linhas do inventario ou resposta completa no DTO.
 
 Ficheiro relevante:
 
@@ -260,6 +277,8 @@ Ficheiros relevantes:
 Os seguintes endpoints responderam corretamente em testes rapidos com os utilizadores demo:
 
 - login com JWT;
+- login local com `operador.braga` contra o backend local;
+- login central com `gestor.formiga` contra o backend central;
 - dashboard;
 - relatorio de stock;
 - listagem de fornecedores;
@@ -269,15 +288,13 @@ Os seguintes endpoints responderam corretamente em testes rapidos com os utiliza
 - consulta de stock;
 - historico de sincronizacao.
 
-Isto nao significa que todos os fluxos estejam bons na interface, apenas que a API base respondeu.
+O frontend tambem respondeu 200 dentro da rede Docker Compose. Isto nao significa que todos os fluxos estejam bons na interface, apenas que a API base e o arranque integrado responderam.
 
 ## Prioridade Recomendada Para Corrigir
 
 1. Melhorar mensagens de erro no frontend para mostrar `ApiError.message` em todas as acoes.
-2. Corrigir relatorios: filtros reais e botoes de exportacao.
-3. Completar encomendas manuais e condicoes comerciais.
-4. Completar faturacao com NIF/nome no PDV.
-5. Completar ciclo de alertas e definicao de nivel minimo.
-6. Completar sincronizacao: iniciar, historico e conflitos.
-7. Completar localizacao de produto.
-8. Tornar devolucao pesquisavel por fatura/venda com nomes de produtos.
+2. Completar encomendas manuais e condicoes comerciais de fornecedores.
+3. Criar historico dedicado para entradas de mercadoria na interface.
+4. Tornar devolucao pesquisavel por numero de fatura/recibo.
+5. Usar o endpoint dedicado de codigo de barras no PDV.
+6. Fazer testes E2E/browser dos fluxos principais e responsividade mobile.

@@ -4,6 +4,11 @@ import type { IconName, StatusTone } from '../data/mockData'
 import { cn } from '../lib/cn'
 import { Icon } from './icons'
 
+export type SelectOption = string | {
+  value: string
+  label: string
+}
+
 export function TopChip({ children }: { children: ReactNode }) {
   return <span className="mf-top-chip">{children}</span>
 }
@@ -106,18 +111,22 @@ export function SelectField({
   ...props
 }: SelectHTMLAttributes<HTMLSelectElement> & {
   label?: string
-  options: string[]
+  options: SelectOption[]
 }) {
   return (
     <label className={cn('mf-field', className)}>
       {label ? <span className="mf-field-label">{label}</span> : null}
       <span className="mf-select-wrap">
         <select className="mf-select" {...props}>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
+          {options.map((option) => {
+            const value = typeof option === 'string' ? option : option.value
+            const optionLabel = typeof option === 'string' ? option : option.label
+            return (
+              <option key={value} value={value}>
+                {optionLabel}
+              </option>
+            )
+          })}
         </select>
         <Icon name="chevron" className="mf-select-icon" />
       </span>

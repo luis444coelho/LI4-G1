@@ -14,6 +14,8 @@ export function FuncionarioSalePage() {
   const [query, setQuery] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [paymentId, setPaymentId] = useState('')
+  const [nifCliente, setNifCliente] = useState('')
+  const [nomeCliente, setNomeCliente] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -91,9 +93,14 @@ export function FuncionarioSalePage() {
       })
       await apiRequest<FaturaResponse>(`/vendas/${finalized.id}/fatura`, {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          nifCliente: nifCliente.trim() || null,
+          nomeCliente: nomeCliente.trim() || null,
+        }),
       })
       setSale(null)
+      setNifCliente('')
+      setNomeCliente('')
       setMessage('Venda finalizada e fatura emitida.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao finalizar venda.')
@@ -168,6 +175,10 @@ export function FuncionarioSalePage() {
         </Panel>
 
         <Panel>
+          <div className="mf-fields-grid two">
+            <TextField label="NIF cliente" value={nifCliente} onChange={(event) => setNifCliente(event.target.value)} />
+            <TextField label="Nome cliente" value={nomeCliente} onChange={(event) => setNomeCliente(event.target.value)} />
+          </div>
           <div className="summary-list sale-summary">
             <div className="summary-row"><span className="muted">Subtotal</span><span className="muted">{money.format(sale?.subtotal ?? 0)}</span></div>
             <div className="summary-row"><span className="muted">IVA discriminado</span><span className="muted">{money.format(sale?.iva ?? 0)}</span></div>
@@ -192,16 +203,32 @@ export function FuncionarioReturnPage() {
 
   async function findSale() {
     setError(null)
-    setSale(await apiRequest<VendaResponse>(`/vendas/${saleId}`))
+    setMessage(null)
+    try {
+      const response = await apiRequest<VendaResponse>(`/vendas/${saleId}`)
+      setSale(response)
+      setProductId(response.linhas.find((line) => !line.anulada)?.produtoId ?? '')
+    } catch (caught) {
+      setSale(null)
+      setProductId('')
+      setError(caught instanceof Error ? caught.message : 'Venda não encontrada.')
+    }
   }
 
   async function returnProduct() {
     if (!sale || !productId) return
-    await apiRequest<VendaResponse>(`/vendas/${sale.id}/devolucao`, {
-      method: 'POST',
-      body: JSON.stringify({ produtoId: productId, quantidade: quantity }),
-    })
-    setMessage('Devolução registada e stock reposto.')
+    setError(null)
+    setMessage(null)
+    try {
+      const response = await apiRequest<VendaResponse>(`/vendas/${sale.id}/devolucao`, {
+        method: 'POST',
+        body: JSON.stringify({ produtoId: productId, quantidade: quantity }),
+      })
+      setSale(response)
+      setMessage('Devolução registada e stock reposto.')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível registar a devolução.')
+    }
   }
 
   return (
@@ -214,7 +241,12 @@ export function FuncionarioReturnPage() {
         </Panel>
 
         <Panel title="Artigo a devolver">
-          <SelectField label="Produto" value={productId} options={['', ...(sale?.linhas ?? []).map((line) => line.produtoId)]} onChange={(event) => setProductId(event.target.value)} />
+          <SelectField
+            label="Produto"
+            value={productId}
+            options={[{ value: '', label: 'Selecionar produto' }, ...(sale?.linhas ?? []).filter((line) => !line.anulada).map((line) => ({ value: line.produtoId, label: line.produto }))]}
+            onChange={(event) => setProductId(event.target.value)}
+          />
           <TextField label="Quantidade" type="number" min={1} value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className="small-field" />
           <Callout tone="warning" className="mt-compact">Stock será reposto e operação registada no log de auditoria.</Callout>
           {error ? <Callout tone="warning">{error}</Callout> : null}

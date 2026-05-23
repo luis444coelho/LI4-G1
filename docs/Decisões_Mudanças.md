@@ -14,8 +14,10 @@ Foram analisadas as tarefas já assinaladas em `TAREFAS_IMPLEMENTACAO.md`, o est
 - `SubEncomendas`, incluindo fornecedores, encomendas e entrada de mercadoria.
 - `SubSincronizacao`, incluindo agendamento, payload, transporte REST/JSON, endpoint central por perfil, estados e conflitos.
 - infraestrutura de execucao com o mesmo backend em perfil `local` e `central`, Docker Compose completo, seed demo configuravel e CORS para o frontend em porta separada.
+- frontend mais ligado a API real para relatorios/exportacao, categorias, alertas de stock, localizacao, fatura completa, sincronizacao, inventario e funcionarios.
+- ambiente local atualizado com Temurin JDK 21.0.11 e Node.js 20.19.5 em `.tools/`, excluido do Git.
 
-A última execução completa de testes do backend passou com sucesso: 130 testes executados, 0 falhas.
+A validacao oficial foi repetida em 2026-05-23 com a toolchain local: `mvn clean verify` executou 133 testes, 0 falhas, com JaCoCo OK; `npm run lint` e `npm run build` passaram com Node.js 20.19.5. O stack Docker Compose tambem arrancou com backend local, backend central, PostgreSQL e frontend, e os logins demo devolveram JWT.
 
 ## Decisões com Impacto Pendente no Relatório
 

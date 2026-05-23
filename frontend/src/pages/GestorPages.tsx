@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, MetricCard, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
 import { ReportsContent } from '../components/pageSections'
-import { apiRequest, type DashboardResponse, type EncomendaResponse, type FornecedorResponse, type LojaResponse, type PageResponse, type PerfilResponse, type RelatorioStockResponse, type SincronizacaoResponse, type SugestaoEncomendaResponse, type UtilizadorResponse } from '../lib/api'
+import { apiRequest, type ConflitoSincronizacaoResponse, type DashboardResponse, type EncomendaResponse, type FornecedorResponse, type LojaResponse, type PageResponse, type PerfilResponse, type RelatorioStockResponse, type SincronizacaoResponse, type SugestaoEncomendaResponse, type UtilizadorResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 const currencyFormatter = new Intl.NumberFormat('pt-PT', {
@@ -501,27 +501,87 @@ export function GestorUsersPage() {
 
 export function GestorSyncPage() {
   const { session } = useAuth()
+  const lojaId = session?.lojaId
   const [history, setHistory] = useState<SincronizacaoResponse[]>([])
+  const [current, setCurrent] = useState<SincronizacaoResponse | null>(null)
+  const [conflictRows, setConflictRows] = useState<ConflitoSincronizacaoResponse[]>([])
+  const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadSyncData = useCallback(async () => {
+    if (!lojaId) return
+    setLoading(true)
+    setError(null)
+    try {
+      const [page, state, conflicts] = await Promise.all([
+        apiRequest<PageResponse<SincronizacaoResponse>>(`/sincronizacao/historico?lojaId=${lojaId}&size=20`),
+        apiRequest<SincronizacaoResponse>(`/sincronizacao/estado?lojaId=${lojaId}`).catch(() => null),
+        apiRequest<ConflitoSincronizacaoResponse[]>(`/sincronizacao/conflitos?lojaId=${lojaId}`).catch(() => []),
+      ])
+      setHistory(page.content)
+      setCurrent(state)
+      setConflictRows(conflicts)
+    } catch (caught) {
+      setHistory([])
+      setConflictRows([])
+      setError(caught instanceof Error ? caught.message : 'Não foi possível carregar sincronizações.')
+    } finally {
+      setLoading(false)
+    }
+  }, [lojaId])
 
   useEffect(() => {
-    apiRequest<PageResponse<SincronizacaoResponse>>(`/sincronizacao/historico?lojaId=${session?.lojaId}&size=20`)
-      .then((page) => setHistory(page.content))
-      .catch(() => setHistory([]))
-  }, [session?.lojaId])
+    const timeoutId = window.setTimeout(() => {
+      void loadSyncData()
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [loadSyncData])
+
+  async function startSync() {
+    if (!lojaId) return
+    setSyncing(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const response = await apiRequest<SincronizacaoResponse>('/sincronizacao/iniciar', {
+        method: 'POST',
+        body: JSON.stringify({ lojaId }),
+      })
+      setCurrent(response)
+      setMessage(response.estado === 'CONCLUIDA' ? 'Sincronização concluída.' : 'Sincronização mantida para nova tentativa.')
+      await loadSyncData()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível iniciar a sincronização.')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const completed = history.filter((item) => item.estado === 'CONCLUIDA').length
-  const conflicts = history.reduce((sum, item) => sum + item.conflitosResolvidos, 0)
+  const conflicts = conflictRows.reduce((sum, item) => sum + item.conflitosResolvidos, 0)
 
   return (
     <div className="mf-stack">
       <div className="mf-metrics-grid three">
         <MetricCard label="Sincronizações" value={String(history.length)} footnote="Histórico da loja" tone="neutral" />
-        <MetricCard label="Concluídas" value={String(completed)} footnote="Sem conflitos registados" tone="success" />
+        <MetricCard label="Estado atual" value={current?.estado ?? '-'} footnote={current?.proximaTentativa ? `Retry ${new Date(current.proximaTentativa).toLocaleString('pt-PT')}` : `${completed} concluídas`} tone={current?.estado === 'FALHADA' ? 'danger' : current?.estado === 'PENDENTE' ? 'neutral' : 'success'} />
         <MetricCard label="Conflitos" value={String(conflicts)} footnote="Resolvidos por last-write-wins" tone={conflicts > 0 ? 'danger' : 'success'} />
       </div>
 
+      <Panel
+        title="Sincronização"
+        action={<Button onClick={startSync} disabled={syncing || loading}>{syncing ? 'A sincronizar...' : 'Iniciar sincronização'}</Button>}
+      >
+        {error ? <Callout tone="warning">{error}</Callout> : null}
+        {message ? <Callout tone="info">{message}</Callout> : null}
+        {!error && !message ? <p className="mf-empty-state">Última tentativa: {current?.inicio ? new Date(current.inicio).toLocaleString('pt-PT') : 'sem registo'}</p> : null}
+      </Panel>
+
       <Panel title="Histórico de sincronizações">
-        {history.length === 0 ? <p className="mf-empty-state">Sem sincronizações registadas.</p> : null}
+        {loading ? <p className="mf-empty-state">A carregar sincronizações...</p> : null}
+        {!loading && history.length === 0 ? <p className="mf-empty-state">Sem sincronizações registadas.</p> : null}
         <table className="mf-table">
           <thead>
             <tr>
@@ -540,6 +600,32 @@ export function GestorSyncPage() {
                 <td>
                   <StatusBadge tone={row.estado === 'CONCLUIDA' ? 'success' : row.estado === 'PENDENTE' ? 'warning' : 'danger'}>{row.estado}</StatusBadge>
                 </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Panel>
+
+      <Panel title="Conflitos resolvidos">
+        {conflictRows.length === 0 ? <p className="mf-empty-state">Sem conflitos registados.</p> : null}
+        <table className="mf-table">
+          <thead>
+            <tr>
+              <th>LOJA</th>
+              <th>DATA/HORA</th>
+              <th>ESTADO</th>
+              <th>CONFLITOS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {conflictRows.map((row) => (
+              <tr key={`${row.sincronizacaoId}-${row.dataHora}`}>
+                <td>{row.lojaId}</td>
+                <td className="muted">{new Date(row.dataHora).toLocaleString('pt-PT')}</td>
+                <td>
+                  <StatusBadge tone={row.estado === 'CONCLUIDA' ? 'success' : 'warning'}>{row.estado}</StatusBadge>
+                </td>
+                <td className={row.conflitosResolvidos > 0 ? 'tone-danger' : 'muted'}>{row.conflitosResolvidos}</td>
               </tr>
             ))}
           </tbody>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
 import { ReportsContent, StockContent } from '../components/pageSections'
-import { apiRequest, type AjusteInventarioResponse, type FechoCaixaResponse, type MotivoAjusteResponse, type PageResponse, type StockResponse, type UtilizadorResponse } from '../lib/api'
+import { apiRequest, type AjusteInventarioResponse, type FechoCaixaResponse, type MotivoAjusteResponse, type PageResponse, type PerfilResponse, type StockResponse, type UtilizadorResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 const money = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
@@ -150,16 +150,115 @@ export function GerenteAdjustmentPage() {
 export function GerenteEmployeesPage() {
   const { session } = useAuth()
   const [rows, setRows] = useState<UtilizadorResponse[]>([])
+  const [profiles, setProfiles] = useState<PerfilResponse[]>([])
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState({
+    username: '',
+    password: 'MiniFormiga2026!',
+    nome: '',
+    email: '',
+    perfilId: '',
+    ativo: true,
+  })
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    apiRequest<PageResponse<UtilizadorResponse>>(`/utilizadores?lojaId=${session?.lojaId}&size=50`)
-      .then((page) => setRows(page.content))
-      .catch(() => setRows([]))
+    Promise.all([
+      apiRequest<PageResponse<UtilizadorResponse>>(`/utilizadores?lojaId=${session?.lojaId}&size=50`),
+      apiRequest<PerfilResponse[]>('/utilizadores/perfis'),
+    ])
+      .then(([page, profileRows]) => {
+        const operationalProfiles = profileRows.filter((profile) => profile.nome !== 'GESTOR')
+        setRows(page.content)
+        setProfiles(operationalProfiles)
+        setDraft((state) => ({ ...state, perfilId: state.perfilId || operationalProfiles.find((profile) => profile.nome === 'FUNCIONARIO')?.id || operationalProfiles[0]?.id || '' }))
+      })
+      .catch(() => setError('Não foi possível carregar funcionários.'))
   }, [session?.lojaId])
+
+  function resetDraft() {
+    setEditingId(null)
+    setDraft((state) => ({
+      username: '',
+      password: 'MiniFormiga2026!',
+      nome: '',
+      email: '',
+      perfilId: profiles.find((profile) => profile.nome === 'FUNCIONARIO')?.id || profiles[0]?.id || state.perfilId,
+      ativo: true,
+    }))
+  }
+
+  async function submitEmployee() {
+    setError(null)
+    setMessage(null)
+    try {
+      if (editingId) {
+        const updated = await apiRequest<UtilizadorResponse>(`/utilizadores/${editingId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            nome: draft.nome,
+            email: draft.email,
+            perfilId: draft.perfilId,
+            lojaId: session?.lojaId,
+            ativo: draft.ativo,
+            password: draft.password.trim() ? draft.password : null,
+          }),
+        })
+        setRows((items) => items.map((item) => (item.id === updated.id ? updated : item)))
+        setMessage('Funcionário atualizado.')
+      } else {
+        const created = await apiRequest<UtilizadorResponse>('/utilizadores', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: draft.username,
+            password: draft.password,
+            nome: draft.nome,
+            email: draft.email,
+            perfilId: draft.perfilId,
+            lojaId: session?.lojaId,
+          }),
+        })
+        setRows((items) => [created, ...items])
+        setMessage('Funcionário criado.')
+      }
+      resetDraft()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível guardar funcionário.')
+    }
+  }
+
+  function editEmployee(employee: UtilizadorResponse) {
+    setEditingId(employee.id)
+    setDraft({
+      username: employee.username,
+      password: '',
+      nome: employee.nome,
+      email: employee.email,
+      perfilId: employee.perfilId || profiles.find((profile) => profile.nome === employee.perfil)?.id || profiles[0]?.id || '',
+      ativo: employee.ativo,
+    })
+  }
 
   return (
     <div className="mf-stack">
-      <div className="mf-toolbar-space"><p className="mf-section-note">{rows.length} funcionários registados</p><Button>Novo funcionário</Button></div>
+      <div className="mf-toolbar-space"><p className="mf-section-note">{rows.length} funcionários registados</p><Button onClick={resetDraft}>Novo funcionário</Button></div>
+      <Panel title={editingId ? 'Editar funcionário' : 'Novo funcionário'}>
+        <div className="mf-fields-grid three">
+          <TextField label="Username" value={draft.username} disabled={Boolean(editingId)} onChange={(event) => setDraft((state) => ({ ...state, username: event.target.value }))} />
+          <TextField label="Nome" value={draft.nome} onChange={(event) => setDraft((state) => ({ ...state, nome: event.target.value }))} />
+          <TextField label="Email" value={draft.email} onChange={(event) => setDraft((state) => ({ ...state, email: event.target.value }))} />
+          <SelectField label="Perfil" value={draft.perfilId} options={profiles.map((profile) => ({ value: profile.id, label: profile.nome }))} onChange={(event) => setDraft((state) => ({ ...state, perfilId: event.target.value }))} />
+          <SelectField label="Estado" value={draft.ativo ? 'ativo' : 'inativo'} options={[{ value: 'ativo', label: 'Ativo' }, { value: 'inativo', label: 'Inativo' }]} onChange={(event) => setDraft((state) => ({ ...state, ativo: event.target.value === 'ativo' }))} />
+          <TextField label={editingId ? 'Nova password' : 'Password inicial'} value={draft.password} onChange={(event) => setDraft((state) => ({ ...state, password: event.target.value }))} />
+        </div>
+        {error ? <Callout tone="warning" className="mt-compact">{error}</Callout> : null}
+        {message ? <Callout tone="info" className="mt-compact">{message}</Callout> : null}
+        <div className="mf-actions-row">
+          <Button onClick={submitEmployee} disabled={!draft.nome || !draft.email || !draft.perfilId || (!editingId && (!draft.username || !draft.password))}>{editingId ? 'Guardar alterações' : 'Criar funcionário'}</Button>
+          {editingId ? <Button variant="secondary" onClick={resetDraft}>Cancelar</Button> : null}
+        </div>
+      </Panel>
       <div className="employee-stack">
         {rows.length === 0 ? <Panel><p className="mf-empty-state">Sem funcionários para apresentar.</p></Panel> : null}
         {rows.map((row) => (
@@ -169,7 +268,7 @@ export function GerenteEmployeesPage() {
                 <InitialAvatar initials={row.nome.slice(0, 2).toUpperCase()} />
                 <div className="employee-copy"><strong>{row.nome}</strong><span className="muted">{row.email}</span></div>
               </div>
-              <div className="employee-actions"><StatusBadge tone={row.ativo ? 'success' : 'danger'}>{row.ativo ? 'Ativo' : 'Inativo'}</StatusBadge><Button variant="secondary" className="small">Editar</Button></div>
+              <div className="employee-actions"><StatusBadge tone={row.ativo ? 'success' : 'danger'}>{row.ativo ? 'Ativo' : 'Inativo'}</StatusBadge><Button variant="secondary" className="small" onClick={() => editEmployee(row)}>Editar</Button></div>
             </div>
           </Panel>
         ))}
