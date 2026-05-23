@@ -73,8 +73,15 @@ mvn spring-boot:run
 ```bash
 cd frontend
 npm ci
-VITE_API_BASE_URL=http://localhost:8080/api/v1 npm run dev -- --host 0.0.0.0 --port 3000
+VITE_API_BASE_URL=http://localhost:8080/api/v1 \
+VITE_CENTRAL_API_BASE_URL=http://localhost:8081/api/v1 \
+npm run dev -- --host 0.0.0.0 --port 3000
 ```
+
+O frontend escolhe a API pelo perfil:
+
+- Gestor da Cadeia -> backend central `http://localhost:8081/api/v1`
+- Gerente, Funcionário e Responsável de Armazém -> backend local `http://localhost:8080/api/v1`
 
 ## Variaveis uteis
 

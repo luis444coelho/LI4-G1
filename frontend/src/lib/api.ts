@@ -1,9 +1,11 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+export const LOCAL_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+export const CENTRAL_API_BASE_URL = import.meta.env.VITE_CENTRAL_API_BASE_URL ?? LOCAL_API_BASE_URL
 export const AUTH_STORAGE_KEY = 'mini-formiga.auth'
 
 interface StoredSession {
   tokenType: string
   accessToken: string
+  apiBaseUrl?: string
 }
 
 export interface LoginResponse {
@@ -302,9 +304,14 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+interface ApiRequestOptions extends RequestInit {
+  apiBaseUrl?: string
+}
+
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers)
   const token = getStoredToken()
+  const { apiBaseUrl, ...requestOptions } = options
 
   if (!headers.has('Accept')) {
     headers.set('Accept', 'application/json')
@@ -316,8 +323,8 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     headers.set('Content-Type', 'application/json')
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+  const response = await fetch(`${apiBaseUrl ?? getStoredApiBaseUrl()}${path}`, {
+    ...requestOptions,
     headers,
   })
   const payload = await parseResponse(response)
@@ -345,6 +352,19 @@ function getStoredToken() {
     return session.accessToken ?? null
   } catch {
     return null
+  }
+}
+
+function getStoredApiBaseUrl() {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY)
+    if (!raw) {
+      return LOCAL_API_BASE_URL
+    }
+    const session = JSON.parse(raw) as Partial<StoredSession>
+    return session.apiBaseUrl ?? LOCAL_API_BASE_URL
+  } catch {
+    return LOCAL_API_BASE_URL
   }
 }
 

@@ -83,7 +83,7 @@ export function AuthenticationPage() {
     setError(null)
     setLoading(true)
     try {
-      const nextSession = await login(username, password)
+      const nextSession = await login(username, password, role.id)
       navigate(roleDefaultPath(nextSession.roleId), { replace: true })
     } catch (caught) {
       const message = caught instanceof ApiError ? caught.message : 'Não foi possível autenticar.'
