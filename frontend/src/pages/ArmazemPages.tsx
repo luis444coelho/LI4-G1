@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { Button, Callout, Panel, SelectField, TextField } from '../components/ui'
 import { StockContent } from '../components/pageSections'
@@ -32,23 +32,32 @@ export function ArmazemGoodsReceiptPage() {
   async function submitReceipt() {
     if (!order) return
     setError(null)
-    const response = await apiRequest<EntradaMercadoriaResponse[]>('/entradas-mercadoria', {
-      method: 'POST',
-      body: JSON.stringify({
-        encomendaId: order.id,
-        lojaId: session?.lojaId,
-        responsavelId: session?.utilizadorId,
-        guiaNumero: guide || `GR-${order.id.slice(0, 8)}`,
-        dataEmissao: new Date().toISOString().slice(0, 10),
-        linhas: order.linhas.map((line) => ({
-          produtoId: line.produtoId,
-          quantidadeEncomendada: line.quantidade,
-          quantidadeRecebida: received[line.produtoId] ?? line.quantidade,
-          observacoes: '',
-        })),
-      }),
-    })
-    setMessage(`${response.length} linhas de mercadoria registadas.`)
+    setMessage(null)
+    try {
+      const response = await apiRequest<EntradaMercadoriaResponse[]>('/entradas-mercadoria', {
+        method: 'POST',
+        body: JSON.stringify({
+          encomendaId: order.id,
+          lojaId: session?.lojaId,
+          responsavelId: session?.utilizadorId,
+          guiaNumero: guide || `GR-${order.id.slice(0, 8)}`,
+          dataEmissao: new Date().toISOString().slice(0, 10),
+          linhas: order.linhas.map((line) => ({
+            produtoId: line.produtoId,
+            quantidadeEncomendada: line.quantidade,
+            quantidadeRecebida: received[line.produtoId] ?? line.quantidade,
+            observacoes: '',
+          })),
+        }),
+      })
+      const page = await apiRequest<PageResponse<EncomendaResponse>>(`/encomendas?lojaId=${session?.lojaId}&size=20`)
+      setOrders(page.content)
+      setOrderId(page.content[0]?.id ?? '')
+      setReceived({})
+      setMessage(`${response.length} linhas de mercadoria registadas.`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível registar a entrada de mercadoria.')
+    }
   }
 
   return (
@@ -90,42 +99,93 @@ export function ArmazemGoodsReceiptPage() {
 
 export function ArmazemInventoryPage() {
   const { session } = useAuth()
+  const lojaId = session?.lojaId
+  const utilizadorId = session?.utilizadorId
   const [stockRows, setStockRows] = useState<StockResponse[]>([])
   const [inventory, setInventory] = useState<InventarioFisicoResponse | null>(null)
   const [lines, setLines] = useState<LinhaInventarioResponse[]>([])
   const [counted, setCounted] = useState<Record<string, number>>({})
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadInventoryData = useCallback(async () => {
+    if (!lojaId) return
+    setError(null)
+    try {
+      const [stock, page] = await Promise.all([
+        apiRequest<StockResponse[]>(`/stock?lojaId=${lojaId}`),
+        apiRequest<PageResponse<InventarioFisicoResponse>>(`/inventarios?lojaId=${lojaId}&size=1`),
+      ])
+      const currentInventory = page.content[0] ?? null
+      setStockRows(stock)
+      setInventory(currentInventory)
+
+      if (currentInventory) {
+        const discrepancyRows = await apiRequest<LinhaInventarioResponse[]>(`/inventarios/${currentInventory.id}/discrepancias`)
+        setLines(discrepancyRows)
+        setCounted(Object.fromEntries(discrepancyRows.map((line) => [line.produtoId, line.quantidadeContada])))
+      } else {
+        setLines([])
+        setCounted({})
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível carregar o inventário.')
+    }
+  }, [lojaId])
 
   useEffect(() => {
-    Promise.all([
-      apiRequest<StockResponse[]>(`/stock?lojaId=${session?.lojaId}`),
-      apiRequest<PageResponse<InventarioFisicoResponse>>(`/inventarios?lojaId=${session?.lojaId}&size=1`),
-    ]).then(([stock, page]) => {
-      setStockRows(stock)
-      setInventory(page.content[0] ?? null)
-    }).catch(() => undefined)
-  }, [session?.lojaId])
+    const timeoutId = window.setTimeout(() => {
+      void loadInventoryData()
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [loadInventoryData])
 
   async function startInventory() {
-    const created = await apiRequest<InventarioFisicoResponse>('/inventarios', {
-      method: 'POST',
-      body: JSON.stringify({ lojaId: session?.lojaId, utilizadorId: session?.utilizadorId }),
-    })
-    setInventory(created)
+    setError(null)
+    setMessage(null)
+    try {
+      const created = await apiRequest<InventarioFisicoResponse>('/inventarios', {
+        method: 'POST',
+        body: JSON.stringify({ lojaId, utilizadorId }),
+      })
+      setInventory(created)
+      const discrepancyRows = await apiRequest<LinhaInventarioResponse[]>(`/inventarios/${created.id}/discrepancias`)
+      setLines(discrepancyRows)
+      setCounted(Object.fromEntries(discrepancyRows.map((line) => [line.produtoId, line.quantidadeContada])))
+      setMessage('Inventário físico iniciado.')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível iniciar o inventário.')
+    }
   }
 
   async function registerCount(product: StockResponse) {
     if (!inventory) return
-    const line = await apiRequest<LinhaInventarioResponse>(`/inventarios/${inventory.id}/linhas`, {
-      method: 'POST',
-      body: JSON.stringify({ produtoId: product.produtoId, quantidade: counted[product.produtoId] ?? product.quantidade }),
-    })
-    setLines((items) => [line, ...items.filter((item) => item.produtoId !== line.produtoId)])
+    setError(null)
+    setMessage(null)
+    try {
+      const line = await apiRequest<LinhaInventarioResponse>(`/inventarios/${inventory.id}/linhas`, {
+        method: 'POST',
+        body: JSON.stringify({ produtoId: product.produtoId, quantidade: counted[product.produtoId] ?? product.quantidade }),
+      })
+      setLines((items) => [line, ...items.filter((item) => item.produtoId !== line.produtoId)])
+      setCounted((items) => ({ ...items, [line.produtoId]: line.quantidadeContada }))
+      setMessage(`Contagem registada para ${product.produto}.`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível registar a contagem.')
+    }
   }
 
   async function closeInventory() {
     if (!inventory) return
-    await apiRequest<void>(`/inventarios/${inventory.id}/fechar`, { method: 'POST' })
-    setInventory({ ...inventory, fechado: true })
+    setError(null)
+    setMessage(null)
+    try {
+      await apiRequest<void>(`/inventarios/${inventory.id}/fechar`, { method: 'POST' })
+      setInventory({ ...inventory, fechado: true })
+      setMessage('Inventário fechado.')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível fechar o inventário.')
+    }
   }
 
   return (
@@ -134,6 +194,8 @@ export function ArmazemInventoryPage() {
         <p className="mf-section-note">Inventário físico {inventory ? inventory.id.slice(0, 8) : 'por iniciar'}</p>
         {inventory ? <Button onClick={closeInventory} disabled={inventory.fechado}>Fechar inventário</Button> : <Button onClick={startInventory}>Iniciar inventário</Button>}
       </div>
+      {error ? <Callout tone="warning">{error}</Callout> : null}
+      {message ? <Callout tone="info">{message}</Callout> : null}
 
       <Panel>
         <table className="mf-table compact inventory">

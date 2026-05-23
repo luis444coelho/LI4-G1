@@ -39,6 +39,48 @@ export interface DashboardResponse {
   vendasPorLoja: VendasPorLojaResponse[]
 }
 
+export interface PeriodoResponse {
+  inicio: string
+  fim: string
+}
+
+export interface LinhaVendaRelatorioResponse {
+  vendaId: string
+  dataHora: string
+  lojaId: string
+  loja: string
+  produtoId: string
+  produto: string
+  categoria: string
+  quantidade: number
+  valorSemIva: number
+  iva: number
+  valorComIva: number
+  margem: number
+}
+
+export interface VendasPorDiaResponse {
+  data: string
+  total: number
+  iva: number
+  margem: number
+  numeroVendas: number
+}
+
+export interface RelatorioVendasResponse {
+  periodo: PeriodoResponse
+  lojaId?: string
+  categoriaId?: string
+  totalSemIva: number
+  totalIva: number
+  totalComIva: number
+  margem: number
+  numeroVendas: number
+  vendasPorLoja: VendasPorLojaResponse[]
+  vendasPorDia: VendasPorDiaResponse[]
+  linhas: LinhaVendaRelatorioResponse[]
+}
+
 export interface StockItemResponse {
   produtoId: string
   produto: string
@@ -61,6 +103,38 @@ export interface RelatorioStockResponse {
   itens: StockItemResponse[]
 }
 
+export interface RentabilidadeProdutoResponse {
+  produtoId: string
+  produto: string
+  categoria: string
+  quantidadeVendida: number
+  receitaSemIva: number
+  custo: number
+  margem: number
+  margemPercentagem: number
+}
+
+export interface RentabilidadeCategoriaResponse {
+  categoria: string
+  quantidadeVendida: number
+  receitaSemIva: number
+  custo: number
+  margem: number
+  margemPercentagem: number
+}
+
+export interface RelatorioRentabilidadeResponse {
+  periodo: PeriodoResponse
+  lojaId?: string
+  categoriaId?: string
+  receitaSemIva: number
+  custoTotal: number
+  margemTotal: number
+  margemPercentagem: number
+  produtos: RentabilidadeProdutoResponse[]
+  categorias: RentabilidadeCategoriaResponse[]
+}
+
 export interface PageResponse<T> {
   content: T[]
   totalElements: number
@@ -80,6 +154,12 @@ export interface ProdutoResponse {
   categoria: string
   taxaIva: number
   ativo: boolean
+}
+
+export interface CategoriaResponse {
+  id: string
+  nome: string
+  descricao?: string
 }
 
 export interface LinhaVendaResponse {
@@ -143,6 +223,8 @@ export interface AlertaStockResponse {
   quantidadeNoMomento: number
   lido: boolean
   resolvido: boolean
+  dataResolucao?: string
+  destinatarios: string[]
 }
 
 export interface AjusteInventarioResponse {
@@ -271,6 +353,12 @@ export interface LinhaInventarioResponse {
   discrepancia: number
 }
 
+export interface LocalizacaoProdutoResponse {
+  produtoId: string
+  corredor: string
+  prateleira: string
+}
+
 export interface SincronizacaoResponse {
   id: string
   lojaId: string
@@ -308,6 +396,11 @@ interface ApiRequestOptions extends RequestInit {
   apiBaseUrl?: string
 }
 
+export interface ApiDownloadResponse {
+  blob: Blob
+  filename: string
+}
+
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers)
   const token = getStoredToken()
@@ -340,6 +433,46 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
 
   return payload as T
+}
+
+export async function apiDownload(path: string, options: ApiRequestOptions = {}): Promise<ApiDownloadResponse> {
+  const headers = new Headers(options.headers)
+  const token = getStoredToken()
+  const { apiBaseUrl, ...requestOptions } = options
+
+  if (!headers.has('Accept')) {
+    headers.set('Accept', '*/*')
+  }
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
+  const response = await fetch(`${apiBaseUrl ?? getStoredApiBaseUrl()}${path}`, {
+    ...requestOptions,
+    headers,
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    let message = 'Pedido rejeitado pelo servidor'
+    try {
+      const payload = JSON.parse(text) as { message?: string }
+      message = payload.message ?? message
+    } catch {
+      message = text || message
+    }
+    throw new ApiError(response.status, message)
+  }
+
+  const disposition = response.headers.get('content-disposition') ?? ''
+  const filenameMatch = /filename="?(?<filename>[^";]+)"?/i.exec(disposition)
+  return {
+    blob: await response.blob(),
+    filename: filenameMatch?.groups?.filename ?? 'mini-formiga-relatorio',
+  }
 }
 
 function getStoredToken() {
