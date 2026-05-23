@@ -9,6 +9,21 @@ Este guia descreve como arrancar o sistema com a arquitetura definida no relator
 - Node.js 20+
 - Docker e Docker Compose, se for usado PostgreSQL via container
 
+### Toolchain local validada
+
+Neste workspace foi instalada uma toolchain local em `.tools/`, excluida do Git, para correr o projeto mesmo quando o sistema tiver Java/Node antigos:
+
+```bash
+export JAVA_HOME="$PWD/.tools/jdk-21.0.11+10"
+export PATH="$JAVA_HOME/bin:$PWD/.tools/node-v20.19.5-linux-x64/bin:$PATH"
+```
+
+Versoes validadas em 2026-05-23:
+
+- Temurin JDK 21.0.11
+- Node.js 20.19.5
+- npm 10.8.2
+
 ## Credenciais demo
 
 Todos os utilizadores demo usam a password:
@@ -94,6 +109,17 @@ O frontend escolhe a API pelo perfil selecionado:
 
 ## Validacao rapida por terminal
 
+Antes dos testes, confirmar que as versoes ativas batem certo com os pre-requisitos:
+
+```bash
+java -version
+javac -version
+node -v
+npm -v
+```
+
+O backend usa `release 21`; com JDK 17 o Maven falha antes de compilar com `release version 21 not supported`. O frontend usa dependencias recentes de TypeScript/ESLint; com Node.js 12 os comandos falham antes de analisar o codigo.
+
 Login demo:
 
 ```bash
@@ -106,13 +132,14 @@ Swagger:
 
 ```bash
 curl -I http://localhost:8080/api/swagger-ui.html
+curl -s http://localhost:8080/api/docs
 ```
 
 Testes backend:
 
 ```bash
 cd backend
-mvn test
+mvn clean verify
 ```
 
 Testes frontend:

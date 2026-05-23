@@ -246,6 +246,8 @@ Requisitos/casos de uso: todos os UC com interface; RNF-10; RF-04 se for mantido
 
 Estado atual: frontend React tem rotas por perfil, autenticacao real via JWT, protecao de rotas e os fluxos principais ligados a dados reais da API. `mockData` fica apenas como configuracao visual/de navegacao por perfil, icones e tipos de UI, nao como fonte de dados de negocio. `npm run build` e `npm run lint` passam com Node.js 20.
 
+Atualizacao de 2026-05-23: foram ligados mais fluxos da UI a endpoints reais: relatorios com filtros/exportacao CSV/PDF, categorias, ciclo de vida de alertas, niveis minimos, localizacao de produto, fatura completa no PDV, sincronizacao com estado/conflitos/inicio, reidratacao de discrepancias de inventario e criacao/edicao de funcionarios pelo gerente.
+
 Tarefas:
 
 - [x] Instalar dependencias com `npm ci` ou `npm install`.
@@ -301,7 +303,7 @@ Testes obrigatorios:
 
 - [x] App arranca com SQLite.
 - [x] App arranca com PostgreSQL.
-- [x] Swagger abre.
+- [x] Swagger/OpenAPI abre. Em 2026-05-23 foi corrigida a whitelist de `/api/swagger-ui/**`, porque `/api/swagger-ui.html` redireciona para `/api/swagger-ui/index.html`.
 - [x] Login demo funciona.
 - [x] Frontend consegue chamar backend. CORS configurado por `mini-formiga.cors.allowed-origins`/`CORS_ALLOWED_ORIGINS` para o frontend em porta separada.
 
@@ -309,7 +311,7 @@ Testes obrigatorios:
 
 Requisitos/capitulo: Capitulo 6 do relatorio, verificacao SRS, cobertura, ISO/IEC 25010.
 
-Estado atual: existem testes de dominio e facades; `mvn verify` passa. Ainda faltam testes de API, seguranca, integracao e sistema.
+Estado atual: existem testes de dominio, facades, controllers e uma cobertura inicial de seguranca; `mvn clean verify` passa com JDK 21. Ainda faltam mais testes de API, integracao e sistema.
 
 Tarefas:
 
@@ -323,8 +325,9 @@ Tarefas:
   - [ ] InventariosController.
   - [ ] SincronizacaoController, quando existir.
   - [x] RelatoriosController, quando existir.
+  - [x] CategoriasController.
 - [ ] Adicionar testes de seguranca:
-  - [ ] sem token da 401;
+  - [x] sem token da 401;
   - [ ] token valido permite;
   - [ ] permissao insuficiente da 403.
 - [ ] Adicionar testes de integracao com base de dados de teste.
@@ -337,7 +340,10 @@ Tarefas:
 
 Evidencias a recolher:
 
-- [ ] Output de `mvn verify`.
+- [x] Output de `mvn clean verify`: em 2026-05-23 executou 133 testes, 0 falhas, e o check JaCoCo passou.
+- [x] Reexecutar `mvn test`/`mvn verify` com JDK 21 instalado. Foi usada a toolchain local `.tools/jdk-21.0.11+10`.
+- [x] Reexecutar `npm run lint` e `npm run build` com Node.js 20+. Foi usada a toolchain local `.tools/node-v20.19.5-linux-x64`.
+- [x] Validar arranque Docker Compose: `docker compose up -d --build` deixou PostgreSQL, backend central, backend local e frontend ativos; login demo devolveu 200/JWT nos perfis local e central.
 - [ ] Screenshot/HTML do JaCoCo.
 - [ ] Percentagens de cobertura global e por pacote.
 - [ ] Lista de testes por RF/UC.

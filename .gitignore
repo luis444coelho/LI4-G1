@@ -6,5 +6,6 @@ logs/
 backend/logs/
 frontend/node_modules/
 frontend/dist/
+.tools/
 .idea/
 *.iml

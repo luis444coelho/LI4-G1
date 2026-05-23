@@ -9,6 +9,13 @@ Guia rapido para correr o projeto. Para instrucoes completas, ver tambem `GUIA_E
 - Node.js 20+
 - Docker e Docker Compose
 
+Se o sistema tiver versoes antigas, este workspace tambem pode usar a toolchain local em `.tools/`:
+
+```bash
+export JAVA_HOME="$PWD/.tools/jdk-21.0.11+10"
+export PATH="$JAVA_HOME/bin:$PWD/.tools/node-v20.19.5-linux-x64/bin:$PATH"
+```
+
 ## Estrutura
 
 - `backend/`: Spring Boot (perfil local com SQLite, perfil central com Postgres)
@@ -119,8 +126,10 @@ MiniFormiga2026!
 
 ```bash
 cd backend
-mvn test
+mvn clean verify
 ```
+
+Validado em 2026-05-23 com Temurin JDK 21.0.11: 133 testes, 0 falhas, JaCoCo OK.
 
 ## Testes (frontend)
 
@@ -129,6 +138,8 @@ cd frontend
 npm run lint
 npm run build
 ```
+
+Validado em 2026-05-23 com Node.js 20.19.5 e npm 10.8.2.
 
 ## Limpeza rapida
 
