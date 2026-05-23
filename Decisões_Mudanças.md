@@ -1,6 +1,6 @@
 # Decisões e Mudanças Face ao Relatório
 
-Este documento regista as decisões tomadas durante a implementação física que diferem, refinam ou tornam mais concreto o que estava definido no relatório e nos diagramas UML. O objetivo é manter rastreabilidade entre a especificação académica e o código efetivamente construído.
+Este documento regista as divergências ainda pendentes entre a implementação física e o relatório, bem como decisões de implementação com impacto no relatório ainda por resolver. As decisões já refletidas no relatório foram removidas deste documento.
 
 ## Estado Analisado
 
@@ -16,319 +16,47 @@ Foram analisadas as tarefas já assinaladas em `TAREFAS_IMPLEMENTACAO.md`, o est
 
 A última execução completa de testes do backend, após a implementação da tarefa 6, passou com sucesso: 130 testes executados, 0 falhas.
 
-## Decisões Implementadas
-
-### DM-01 - `SubAuditoria` formalizado como subsistema
-
-Diferença face ao relatório: o relatório descrevia auditoria como responsabilidade transversal e a decisão DA-08 indicava escrita em ficheiros JSON. No código, a auditoria passou a existir também como subsistema formal.
-
-Decisão tomada: foram criados `ISubAuditoria` e `AuditoriaFacade`, expostos por `IMiniFormigaLN`, mantendo `AuditoriaService` como componente técnico de escrita dos logs.
-
-Motivo: alinhar melhor o backend com o diagrama de componentes, onde a lógica de negócio inclui `SubAuditoria` a par de `SubPDV`, `SubStock`, `SubUtilizadores`, `SubEncomendas` e `SubSincronizacao`.
-
-Impacto no relatório: deve ser assumido que `SubAuditoria` é simultaneamente um subsistema da lógica de negócio e um serviço técnico de persistência em ficheiros JSON.
-
-Ficheiros principais:
-
-- `backend/src/main/java/pt/miniFormiga/subsistemas/auditoria/ISubAuditoria.java`
-- `backend/src/main/java/pt/miniFormiga/subsistemas/auditoria/AuditoriaFacade.java`
-- `backend/src/main/java/pt/miniFormiga/auditoria/AuditoriaService.java`
-- `backend/src/main/java/pt/miniFormiga/facade/IMiniFormigaLN.java`
-
-### DM-02 - Campos do log de auditoria normalizados
-
-Diferença face ao relatório: o relatório define os campos obrigatórios do log de auditoria de forma conceptual, mas não fixa uma estrutura JSON final.
-
-Decisão tomada: o log passou a usar os campos normalizados `utilizadorId`, `tipoOperacao`, `dataHora`, `entidade`, `entidadeId` e `descricao`.
-
-Motivo: cumprir RNF-05 de forma verificável e reduzir ambiguidade entre termos como recurso, operação e entidade afetada.
-
-Impacto no relatório: a secção de implementação pode indicar esta estrutura como formato físico adotado para o log JSON.
-
-### DM-03 - Perfil `RESPONSAVEL_ARMAZEM` como designação única
-
-Diferença face ao relatório: existiam variações de nomenclatura para o responsável de armazém.
-
-Decisão tomada: o código passou a usar `RESPONSAVEL_ARMAZEM` como designação canónica do perfil, removendo alias como `RESP_ARMAZEM`.
-
-Motivo: evitar divergência entre permissões, seeds, controladores e interface.
-
-Impacto no relatório: qualquer referência abreviada deve ser tratada apenas como texto descritivo; no sistema físico, o perfil é `RESPONSAVEL_ARMAZEM`.
-
-### DM-04 - Bloqueio de conta após cinco falhas persistido em `Utilizador`
-
-Diferença face ao diagrama de classes: o diagrama não explicita o atributo `tentativasFalhadas` na entidade `Utilizador`.
-
-Decisão tomada: `Utilizador` passou a armazenar o número de tentativas falhadas e a bloquear a conta após cinco falhas consecutivas.
-
-Motivo: implementar o fluxo de exceção do UC-01 e tornar o comportamento testável e persistente.
-
-Impacto no relatório: deve ser documentado que `tentativasFalhadas` é um atributo físico adicional necessário à autenticação segura.
-
-Ficheiros principais:
-
-- `backend/src/main/java/pt/miniFormiga/domain/Utilizador.java`
-- `backend/src/main/java/pt/miniFormiga/subsistemas/utilizadores/UtilizadoresFacade.java`
-
-### DM-05 - Gestão de utilizadores limitada por loja para gerente
-
-Diferença face ao relatório: o relatório indica que o gerente gere utilizadores da sua loja, mas a API inicial podia ser interpretada como listagem global.
-
-Decisão tomada: a listagem de utilizadores filtra por loja quando o utilizador autenticado não tem permissões globais.
-
-Motivo: cumprir RF-10, RNF-04 e US-11 sem permitir que um gerente consulte colaboradores de toda a cadeia.
-
-Impacto no relatório: a especificação de API deve clarificar que `GET /utilizadores` é sensível ao perfil autenticado.
-
-### DM-06 - Endpoints auxiliares para perfis e lojas
-
-Diferença face ao relatório: os endpoints `/api/v1/utilizadores/perfis` e `/api/v1/utilizadores/lojas` não aparecem na tabela inicial da API.
-
-Decisão tomada: foram adicionados endpoints auxiliares para suportar a interface de gestão de utilizadores.
-
-Motivo: a UI precisa de listas controladas de perfis e lojas para criar/editar utilizadores sem hardcoding no frontend.
-
-Impacto no relatório: a tabela de endpoints de utilizadores deve ser atualizada com estes dois endpoints.
-
-### DM-07 - `Devolucao` criada como entidade persistente
-
-Diferença face ao diagrama de classes: o relatório inclui US-17, RF-16 e UC-04 para devoluções, mas o modelo de domínio/classe original não continha uma entidade `Devolucao`.
-
-Decisão tomada: foi criada a entidade `Devolucao` e o respetivo `DevolucaoRepository`.
-
-Motivo: uma devolução não deve existir apenas como efeito colateral em stock e auditoria; precisa de histórico próprio para rastreabilidade operacional e financeira.
-
-Impacto no relatório: o diagrama de classes e a tabela de entidades devem ser atualizados para incluir `Devolucao`, associada a `Venda` e `Produto`.
-
-Ficheiros principais:
-
-- `backend/src/main/java/pt/miniFormiga/domain/Devolucao.java`
-- `backend/src/main/java/pt/miniFormiga/repository/DevolucaoRepository.java`
-- `backend/src/main/java/pt/miniFormiga/subsistemas/pdv/PDVFacade.java`
-
-### DM-08 - Nota de crédito tratada como documento simplificado interno
-
-Diferença face ao relatório: o relatório refere devolução e conformidade fiscal, mas não detalha nota de crédito.
-
-Decisão tomada: a devolução gera um documento numerado no formato `NC/<ano>/<sequencia>`, persistido em `Devolucao`. Isto cobre rastreabilidade interna, mas não equivale ainda a uma nota de crédito fiscal completa certificada pela AT.
-
-Motivo: implementar RF-16 de forma concreta sem introduzir uma camada fiscal completa fora do âmbito atual.
-
-Impacto no relatório: deve ser assumido explicitamente que a nota de crédito fiscal completa fica fora do âmbito da implementação atual, ou então deve ser modelada como trabalho futuro obrigatório.
-
-### DM-09 - Numeração sequencial com bloqueio pessimista como exceção à DA-06
-
-Diferença face ao relatório: a decisão DA-06 privilegia `optimistic locking` como regra geral de concorrência.
-
-Decisão tomada: a numeração de faturas e documentos de devolução usa a sequência `FaturaSequencia` com bloqueio de escrita no repositório.
-
-Motivo: RD-03 exige numeração sequencial, única e ininterrupta por série. Neste caso específico, o bloqueio pessimista é mais adequado do que aceitar falhas por conflito e repetir a operação.
-
-Impacto no relatório: DA-06 deve incluir esta exceção: a concorrência geral usa `optimistic locking`, mas séries fiscais usam bloqueio pessimista para garantir sequência.
-
-### DM-10 - Meios de pagamento obrigatórios garantidos no arranque do `SubPDV`
-
-Diferença face ao relatório: o relatório enumera os meios `numerário`, `cartão` e `MB Way`, mas não define como garantir a sua existência física.
-
-Decisão tomada: `PDVFacade` garante no arranque que existem `NUMERARIO`, `CARTAO` e `MBWAY`.
-
-Motivo: evitar dependência exclusiva de seed/demo data para uma regra de domínio essencial do PDV.
-
-Impacto no relatório: pode ser descrito como inicialização técnica obrigatória do subsistema `SubPDV`.
-
-### DM-11 - Tipos de meio de pagamento normalizados em maiúsculas
-
-Diferença face ao relatório: o relatório usa nomes legíveis para meios de pagamento, mas não fixa representação interna.
-
-Decisão tomada: `MeioPagamento` normaliza o tipo para maiúsculas (`NUMERARIO`, `CARTAO`, `MBWAY`).
-
-Motivo: impedir divergências como `Cartao`, `cartão`, `CARTAO` ou `MB Way` no backend.
-
-Impacto no relatório: a API pode continuar a apresentar nomes amigáveis, mas a representação interna é normalizada.
-
-### DM-12 - Persistência explícita da venda após alterar linhas
-
-Diferença face ao relatório: o relatório especifica o comportamento do PDV, mas não detalha cascades JPA nem recarregamento de agregados.
-
-Decisão tomada: ao adicionar ou remover linhas de venda, a venda é guardada explicitamente e os totais são recalculados.
-
-Motivo: garantir consistência entre `Venda` e `LinhaVenda` em contexto JPA e tornar os testes de reload previsíveis.
-
-Impacto no relatório: sem impacto conceptual; é uma decisão técnica de persistência.
-
-### DM-13 - Remoção de linha inexistente passa a falhar explicitamente
-
-Diferença face ao relatório: UC-02/UC-16 descrevem a remoção de linhas antes da finalização, mas não definem o comportamento se a linha não existir.
-
-Decisão tomada: `Venda.anularLinha` lança erro quando a linha indicada não pertence à venda.
-
-Motivo: evitar respostas silenciosas e facilitar deteção de erros de interface ou API.
-
-Impacto no relatório: pode ser acrescentado como fluxo de exceção do UC-02.
-
-### DM-14 - Stock negativo bloqueado na escrita transacional
-
-Diferença face ao relatório: RD-04 exige bloquear stock negativo, mas não especifica como tratar concorrência.
-
-Decisão tomada: a finalização da venda aplica a atualização de stock dentro da mesma transação e depende da validação em `Stock.atualizarStock`, com suporte de versionamento herdado de `EntidadeBase`.
-
-Motivo: impedir que a validação prévia fique desatualizada em cenários concorrentes.
-
-Impacto no relatório: a secção de implementação pode indicar que RD-04 é garantido na operação de escrita, não apenas na consulta prévia.
+## Decisões com Impacto Pendente no Relatório
 
 ### DM-15 - Fatura simplificada/completa concretizada no backend
 
-Diferença face ao relatório: RD-02 define a regra fiscal, mas a implementação precisou de tornar explícitas as condições.
-
 Decisão tomada: fatura simplificada é permitida até 1000 EUR sem NIF; fatura completa é exigida quando há NIF ou quando o valor ultrapassa 1000 EUR.
 
-Motivo: alinhar o comportamento físico com RD-02 e RNF-08.
+Impacto pendente: registar RD-02 como satisfeito na tabela de verificação do SRS (Capítulo 6), quando essa tabela for preenchida.
 
-Impacto no relatório: deve ser possível referir esta regra como já implementada e coberta por testes.
-
-### DM-16 - Alertas de stock com ciclo de vida físico
-
-Diferença face ao relatório: o relatório e o diagrama identificam `AlertaStock`, mas não detalham completamente o seu ciclo de vida físico para além da notificação.
-
-Decisão tomada: `AlertaStock` passou a ter `lido`, `resolvido` e `dataResolucao`. A API mantém o endpoint para marcar como lido e acrescenta `/api/v1/stock/alertas/{alertaId}/resolver` para fechar o alerta.
-
-Motivo: evitar duplicação de alertas ativos para o mesmo stock e permitir que o alerta tenha um fim operacional claro, sem apagar histórico.
-
-Impacto no relatório: o UC-07 pode incluir o fluxo alternativo de resolução/fecho de alerta.
-
-### DM-17 - Inventário físico abre com snapshot de todos os produtos da loja
-
-Diferença face ao relatório: o UC-11 diz que o responsável regista contagens, mas não indicava se as linhas eram criadas manualmente uma a uma ou se o sistema apresentava todos os produtos.
-
-Decisão tomada: ao iniciar um inventário físico, o backend cria linhas para todos os registos de stock da loja, com snapshot da quantidade registada no sistema.
-
-Motivo: alinhar a implementação com o critério de verificação da US-20, em que o responsável acede ao inventário, regista contagens e o sistema calcula automaticamente discrepâncias face ao stock registado.
-
-Impacto no relatório: pode ser descrito como detalhe de implementação do UC-11; não contradiz o diagrama, apenas concretiza o fluxo.
-
-### DM-18 - Entrada de mercadoria exclusivamente por linhas
-
-Diferença face ao relatório/API inicial: a tabela de API indicava `POST /entradas-mercadoria` como registo de receção, mas não detalhava o formato do corpo. A primeira implementação ainda aceitava um formato antigo de uma única linha com `produtoId`, `quantidadeRecebida` e `quantidadeEncomendada` no topo do pedido.
-
-Decisão tomada: o pedido de entrada de mercadoria passou a aceitar exclusivamente uma lista `linhas`, onde cada linha contém `produtoId`, `quantidadeRecebida`, `quantidadeEncomendada` e `observacoes`.
-
-Motivo: o UC-08 e o diagrama descrevem a receção associada a guia de remessa com várias linhas/produtos. Remover o formato antigo evita duas formas concorrentes de representar a mesma operação e torna a API mais coerente com o modelo `GuiaRemessa -> EntradaMercadoria -> Produto`.
-
-Impacto no relatório: a especificação de API deve indicar que `POST /entradas-mercadoria` devolve uma lista de entradas registadas e que o corpo do pedido é baseado em linhas de receção.
-
-### DM-19 - Sincronização implementada com transporte REST configurável
-
-Diferença face ao relatório: o UC-13 descreve a sincronização com um servidor central, mas não define se esse servidor é outro programa ou outra instância da mesma aplicação.
-
-Decisão tomada: o backend passou a ser um monólito modular multi-perfil. No perfil `local`, usa SQLite, constrói o payload de sincronização e envia-o para `mini-formiga.sincronizacao.central-url`. No perfil `central`, usa PostgreSQL e expõe `POST /api/v1/central/sincronizacao/receber` para receber payloads das lojas.
-
-Motivo: cumprir a arquitetura monolítica modular sem criar um segundo projeto. A diferença entre loja e servidor central passa a ser uma diferença de configuração/perfil de execução, não de código-base.
-
-Impacto no relatório: a secção de implementação deve indicar que existem duas instâncias possíveis da mesma aplicação: uma instância `local` por loja e uma instância `central` no servidor central. Se o URL central falhar, a sincronização local permanece `PENDENTE` e recebe `proximaTentativa`, cumprindo RNF-02.
-
-### DM-20 - Conflitos de sincronização resolvidos no perfil central
-
-Diferença face ao relatório: DA-05 define `last-write-wins`, mas não especifica onde a comparação é feita.
-
-Decisão tomada: o backend local envia `updatedAt` e `version` no payload. A instância central compara esses metadados com os registos centrais existentes, aplica `last-write-wins`, guarda a sincronização consolidada e devolve conflitos resolvidos. A instância local guarda esses conflitos em `conflitosJson` e expõe-nos em `/api/v1/sincronizacao/conflitos`.
-
-Motivo: numa arquitetura local-central, a decisão final sobre conflitos deve pertencer ao servidor central, que possui a visão consolidada. A loja mantém rastreabilidade e consulta posterior, como pedido no UC-13.
-
-Impacto no relatório: deve ficar claro que a resolução de conflitos é responsabilidade do perfil `central`, enquanto o perfil `local` prepara o payload e regista o resultado.
-
-### DM-22 - Sincronização central protegida por token técnico
-
-Diferença face ao relatório: o relatório indica autenticação por JWT para endpoints de utilizador, mas não detalha autenticação máquina-a-máquina entre loja e servidor central.
-
-Decisão tomada: o endpoint central de receção de sincronização é permitido ao nível do filtro HTTP, mas valida o cabeçalho `X-Sync-Token` contra a propriedade `mini-formiga.sincronizacao.token`.
-
-Motivo: o cliente local de sincronização usa `RestTemplate`, não uma sessão de utilizador. O token técnico evita expor o endpoint central sem proteção e mantém a simplicidade da comunicação entre instâncias do mesmo sistema.
-
-Impacto no relatório: a especificação de API deve indicar que `POST /api/v1/central/sincronizacao/receber` usa autenticação técnica por `X-Sync-Token`, além de TLS em deployment.
-
-### DM-21 - TLS tratado como responsabilidade de deployment
-
-Diferença face ao relatório: RNF-06/UC-13 mencionam comunicação cifrada, enquanto o backend local continua a correr em HTTP durante desenvolvimento.
-
-Decisão tomada: a aplicação documenta e prepara a sincronização por URL configurável, mas não força HTTPS no Spring Boot local. A cifra TLS 1.3 deve ser garantida no deployment por reverse proxy ou endpoint central HTTPS.
-
-Motivo: evita complicar a execução local e mantém coerência com a arquitetura descrita, em que lojas comunicam com um servidor central exposto por infraestrutura controlada.
-
-Impacto no relatório: a secção de implementação deve indicar que TLS é uma garantia de infraestrutura/deployment, não uma configuração demonstrada localmente no Spring Boot.
 
 ## Divergências Ainda Pendentes
 
-### DP-01 - Frontend real ligado a API, com `mockData` residual de configuracao
+### DP-01 - Secção de interface do Capítulo 5 por preencher
 
-Estado atual: o frontend React consome a API real nos fluxos principais de negocio: autenticacao, dashboard, relatorios/stock, PDV, devolucao, fecho de caixa, ajustes, utilizadores, fornecedores, encomendas, sincronizacao, entrada de mercadoria e inventario fisico.
+Estado atual: o frontend React consome a API real nos fluxos principais de negócio: autenticação, dashboard, relatórios/stock, PDV, devolução, fecho de caixa, ajustes, utilizadores, fornecedores, encomendas, sincronização, entrada de mercadoria e inventário físico. `frontend/src/data/mockData.ts` existe apenas como configuração estática de perfis, rotas e ícones — não é fonte de dados operacionais.
 
-Diferença face ao relatório: `frontend/src/data/mockData.ts` continua a existir, mas apenas como configuracao visual/de navegacao por perfil, icones e tipos de UI. Ja nao e fonte dos dados operacionais principais.
+Ação necessária: preencher a secção "Interface" do Capítulo 5 (atualmente em branco) indicando que os fluxos principais consomem a API real e que a camada de apresentação conserva configuração estática para perfis, rotas e ícones.
 
-Decisão tomada: manter esses dados como configuracao estatica de apresentacao, porque representam metadados da interface e nao informacao de negocio. A validacao funcional deve incidir nos endpoints reais e nos formularios ligados a API.
-
-Impacto no relatório: a secção de implementação da interface pode indicar que os fluxos principais usam API real, mas que a camada de apresentacao conserva configuracao estatica para perfis, rotas e icones.
-
-### DP-02 - Dashboard e relatórios ainda não têm endpoints dedicados
+### DP-02 - Dashboard e relatórios sem endpoints dedicados
 
 Estado atual: existem dados de vendas, stock e fechos, mas não há controladores dedicados para `/api/v1/dashboard` e `/api/v1/relatorios/*`.
 
-Diferença face ao relatório: RF-01 e RF-02 prometem dashboard, relatórios e exportação.
+Diferença face ao relatório: RF-01 e RF-02 especificam dashboard, relatórios e exportação.
 
-Decisão necessária: implementar o módulo de relatórios/dashboard antes dos testes finais ou assinalar estes requisitos como parcialmente satisfeitos.
+Ação necessária: implementar o módulo de relatórios/dashboard antes dos testes finais, ou assinalar RF-01 e RF-02 como parcialmente satisfeitos na tabela de verificação do SRS (Capítulo 6).
 
-### DP-03 - Consolidação central ainda é baseada no payload de metadados
+### DP-03 - Consolidação central baseada em metadados, não em snapshots completos
 
-Estado atual: o perfil `central` recebe o payload, regista a sincronização consolidada e resolve conflitos por `updatedAt`/`version`. O payload atual contém metadados e logs, mas não serializa ainda o estado completo de cada entidade para recriar registos em falta.
+Estado atual: o perfil `central` recebe o payload, regista a sincronização consolidada e resolve conflitos por `updatedAt`/`version`. O payload atual contém metadados e logs, mas não serializa o estado completo de cada entidade para recriar registos ausentes no servidor central.
 
-Diferença face ao relatório: RF-17, RNF-03 e UC-13 descrevem consolidação de dados entre loja e servidor central. A infraestrutura local-central existe, mas a materialização completa de entidades ausentes no servidor central ainda exigiria expandir o payload com dados de negócio completos.
+Diferença face ao relatório: RF-17, RNF-03 e UC-13 descrevem consolidação de dados entre loja e servidor central.
 
-Decisão necessária: para uma demonstração completa de consolidação, expandir o payload com snapshots completos das entidades ou documentar que a validação atual cobre contrato, estados, retry e conflitos por metadados.
+Ação necessária: expandir o payload com snapshots completos das entidades, ou documentar na tabela de verificação do SRS que a validação atual cobre contrato, estados, retry e conflitos por metadados, ficando a materialização completa de entidades ausentes como trabalho futuro (Capítulo 7).
 
-### DP-04 - TLS não está configurado no Spring Boot
+### DP-05 - PIT e jqwik não configurados
 
-Estado atual: não existe configuração HTTPS/TLS no backend local. A API corre em HTTP durante desenvolvimento e a sincronização usa um URL central configurável.
+Estado atual: o backend tem JaCoCo configurado, mas não há dependências de PIT nem jqwik no `pom.xml`. A secção de estratégia de testes do Capítulo 6 foi atualizada para indicar que estas ferramentas não foram implementadas no âmbito temporal do projeto.
 
-Diferença face ao relatório: RNF-06/UC-13 referem TLS 1.2+ ou TLS 1.3.
+Ação necessária: confirmar que o texto da secção de testes está alinhado com o que foi efetivamente executado e que não subsistem referências a PIT ou jqwik como trabalho realizado.
 
-Decisão necessária: no relatório final, explicitar que TLS 1.3 é garantido pelo reverse proxy/endpoint central HTTPS em deployment, ou acrescentar configuração HTTPS no Spring Boot caso a demonstração exija cifra local.
-
-### DP-05 - PIT e jqwik ainda não estão configurados
-
-Estado atual: o backend tem JaCoCo configurado, mas não há dependências/configuração de PIT nem jqwik no `pom.xml`.
-
-Diferença face ao relatório: a estratégia de testes menciona análise de mutação com PIT e property-based testing com jqwik.
-
-Decisão necessária: adicionar estas ferramentas e testes reais, ou remover/ajustar essa promessa no relatório.
-
-### DP-06 - Docker Compose não orquestra o backend
-
-Estado atual: `docker-compose.yml` contém PostgreSQL e frontend, mas não inclui serviço backend.
-
-Diferença face ao relatório: a configuração do ambiente sugere orquestração dos componentes de aplicação.
-
-Decisão necessária: adicionar serviço backend ao Compose ou clarificar que o backend é executado localmente por Maven durante o desenvolvimento.
-
-### DP-07 - Fiscalidade real ainda é simplificada
+### DP-07 - Conformidade fiscal simplificada
 
 Estado atual: há regras de fatura simplificada/completa e numeração sequencial, mas não há certificação fiscal, assinatura AT, SAF-T, comunicação AT ou nota de crédito fiscal completa.
 
-Diferença face ao relatório: o texto fala em conformidade com normas da Autoridade Tributária de forma ampla.
-
-Decisão necessária: reduzir o alcance do relatório para conformidade simplificada académica, ou planear um módulo fiscal completo.
-
-## Atualizações Recomendadas ao Relatório e Diagramas
-
-- Atualizar o diagrama de classes com `Devolucao`.
-- Atualizar a tabela de entidades com `Devolucao` e a sua relação com `Venda` e `Produto`.
-- Acrescentar `tentativasFalhadas` a `Utilizador` como detalhe físico de autenticação.
-- Clarificar que `SubAuditoria` é um subsistema formal, mas persiste em ficheiros JSON por decisão DA-08.
-- Atualizar a API de utilizadores com `/utilizadores/perfis` e `/utilizadores/lojas`.
-- Explicitar a exceção à DA-06: numeração fiscal usa bloqueio pessimista.
-- Corrigir a referência TLS para uma versão única e indicar se será garantida pela aplicação ou pela infraestrutura.
-- Rever a secção de testes para decidir definitivamente entre implementar PIT/jqwik ou retirar essas referências.
-
-## Resumo Executivo
-
-As mudanças implementadas mantêm o espírito do relatório e, na maior parte dos casos, tornam a especificação mais concreta e testável. As principais diferenças reais são a criação da entidade `Devolucao`, a formalização de `SubAuditoria`, os endpoints auxiliares de utilizadores e a exceção de bloqueio pessimista para numeração fiscal.
-
-Os maiores desvios ainda por resolver não estão no `SubPDV`, na autenticação nem no frontend principal, mas sim em funcionalidades de integração e validação final: consolidação central completa de snapshots, TLS em deployment e ferramentas avançadas de testes.
+Ação necessária: confirmar que o UC-04 corrigido e o parágrafo acrescentado no Capítulo 7 delimitam claramente o âmbito académico da conformidade fiscal implementada, evitando que o texto restante do relatório sugira conformidade plena com a AT.
