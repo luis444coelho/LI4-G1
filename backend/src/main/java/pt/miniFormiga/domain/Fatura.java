@@ -8,15 +8,17 @@ import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(name = "faturas")
-public class Fatura extends EntidadeBase {
+public class Fatura extends EntidadeBase implements Persistable<UUID> {
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id", nullable = false)
@@ -61,6 +63,7 @@ public class Fatura extends EntidadeBase {
 
     public Fatura(Venda venda, String numero, String serie, String tipo, String nifCliente, String nomeCliente) {
         this.venda = Objects.requireNonNull(venda, "Venda e obrigatoria");
+        definirId(venda.getId());
         this.lojaId = venda.getLoja() == null ? null : venda.getLoja().getId();
         this.numero = Integer.parseInt(Objects.requireNonNull(numero, "Numero da fatura e obrigatorio"));
         this.serie = Objects.requireNonNull(serie, "Serie da fatura e obrigatoria");
@@ -159,6 +162,12 @@ public class Fatura extends EntidadeBase {
 
     public boolean isEmitida() {
         return emitida;
+    }
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return getCreatedAt() == null;
     }
 
 }
