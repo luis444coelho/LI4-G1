@@ -56,6 +56,11 @@ public class ApiExceptionHandler {
         return erro(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Sem permissao para executar a operacao", Map.of());
     }
 
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> erroInterno(Exception exception) {
+        return erro(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Erro interno ao executar a operacao", Map.of());
+    }
+
     private ResponseEntity<ApiError> erro(HttpStatus status, String code, String message, Map<String, Object> details) {
         return ResponseEntity.status(status).body(new ApiError(code, message, details));
     }

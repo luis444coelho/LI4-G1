@@ -8,8 +8,15 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.domain.TipoOperacao;
+import pt.miniFormiga.exception.BusinessException;
+import pt.miniFormiga.repository.FaturaRepository;
+import pt.miniFormiga.repository.UtilizadorRepository;
 import pt.miniFormiga.subsistemas.pdv.ISubPDV;
 
 import java.time.LocalDate;
@@ -22,9 +29,18 @@ import static pt.miniFormiga.subsistemas.pdv.PdvDtos.*;
 @Tag(name = "VENDAS", description = "Operacoes transacionais do ponto de venda")
 public class VendasController {
     private final ISubPDV pdv;
+    private final FaturaRepository faturaRepository;
+    private final UtilizadorRepository utilizadorRepository;
+    private final AuditoriaService auditoria;
 
-    public VendasController(ISubPDV pdv) {
+    public VendasController(ISubPDV pdv,
+                            FaturaRepository faturaRepository,
+                            UtilizadorRepository utilizadorRepository,
+                            AuditoriaService auditoria) {
         this.pdv = pdv;
+        this.faturaRepository = faturaRepository;
+        this.utilizadorRepository = utilizadorRepository;
+        this.auditoria = auditoria;
     }
 
     public record IniciarVendaRequest(@NotNull UUID lojaId, @NotNull UUID operadorId) { }
@@ -99,6 +115,30 @@ public class VendasController {
         return FaturaDTO.from(pdv.emitirFatura(id, request.nifCliente(), request.nomeCliente()));
     }
 
+    @GetMapping("/faturas/{id}")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','PDV_WRITE','RELATORIOS_READ')")
+    @Operation(summary = "Obter fatura")
+    @ApiResponse(responseCode = "200", description = "Fatura encontrada")
+    public FaturaDTO obterFatura(@PathVariable UUID id, @AuthenticationPrincipal UserDetails principal) {
+        FaturaDTO fatura = pdv.obterFatura(id);
+        auditoria.registar(TipoOperacao.FATURA_CONSULTADA, utilizadorId(principal), "FATURA", id, "Fatura consultada");
+        return fatura;
+    }
+
+    @GetMapping("/faturas/numero")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','PDV_WRITE','RELATORIOS_READ')")
+    @Operation(summary = "Obter fatura por numero")
+    @ApiResponse(responseCode = "200", description = "Fatura encontrada")
+    public FaturaDTO obterFaturaPorNumero(@RequestParam String numeroFatura,
+                                          @AuthenticationPrincipal UserDetails principal) {
+        NumeroFatura numero = parseNumeroFatura(numeroFatura);
+        FaturaDTO fatura = faturaRepository.findBySerieAndNumero(numero.serie(), numero.numero())
+                .map(FaturaDTO::from)
+                .orElseThrow(() -> new BusinessException("FATURA_NAO_ENCONTRADA", "Fatura nao encontrada"));
+        auditoria.registar(TipoOperacao.FATURA_CONSULTADA, utilizadorId(principal), "FATURA", fatura.id(), "Fatura consultada");
+        return fatura;
+    }
+
     @PostMapping("/{id}/devolucao")
     @PreAuthorize("hasAuthority('PDV_WRITE')")
     @Operation(summary = "Processar devolucao")
@@ -108,5 +148,35 @@ public class VendasController {
             return facade.processarDevolucao(id, request);
         }
         throw new IllegalStateException("SubPDV nao suporta devolucoes nesta implementacao");
+    }
+
+    private static NumeroFatura parseNumeroFatura(String numeroFatura) {
+        if (numeroFatura == null || numeroFatura.isBlank()) {
+            throw new BusinessException("NUMERO_FATURA_INVALIDO", "Numero de fatura invalido");
+        }
+        String normalizado = numeroFatura.trim();
+        int ultimoSeparador = normalizado.lastIndexOf('/');
+        if (ultimoSeparador <= 0 || ultimoSeparador == normalizado.length() - 1) {
+            throw new BusinessException("NUMERO_FATURA_INVALIDO", "Numero de fatura invalido");
+        }
+        String serie = normalizado.substring(0, ultimoSeparador);
+        try {
+            int numero = Integer.parseInt(normalizado.substring(ultimoSeparador + 1));
+            return new NumeroFatura(serie, numero);
+        } catch (NumberFormatException exception) {
+            throw new BusinessException("NUMERO_FATURA_INVALIDO", "Numero de fatura invalido");
+        }
+    }
+
+    private record NumeroFatura(String serie, int numero) {
+    }
+
+    private UUID utilizadorId(UserDetails principal) {
+        if (principal == null) {
+            return null;
+        }
+        return utilizadorRepository.findByUsername(principal.getUsername())
+                .map(pt.miniFormiga.domain.Utilizador::getId)
+                .orElse(null);
     }
 }

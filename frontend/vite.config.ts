@@ -6,7 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'http://localhost:8080',
+      '/api': process.env.VITE_PROXY_API_TARGET ?? 'http://localhost:8080',
+      '/central-api': {
+        target: process.env.VITE_PROXY_CENTRAL_API_TARGET ?? 'http://localhost:8081',
+        rewrite: (path) => path.replace(/^\/central-api/, '/api'),
+      },
     },
   },
 })

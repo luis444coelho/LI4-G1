@@ -45,8 +45,11 @@ public final class PdvDtos {
     public record LinhaVendaDTO(UUID id, UUID produtoId, String produto, int quantidade, BigDecimal precoUnitario,
                                 BigDecimal totalLinha, boolean anulada) {
         public static LinhaVendaDTO from(LinhaVenda linha) {
+            BigDecimal totalLinha = linha.isAnulada()
+                    ? BigDecimal.ZERO
+                    : linha.getPrecoUnitario().multiply(BigDecimal.valueOf(linha.getQuantidade()));
             return new LinhaVendaDTO(linha.getId(), linha.getProduto().getId(), linha.getProduto().getNome(),
-                    linha.getQuantidade(), linha.getPrecoUnitario(), linha.getTotalLinha(), linha.isAnulada());
+                    linha.getQuantidade(), linha.getPrecoUnitario(), totalLinha, linha.isAnulada());
         }
     }
 
@@ -66,10 +69,11 @@ public final class PdvDtos {
                             String nifCliente, String nomeCliente, LocalDateTime dataEmissao,
                             BigDecimal totalSemIva, BigDecimal totalIva, BigDecimal totalComIva) {
         public static FaturaDTO from(Fatura fatura) {
+            fatura.getVenda().calcularTotais();
             return new FaturaDTO(fatura.getId(), fatura.getVenda().getId(), fatura.getNumeroFatura(),
                     fatura.getSerie(), fatura.getTipo(), fatura.getNifCliente(), fatura.getNomeCliente(),
-                    fatura.getDataEmissao(), fatura.getTotalSemIVA(), fatura.getTotalIVA(),
-                    fatura.getTotalComIVA());
+                    fatura.getDataEmissao(), fatura.getVenda().getTotalSemIVA(), fatura.getVenda().getTotalIVA(),
+                    fatura.getVenda().getTotalComIVA());
         }
     }
 

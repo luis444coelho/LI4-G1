@@ -31,7 +31,7 @@ services:
     volumes:
       - ./backend:/app
       - backend_m2:/root/.m2
-      - backend_logs:/app/logs
+      - ./backend/logs:/app/logs
     depends_on:
       - postgres
 
@@ -55,7 +55,7 @@ services:
       - ./backend:/app
       - backend_m2:/root/.m2
       - backend_local_data:/data
-      - backend_logs:/app/logs
+      - ./backend/logs:/app/logs
     depends_on:
       - backend-central
 
@@ -63,8 +63,10 @@ services:
     build: ./frontend
     container_name: mini-formiga-frontend
     environment:
-      VITE_API_BASE_URL: http://localhost:8080/api/v1
-      VITE_CENTRAL_API_BASE_URL: http://localhost:8081/api/v1
+      VITE_API_BASE_URL: /api/v1
+      VITE_CENTRAL_API_BASE_URL: /central-api/v1
+      VITE_PROXY_API_TARGET: http://backend-local:8080
+      VITE_PROXY_CENTRAL_API_TARGET: http://backend-central:8081
     ports:
       - "3000:3000"
     depends_on:
@@ -74,4 +76,3 @@ volumes:
   postgres_data:
   backend_m2:
   backend_local_data:
-  backend_logs:

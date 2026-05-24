@@ -267,7 +267,6 @@ class PDVFacadeTest {
     void devolucaoReverteStock() {
         Venda venda = vendaFinalizada();
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
-        when(faturaRepository.findFirstByLojaIdAndSerieOrderByNumeroDesc(eq(loja.getId()), anyString())).thenReturn(Optional.empty());
         when(devolucaoRepository.save(any(Devolucao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         VendaDTO devolucao = facade.processarDevolucao(venda.getId(), new ProcessarDevolucaoRequest(produto.getId(), 1));

@@ -1161,6 +1161,39 @@ select {
   font-size: 12px;
 }
 
+.mf-checkbox-row {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #dce4f9;
+  font-size: 14px;
+}
+
+.mf-checkbox-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: #5d8cff;
+}
+
+.invoice-preview {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #30476e;
+  border-radius: 8px;
+  background: rgba(39, 70, 116, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #dce4f9;
+}
+
+.invoice-preview span {
+  color: #aab6ce;
+  font-size: 13px;
+}
+
 .sale-summary {
   margin-bottom: 8px;
 }
