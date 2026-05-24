@@ -6,4 +6,5 @@ import pt.miniFormiga.domain.Devolucao;
 import java.util.UUID;
 
 public interface DevolucaoRepository extends JpaRepository<Devolucao, UUID> {
+    int countByVendaLojaIdAndNumeroDocumentoStartingWith(UUID lojaId, String prefixo);
 }

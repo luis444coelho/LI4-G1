@@ -326,7 +326,7 @@ public class PDVFacade implements ISubPDV {
 
     private String proximoNumeroDocumentoDevolucao(UUID lojaId) {
         String serie = "NC/" + LocalDate.now().getYear();
-        int numero = proximoNumeroFatura(lojaId, serie);
+        int numero = devolucaoRepository.countByVendaLojaIdAndNumeroDocumentoStartingWith(lojaId, serie + "/") + 1;
         return serie + "/" + String.format("%05d", numero);
     }
 

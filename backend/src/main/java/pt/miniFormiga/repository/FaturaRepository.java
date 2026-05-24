@@ -15,4 +15,7 @@ public interface FaturaRepository extends JpaRepository<Fatura, UUID> {
     @Override
     @EntityGraph(attributePaths = {"venda", "venda.loja", "venda.linhas", "venda.linhas.produto", "venda.linhas.produto.taxaIVA"})
     Optional<Fatura> findById(UUID id);
+
+    @EntityGraph(attributePaths = {"venda", "venda.loja", "venda.linhas", "venda.linhas.produto", "venda.linhas.produto.taxaIVA"})
+    Optional<Fatura> findBySerieAndNumero(String serie, int numero);
 }
