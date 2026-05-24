@@ -9,6 +9,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -17,7 +19,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "utilizadores")
-public class Utilizador extends EntidadeBase {
+public class Utilizador extends EntidadeBase implements Persistable<java.util.UUID> {
 
     @Column(nullable = false, unique = true)
     private String username;
@@ -172,6 +174,12 @@ public class Utilizador extends EntidadeBase {
 
     public List<LogAuditoria> getLogsAuditoria() {
         return Collections.emptyList();
+    }
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return getCreatedAt() == null;
     }
 
     private String validarTexto(String valor, String mensagem) {

@@ -169,10 +169,10 @@ export function GerenteEmployeesPage() {
       apiRequest<PerfilResponse[]>('/utilizadores/perfis'),
     ])
       .then(([page, profileRows]) => {
-        const operationalProfiles = profileRows.filter((profile) => profile.nome !== 'GESTOR')
+        const operationalProfiles = profileRows.filter((profile) => ['FUNCIONARIO', 'ARMAZEM', 'RESPONSAVEL_ARMAZEM'].includes(profile.nome))
         setRows(page.content)
         setProfiles(operationalProfiles)
-        setDraft((state) => ({ ...state, perfilId: state.perfilId || operationalProfiles.find((profile) => profile.nome === 'FUNCIONARIO')?.id || operationalProfiles[0]?.id || '' }))
+        setDraft((state) => ({ ...state, perfilId: state.perfilId || operationalProfiles.find((profile) => profile.nome === 'FUNCIONARIO')?.nome || operationalProfiles[0]?.nome || '' }))
       })
       .catch(() => setError('Não foi possível carregar funcionários.'))
   }, [session?.lojaId])
@@ -184,7 +184,7 @@ export function GerenteEmployeesPage() {
       password: 'MiniFormiga2026!',
       nome: '',
       email: '',
-      perfilId: profiles.find((profile) => profile.nome === 'FUNCIONARIO')?.id || profiles[0]?.id || state.perfilId,
+      perfilId: profiles.find((profile) => profile.nome === 'FUNCIONARIO')?.nome || profiles[0]?.nome || state.perfilId,
       ativo: true,
     }))
   }
@@ -199,7 +199,7 @@ export function GerenteEmployeesPage() {
           body: JSON.stringify({
             nome: draft.nome,
             email: draft.email,
-            perfilId: draft.perfilId,
+            perfil: draft.perfilId,
             lojaId: session?.lojaId,
             ativo: draft.ativo,
             password: draft.password.trim() ? draft.password : null,
@@ -215,7 +215,7 @@ export function GerenteEmployeesPage() {
             password: draft.password,
             nome: draft.nome,
             email: draft.email,
-            perfilId: draft.perfilId,
+            perfil: draft.perfilId,
             lojaId: session?.lojaId,
           }),
         })
@@ -235,7 +235,7 @@ export function GerenteEmployeesPage() {
       password: '',
       nome: employee.nome,
       email: employee.email,
-      perfilId: employee.perfilId || profiles.find((profile) => profile.nome === employee.perfil)?.id || profiles[0]?.id || '',
+      perfilId: employee.perfilId || profiles.find((profile) => profile.nome === employee.perfil)?.nome || profiles[0]?.nome || '',
       ativo: employee.ativo,
     })
   }
@@ -248,7 +248,7 @@ export function GerenteEmployeesPage() {
           <TextField label="Username" value={draft.username} disabled={Boolean(editingId)} onChange={(event) => setDraft((state) => ({ ...state, username: event.target.value }))} />
           <TextField label="Nome" value={draft.nome} onChange={(event) => setDraft((state) => ({ ...state, nome: event.target.value }))} />
           <TextField label="Email" value={draft.email} onChange={(event) => setDraft((state) => ({ ...state, email: event.target.value }))} />
-          <SelectField label="Perfil" value={draft.perfilId} options={profiles.map((profile) => ({ value: profile.id, label: profile.nome }))} onChange={(event) => setDraft((state) => ({ ...state, perfilId: event.target.value }))} />
+          <SelectField label="Perfil" value={draft.perfilId} options={profiles.map((profile) => ({ value: profile.nome, label: profile.nome }))} onChange={(event) => setDraft((state) => ({ ...state, perfilId: event.target.value }))} />
           <SelectField label="Estado" value={draft.ativo ? 'ativo' : 'inativo'} options={[{ value: 'ativo', label: 'Ativo' }, { value: 'inativo', label: 'Inativo' }]} onChange={(event) => setDraft((state) => ({ ...state, ativo: event.target.value === 'ativo' }))} />
           <TextField label={editingId ? 'Nova password' : 'Password inicial'} value={draft.password} onChange={(event) => setDraft((state) => ({ ...state, password: event.target.value }))} />
         </div>

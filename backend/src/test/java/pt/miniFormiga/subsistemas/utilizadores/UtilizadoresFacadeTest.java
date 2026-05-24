@@ -114,4 +114,18 @@ class UtilizadoresFacadeTest {
 
         verify(utilizadorRepository).findByLojaId(lojaBraga.getId(), PageRequest.of(0, 10));
     }
+
+    @Test
+    void novoUtilizadorComUuidAtribuidoEConsideradoNovoAtePersistir() {
+        Utilizador novo = new Utilizador(
+                "novo.operador",
+                "hash",
+                "Novo Operador",
+                "novo.operador@mini.pt",
+                funcionario,
+                lojaBraga
+        );
+
+        org.junit.jupiter.api.Assertions.assertTrue(novo.isNew());
+    }
 }

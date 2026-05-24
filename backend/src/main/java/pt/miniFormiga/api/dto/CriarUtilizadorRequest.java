@@ -12,7 +12,11 @@ public record CriarUtilizadorRequest(
         @NotBlank @Size(min = 8, max = 120) String password,
         @NotBlank @Size(max = 120) String nome,
         @Email @Size(max = 160) String email,
-        @NotBlank String perfil,
+        String perfil,
+        String perfilId,
         @NotNull UUID lojaId
 ) {
+    public String perfilEfetivo() {
+        return perfil != null && !perfil.isBlank() ? perfil : perfilId;
+    }
 }

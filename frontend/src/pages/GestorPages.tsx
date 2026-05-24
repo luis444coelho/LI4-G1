@@ -422,7 +422,7 @@ export function GestorUsersPage() {
         setStores(storeRows)
         setDraft((state) => ({
           ...state,
-          perfilId: state.perfilId || profileRows[0]?.id || '',
+          perfilId: state.perfilId || profileRows[0]?.nome || '',
           lojaId: state.lojaId || storeRows[0]?.id || '',
         }))
       })
@@ -432,10 +432,21 @@ export function GestorUsersPage() {
   async function createUser() {
     setError(null)
     setMessage(null)
+    if (rows.some((row) => row.username.toLowerCase() === draft.username.trim().toLowerCase())) {
+      setError('Username já existe.')
+      return
+    }
     try {
       const created = await apiRequest<UtilizadorResponse>('/utilizadores', {
         method: 'POST',
-        body: JSON.stringify(draft),
+        body: JSON.stringify({
+          username: draft.username,
+          password: draft.password,
+          nome: draft.nome,
+          email: draft.email,
+          perfil: draft.perfilId,
+          lojaId: draft.lojaId,
+        }),
       })
       setRows((items) => [created, ...items])
       setDraft((state) => ({ ...state, username: '', nome: '', email: '', password: 'MiniFormiga2026!' }))
@@ -452,13 +463,13 @@ export function GestorUsersPage() {
           <TextField label="Username" value={draft.username} onChange={(event) => setDraft((state) => ({ ...state, username: event.target.value }))} />
           <TextField label="Nome" value={draft.nome} onChange={(event) => setDraft((state) => ({ ...state, nome: event.target.value }))} />
           <TextField label="Email" value={draft.email} onChange={(event) => setDraft((state) => ({ ...state, email: event.target.value }))} />
-          <SelectField label="Perfil" value={draft.perfilId} options={profiles.map((profile) => profile.id)} onChange={(event) => setDraft((state) => ({ ...state, perfilId: event.target.value }))} />
+          <SelectField label="Perfil" value={draft.perfilId} options={profiles.map((profile) => ({ value: profile.nome, label: profile.nome }))} onChange={(event) => setDraft((state) => ({ ...state, perfilId: event.target.value }))} />
           <SelectField label="Loja" value={draft.lojaId} options={stores.map((store) => store.id)} onChange={(event) => setDraft((state) => ({ ...state, lojaId: event.target.value }))} />
           <TextField label="Password inicial" value={draft.password} onChange={(event) => setDraft((state) => ({ ...state, password: event.target.value }))} />
         </div>
         {error ? <Callout tone="warning" className="mt-compact">{error}</Callout> : null}
         {message ? <Callout tone="info" className="mt-compact">{message}</Callout> : null}
-        <Button className="mt-compact" onClick={createUser} disabled={!draft.username || !draft.nome || !draft.perfilId || !draft.lojaId}>Criar utilizador</Button>
+        <Button className="mt-compact" onClick={createUser} disabled={!draft.username || !draft.password || !draft.nome || !draft.perfilId || !draft.lojaId}>Criar utilizador</Button>
       </Panel>
 
       <div className="mf-toolbar-space">

@@ -405,11 +405,12 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   const headers = new Headers(options.headers)
   const token = getStoredToken()
   const { apiBaseUrl, ...requestOptions } = options
+  const isLoginRequest = path === '/auth/login'
 
   if (!headers.has('Accept')) {
     headers.set('Accept', 'application/json')
   }
-  if (token) {
+  if (token && !isLoginRequest) {
     headers.set('Authorization', `Bearer ${token}`)
   }
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -425,6 +426,8 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   if (!response.ok) {
     const message = payload && typeof payload === 'object' && 'message' in payload
       ? String(payload.message)
+      : typeof payload === 'string' && payload.trim()
+        ? payload
       : 'Pedido rejeitado pelo servidor'
     const code = payload && typeof payload === 'object' && 'code' in payload
       ? String(payload.code)

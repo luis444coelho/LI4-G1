@@ -9,6 +9,7 @@ export function perfilToRoleId(perfil: string): RoleId {
     case 'FUNCIONARIO':
       return 'funcionario'
     case 'RESPONSAVEL_ARMAZEM':
+    case 'ARMAZEM':
       return 'armazem'
     default:
       return 'funcionario'

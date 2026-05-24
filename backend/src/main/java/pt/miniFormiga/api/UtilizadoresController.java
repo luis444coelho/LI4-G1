@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,12 +32,14 @@ import pt.miniFormiga.subsistemas.utilizadores.CriarUtilizadorCommand;
 import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/utilizadores")
 @Tag(name = "UTILIZADORES", description = "Gestao de utilizadores e perfis de acesso")
 public class UtilizadoresController {
+    private static final Set<String> PERFIS_GERENTE_PODE_GERIR = Set.of("FUNCIONARIO", "ARMAZEM");
 
     private final ISubUtilizadores utilizadores;
     private final LojaRepository lojaRepository;
@@ -50,9 +53,9 @@ public class UtilizadoresController {
         this.utilizadorRepository = utilizadorRepository;
     }
 
-    public record PerfilResponse(UUID id, String nome, List<String> permissoes) {
+    public record PerfilResponse(String id, String nome, List<String> permissoes) {
         static PerfilResponse from(PerfilUtilizador perfil) {
-            return new PerfilResponse(null, perfil.getNome(), perfil.getPermissoes());
+            return new PerfilResponse(perfil.getNome(), perfil.getNome(), perfil.getPermissoes());
         }
     }
 
@@ -104,8 +107,13 @@ public class UtilizadoresController {
     @Operation(summary = "Obter utilizador")
     @ApiResponse(responseCode = "200", description = "Utilizador encontrado")
     @ApiResponse(responseCode = "404", description = "Utilizador inexistente")
-    public UtilizadorResponse obter(@PathVariable UUID id) {
-        return UtilizadorResponse.from(utilizadores.obterUtilizador(id));
+    public UtilizadorResponse obter(@PathVariable UUID id, Authentication authentication) {
+        Utilizador utilizador = utilizadores.obterUtilizador(id);
+        if (!temAutoridade(authentication, "GLOBAL_ADMIN")) {
+            validarMesmoAmbitoLoja(utilizadorAtual(authentication), utilizador);
+            validarPerfilGerivelPorGerente(utilizador.getPerfil().getNome());
+        }
+        return UtilizadorResponse.from(utilizador);
     }
 
     @PostMapping
@@ -114,13 +122,20 @@ public class UtilizadoresController {
     @Operation(summary = "Criar utilizador")
     @ApiResponse(responseCode = "201", description = "Utilizador criado")
     @ApiResponse(responseCode = "400", description = "Pedido invalido")
-    public UtilizadorResponse criar(@Valid @RequestBody CriarUtilizadorRequest request) {
+    public UtilizadorResponse criar(@Valid @RequestBody CriarUtilizadorRequest request,
+                                    Authentication authentication) {
+        if (!temAutoridade(authentication, "GLOBAL_ADMIN")) {
+            Utilizador atual = utilizadorAtual(authentication);
+            validarLojaGerivelPorGerente(atual, request.lojaId());
+            validarPerfilGerivelPorGerente(request.perfilEfetivo());
+        }
+        validarPerfilObrigatorio(request.perfilEfetivo());
         return UtilizadorResponse.from(utilizadores.criarUtilizador(new CriarUtilizadorCommand(
                 request.username(),
                 request.password(),
                 request.nome(),
                 request.email(),
-                request.perfil(),
+                request.perfilEfetivo(),
                 request.lojaId()
         )));
     }
@@ -129,11 +144,23 @@ public class UtilizadoresController {
     @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','UTILIZADORES_WRITE')")
     @Operation(summary = "Atualizar utilizador")
     @ApiResponse(responseCode = "200", description = "Utilizador atualizado")
-    public UtilizadorResponse atualizar(@PathVariable UUID id, @Valid @RequestBody AtualizarUtilizadorRequest request) {
+    public UtilizadorResponse atualizar(@PathVariable UUID id,
+                                        @Valid @RequestBody AtualizarUtilizadorRequest request,
+                                        Authentication authentication) {
+        if (!temAutoridade(authentication, "GLOBAL_ADMIN")) {
+            Utilizador atual = utilizadorAtual(authentication);
+            Utilizador alvo = utilizadores.obterUtilizador(id);
+            validarMesmoAmbitoLoja(atual, alvo);
+            validarLojaGerivelPorGerente(atual, request.lojaId());
+            validarPerfilGerivelPorGerente(alvo.getPerfil().getNome());
+            if (request.perfilEfetivo() != null) {
+                validarPerfilGerivelPorGerente(request.perfilEfetivo());
+            }
+        }
         return UtilizadorResponse.from(utilizadores.atualizarUtilizador(id, new AtualizarUtilizadorCommand(
                 request.nome(),
                 request.email(),
-                request.perfil(),
+                request.perfilEfetivo(),
                 request.lojaId(),
                 request.password(),
                 request.ativo()
@@ -160,5 +187,33 @@ public class UtilizadoresController {
         }
         return utilizadorRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Utilizador autenticado nao encontrado"));
+    }
+
+    private void validarMesmoAmbitoLoja(Utilizador atual, Utilizador alvo) {
+        if (atual.getLoja() == null || alvo.getLoja() == null || !atual.getLoja().getId().equals(alvo.getLoja().getId())) {
+            throw new AccessDeniedException("Gerente so pode gerir utilizadores da propria loja");
+        }
+    }
+
+    private void validarLojaGerivelPorGerente(Utilizador atual, UUID lojaId) {
+        if (lojaId != null && (atual.getLoja() == null || !atual.getLoja().getId().equals(lojaId))) {
+            throw new AccessDeniedException("Gerente so pode gerir utilizadores da propria loja");
+        }
+    }
+
+    private void validarPerfilGerivelPorGerente(String perfil) {
+        if (perfil == null) {
+            return;
+        }
+        String normalizado = "RESPONSAVEL_ARMAZEM".equals(perfil) ? "ARMAZEM" : perfil;
+        if (!PERFIS_GERENTE_PODE_GERIR.contains(normalizado)) {
+            throw new AccessDeniedException("Gerente so pode gerir perfis operacionais da propria loja");
+        }
+    }
+
+    private void validarPerfilObrigatorio(String perfil) {
+        if (perfil == null || perfil.isBlank()) {
+            throw new IllegalArgumentException("Perfil e obrigatorio");
+        }
     }
 }
