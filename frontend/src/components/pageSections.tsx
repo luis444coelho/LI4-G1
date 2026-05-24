@@ -383,8 +383,8 @@ export function StockContent() {
     try {
       const response = await apiRequest<AlertaStockResponse[]>(`/stock/alertas?lojaId=${lojaId}`)
       setAlerts(response)
-    } catch {
-      setAlerts([])
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível carregar alertas de stock.')
     }
   }, [lojaId])
 
@@ -442,6 +442,7 @@ export function StockContent() {
     try {
       await apiRequest<AlertaStockResponse>(`/stock/alertas/${alertId}/${action}`, { method: 'PATCH' })
       await loadAlerts()
+      await loadStock()
       setMessage(action === 'lido' ? 'Alerta marcado como lido.' : 'Alerta resolvido.')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Não foi possível atualizar o alerta.')

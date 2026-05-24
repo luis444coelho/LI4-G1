@@ -62,6 +62,11 @@ public class AlertaStock extends EntidadeBase {
         this.resolvido = false;
     }
 
+    public AlertaStock(Produto produto, Loja loja, int quantidadeNoMomento) {
+        this(produto, quantidadeNoMomento);
+        this.loja = loja;
+    }
+
     public AlertaStock(ProdutoLoja produtoLoja, int quantidadeNoMomento) {
         this(produtoLoja.getProduto(), quantidadeNoMomento);
         this.produtoLoja = produtoLoja;

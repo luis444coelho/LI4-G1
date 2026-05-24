@@ -37,3 +37,13 @@
 {"dataHora":"2026-05-24T21:41:02.877614917Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
 {"dataHora":"2026-05-24T21:41:03.440454084Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
 {"dataHora":"2026-05-24T21:41:36.437023919Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-24T21:49:32.974334142Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-24T21:50:12.815243807Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
+{"dataHora":"2026-05-24T21:51:47.697245049Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-24T21:52:00.988944326Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-24T21:53:29.471306561Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-24T21:54:01.918590240Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-24T21:54:39.058357796Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
+{"dataHora":"2026-05-24T21:54:40.658201577Z","tipoOperacao":"LOGIN","utilizadorId":"6f4c52e5-828a-4b73-9b5a-9c7cde7556c2","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-24T21:55:05.769492535Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de armazem.braga"}
+{"dataHora":"2026-05-24T21:55:07.688086197Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}

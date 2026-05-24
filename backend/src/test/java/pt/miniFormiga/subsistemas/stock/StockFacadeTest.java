@@ -303,13 +303,30 @@ class StockFacadeTest {
         Stock stock = new Stock(produto(), loja, 5);
         AlertaStock recente = new AlertaStock(stock, 5);
         AlertaStock antigo = new AlertaStock(stock, 7);
-        when(alertaStockRepository.findByLojaIdAndResolvidoFalseOrderByDataHoraDesc(loja.getId()))
+        when(alertaStockRepository.findAtivosByLojaId(loja.getId()))
                 .thenReturn(List.of(recente, antigo));
 
         List<AlertaStock> alertas = facade.getAlertasAtivos(loja.getId());
 
         assertEquals(List.of(recente, antigo), alertas);
         assertFalse(alertas.get(0).isLido());
+    }
+
+    @Test
+    void getAlertasAtivosCriaAlertaQuandoStockJaEstaAbaixoDoMinimo() {
+        Loja loja = loja();
+        Produto produto = produto();
+        produto.definirStockInicial(5);
+        produto.definirNivelMinimo(10);
+        when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
+        when(produtoRepository.findAll()).thenReturn(List.of(produto));
+        when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(produto.getId())).thenReturn(false);
+        when(alertaStockRepository.existsByProdutoIdAndResolvidoTrue(produto.getId())).thenReturn(false);
+        when(alertaStockRepository.findAtivosByLojaId(loja.getId())).thenReturn(List.of());
+
+        facade.getAlertasAtivos(loja.getId());
+
+        verify(alertaStockRepository).save(any(AlertaStock.class));
     }
 
     @Test

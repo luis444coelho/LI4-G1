@@ -150,10 +150,10 @@ public class StockFacade implements ISubStock {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<AlertaStock> getAlertasAtivos(UUID lojaId) {
         if (lojaId != null) {
-            return alertaStockRepository.findByLojaIdAndResolvidoFalseOrderByDataHoraDesc(lojaId);
+            stockStore.listar(lojaId).forEach(this::emitirAlertaSeNecessarioAoListar);
+            return alertaStockRepository.findAtivosByLojaId(lojaId);
         }
         return alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc();
     }
@@ -187,11 +187,31 @@ public class StockFacade implements ISubStock {
                 ? alertaStockRepository.existsByProdutoIdAndResolvidoFalse(item.produtoId())
                 : alertaStockRepository.existsByProdutoLojaIdAndResolvidoFalse(item.produtoLoja().getId());
         if (item.precisaReposicao() && !alertaAberto) {
-            AlertaStock alerta = item.produtoLoja() == null
-                    ? new AlertaStock(item.produto(), item.quantidade())
-                    : new AlertaStock(item.produtoLoja(), item.quantidade());
-            alertaStockRepository.save(alerta);
+            alertaStockRepository.save(criarAlerta(item));
         }
+    }
+
+    private void emitirAlertaSeNecessarioAoListar(StockItem item) {
+        boolean alertaExistente = item.produtoLoja() == null
+                ? alertaStockRepository.existsByProdutoIdAndResolvidoFalse(item.produtoId())
+                    || alertaStockRepository.existsByProdutoIdAndResolvidoTrue(item.produtoId())
+                : alertaStockRepository.existsByProdutoLojaIdAndResolvidoFalse(item.produtoLoja().getId())
+                    || alertaStockRepository.existsByProdutoLojaIdAndResolvidoTrue(item.produtoLoja().getId());
+        if (item.precisaReposicao() && !alertaExistente) {
+            alertaStockRepository.save(criarAlerta(item));
+        }
+    }
+
+    private AlertaStock criarAlerta(StockItem item) {
+        if (item.produtoLoja() != null) {
+            return new AlertaStock(item.produtoLoja(), item.quantidade());
+        }
+        Loja loja = item.lojaId() == null
+                ? null
+                : lojaRepository.findById(item.lojaId()).orElse(null);
+        return loja == null
+                ? new AlertaStock(item.produto(), item.quantidade())
+                : new AlertaStock(item.produto(), loja, item.quantidade());
     }
 
     private AjusteInventario criarAjuste(StockItem item,
