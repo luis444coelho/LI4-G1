@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import pt.miniFormiga.domain.Venda;
 
 import java.time.LocalDateTime;
@@ -21,6 +22,40 @@ public interface VendaRepository extends JpaRepository<Venda, UUID> {
 
     @EntityGraph(attributePaths = {"loja", "linhas", "linhas.produto", "linhas.produto.categoria", "linhas.produto.taxaIVA"})
     List<Venda> findByLojaIdAndAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(UUID lojaId, LocalDateTime inicio, LocalDateTime fim);
+
+    @EntityGraph(attributePaths = {"loja", "utilizador", "linhas", "linhas.produto", "linhas.produto.categoria", "linhas.produto.taxaIVA"})
+    @Query("""
+            select v
+            from Venda v
+            where v.loja.id = :lojaId
+              and v.anulada = false
+              and v.meioPagamento is not null
+              and v.dataHora >= :inicio
+              and v.dataHora < :fim
+              and not exists (
+                  select 1
+                  from FechoCaixa f join f.vendas vendaFechada
+                  where vendaFechada = v
+              )
+            """)
+    Page<Venda> findVendasPorFechar(UUID lojaId, LocalDateTime inicio, LocalDateTime fim, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"loja", "linhas", "linhas.produto", "linhas.produto.categoria", "linhas.produto.taxaIVA"})
+    @Query("""
+            select v
+            from Venda v
+            where v.loja.id = :lojaId
+              and v.anulada = false
+              and v.meioPagamento is not null
+              and v.dataHora >= :inicio
+              and v.dataHora < :fim
+              and not exists (
+                  select 1
+                  from FechoCaixa f join f.vendas vendaFechada
+                  where vendaFechada = v
+              )
+            """)
+    List<Venda> findVendasPorFechar(UUID lojaId, LocalDateTime inicio, LocalDateTime fim);
 
     @EntityGraph(attributePaths = {"loja", "linhas", "linhas.produto", "linhas.produto.categoria", "linhas.produto.taxaIVA"})
     List<Venda> findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(LocalDateTime inicio, LocalDateTime fim);

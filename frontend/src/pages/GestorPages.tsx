@@ -25,30 +25,39 @@ export function GestorDashboardPage() {
 
   useEffect(() => {
     let ignore = false
+    let primeiraCarga = true
 
-    Promise.all([
-      apiRequest<DashboardResponse>('/dashboard'),
-      apiRequest<RelatorioStockResponse>('/relatorios/stock'),
-    ])
-      .then(([dashboardResponse, stockResponse]) => {
-        if (!ignore) {
-          setDashboard(dashboardResponse)
-          setStock(stockResponse)
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          setError('Não foi possível carregar o dashboard.')
-        }
-      })
-      .finally(() => {
-        if (!ignore) {
-          setLoading(false)
-        }
-      })
+    const carregar = () => {
+      Promise.all([
+        apiRequest<DashboardResponse>('/dashboard'),
+        apiRequest<RelatorioStockResponse>('/relatorios/stock'),
+      ])
+        .then(([dashboardResponse, stockResponse]) => {
+          if (!ignore) {
+            setDashboard(dashboardResponse)
+            setStock(stockResponse)
+            setError(null)
+          }
+        })
+        .catch(() => {
+          if (!ignore) {
+            setError('Não foi possível carregar o dashboard.')
+          }
+        })
+        .finally(() => {
+          if (!ignore && primeiraCarga) {
+            setLoading(false)
+            primeiraCarga = false
+          }
+        })
+    }
+
+    carregar()
+    const intervalo = window.setInterval(carregar, 10000)
 
     return () => {
       ignore = true
+      window.clearInterval(intervalo)
     }
   }, [])
 
@@ -511,25 +520,32 @@ export function GestorUsersPage() {
 }
 
 export function GestorSyncPage() {
-  const { session } = useAuth()
-  const lojaId = session?.lojaId
+  const [stores, setStores] = useState<LojaResponse[]>([])
+  const [selectedStoreId, setSelectedStoreId] = useState('')
   const [history, setHistory] = useState<SincronizacaoResponse[]>([])
   const [current, setCurrent] = useState<SincronizacaoResponse | null>(null)
   const [conflictRows, setConflictRows] = useState<ConflitoSincronizacaoResponse[]>([])
   const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    apiRequest<LojaResponse[]>('/utilizadores/lojas')
+      .then((rows) => {
+        setStores(rows)
+        setSelectedStoreId((currentStoreId) => currentStoreId || rows[0]?.id || '')
+      })
+      .catch(() => setError('Não foi possível carregar lojas.'))
+  }, [])
+
   const loadSyncData = useCallback(async () => {
-    if (!lojaId) return
+    if (!selectedStoreId) return
     setLoading(true)
     setError(null)
     try {
       const [page, state, conflicts] = await Promise.all([
-        apiRequest<PageResponse<SincronizacaoResponse>>(`/sincronizacao/historico?lojaId=${lojaId}&size=20`),
-        apiRequest<SincronizacaoResponse>(`/sincronizacao/estado?lojaId=${lojaId}`).catch(() => null),
-        apiRequest<ConflitoSincronizacaoResponse[]>(`/sincronizacao/conflitos?lojaId=${lojaId}`).catch(() => []),
+        apiRequest<PageResponse<SincronizacaoResponse>>(`/sincronizacao/historico?lojaId=${selectedStoreId}&size=20`),
+        apiRequest<SincronizacaoResponse>(`/sincronizacao/estado?lojaId=${selectedStoreId}`).catch(() => null),
+        apiRequest<ConflitoSincronizacaoResponse[]>(`/sincronizacao/conflitos?lojaId=${selectedStoreId}`).catch(() => []),
       ])
       setHistory(page.content)
       setCurrent(state)
@@ -541,7 +557,7 @@ export function GestorSyncPage() {
     } finally {
       setLoading(false)
     }
-  }, [lojaId])
+  }, [selectedStoreId])
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -549,26 +565,6 @@ export function GestorSyncPage() {
     }, 0)
     return () => window.clearTimeout(timeoutId)
   }, [loadSyncData])
-
-  async function startSync() {
-    if (!lojaId) return
-    setSyncing(true)
-    setError(null)
-    setMessage(null)
-    try {
-      const response = await apiRequest<SincronizacaoResponse>('/sincronizacao/iniciar', {
-        method: 'POST',
-        body: JSON.stringify({ lojaId }),
-      })
-      setCurrent(response)
-      setMessage(response.estado === 'CONCLUIDA' ? 'Sincronização concluída.' : 'Sincronização mantida para nova tentativa.')
-      await loadSyncData()
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível iniciar a sincronização.')
-    } finally {
-      setSyncing(false)
-    }
-  }
 
   const completed = history.filter((item) => item.estado === 'CONCLUIDA').length
   const conflicts = conflictRows.reduce((sum, item) => sum + item.conflitosResolvidos, 0)
@@ -583,11 +579,15 @@ export function GestorSyncPage() {
 
       <Panel
         title="Sincronização"
-        action={<Button onClick={startSync} disabled={syncing || loading}>{syncing ? 'A sincronizar...' : 'Iniciar sincronização'}</Button>}
       >
+        <SelectField
+          label="Loja"
+          value={selectedStoreId}
+          options={stores.map((store) => ({ value: store.id, label: store.nome }))}
+          onChange={(event) => setSelectedStoreId(event.target.value)}
+        />
         {error ? <Callout tone="warning">{error}</Callout> : null}
-        {message ? <Callout tone="info">{message}</Callout> : null}
-        {!error && !message ? <p className="mf-empty-state">Última tentativa: {current?.inicio ? new Date(current.inicio).toLocaleString('pt-PT') : 'sem registo'}</p> : null}
+        {!error ? <p className="mf-empty-state">Última sincronização recebida: {current?.inicio ? new Date(current.inicio).toLocaleString('pt-PT') : 'sem registo'}</p> : null}
       </Panel>
 
       <Panel title="Histórico de sincronizações">

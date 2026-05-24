@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
 import { ReportsContent, StockContent } from '../components/pageSections'
-import { apiRequest, type AjusteInventarioResponse, type FechoCaixaResponse, type MotivoAjusteResponse, type PageResponse, type PerfilResponse, type StockResponse, type UtilizadorResponse } from '../lib/api'
+import { apiRequest, type AjusteInventarioResponse, type FechoCaixaResponse, type MotivoAjusteResponse, type PageResponse, type PerfilResponse, type StockResponse, type UtilizadorResponse, type VendaResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 const money = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
@@ -15,34 +15,62 @@ export function GerenteCashPage() {
   const { session } = useAuth()
   const [closings, setClosings] = useState<FechoCaixaResponse[]>([])
   const [current, setCurrent] = useState<FechoCaixaResponse | null>(null)
+  const [todaySales, setTodaySales] = useState<VendaResponse[]>([])
+  const [closingNote, setClosingNote] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    apiRequest<PageResponse<FechoCaixaResponse>>(`/fechos-caixa?lojaId=${session?.lojaId}&size=5`)
-      .then((page) => setClosings(page.content))
+    const today = formatLocalDate(new Date())
+    Promise.all([
+      apiRequest<PageResponse<FechoCaixaResponse>>(`/fechos-caixa?lojaId=${session?.lojaId}&size=5`),
+      apiRequest<PageResponse<VendaResponse>>(`/vendas?lojaId=${session?.lojaId}&inicio=${today}&fim=${today}&porFechar=true&size=100`),
+    ])
+      .then(([closingPage, salesPage]) => {
+        setClosings(closingPage.content)
+        const pendingClosing = closingPage.content.find((closing) => closing.data === today && !closing.confirmado) ?? null
+        setCurrent(pendingClosing)
+        setClosingNote(pendingClosing?.observacoesDiscrepancia ?? '')
+        setTodaySales(salesPage.content.filter((sale) => sale.meioPagamento && !sale.anulada))
+      })
       .catch(() => setError('Não foi possível carregar fechos de caixa.'))
   }, [session?.lojaId])
 
   async function createClosing() {
     setError(null)
-    const created = await apiRequest<FechoCaixaResponse>('/fechos-caixa', {
-      method: 'POST',
-      body: JSON.stringify({ lojaId: session?.lojaId, utilizadorId: session?.utilizadorId }),
-    })
-    setCurrent(created)
+    try {
+      const created = await apiRequest<FechoCaixaResponse>('/fechos-caixa', {
+        method: 'POST',
+        body: JSON.stringify({ lojaId: session?.lojaId, utilizadorId: session?.utilizadorId }),
+      })
+      setCurrent(created)
+      setClosingNote(created.observacoesDiscrepancia ?? '')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível criar o fecho de caixa.')
+    }
   }
 
   async function confirmClosing() {
     if (!current) return
-    const confirmed = await apiRequest<FechoCaixaResponse>(`/fechos-caixa/${current.id}/confirmar`, {
-      method: 'POST',
-      body: JSON.stringify({ observacoesDiscrepancia: '' }),
-    })
-    setCurrent(confirmed)
-    setClosings((items) => [confirmed, ...items.filter((item) => item.id !== confirmed.id)])
+    setError(null)
+    try {
+      const confirmed = await apiRequest<FechoCaixaResponse>(`/fechos-caixa/${current.id}/confirmar`, {
+        method: 'POST',
+        body: JSON.stringify({ observacoesDiscrepancia: closingNote.trim() || null }),
+      })
+      setCurrent(null)
+      setClosingNote('')
+      setTodaySales([])
+      setClosings((items) => [confirmed, ...items.filter((item) => item.id !== confirmed.id)])
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível confirmar o fecho de caixa.')
+    }
   }
 
-  const summary = current ?? closings[0]
+  const salesSummary = summarizeSales(todaySales)
+  const summary = current ?? salesSummary
+  const hasPendingClosing = Boolean(current && !current.confirmado)
+  const today = formatLocalDate(new Date())
+  const hasClosedToday = closings.some((closing) => closing.data === today && closing.confirmado)
 
   return (
     <div className="mf-two-column closing">
@@ -55,9 +83,34 @@ export function GerenteCashPage() {
           <div className="summary-row"><span className="muted">Total geral</span><strong className="summary-strong">{money.format(summary?.totalGeral ?? 0)}</strong></div>
         </div>
 
-        <Button className="full-width mt-large" onClick={current ? confirmClosing : createClosing}>
-          {current && !current.confirmado ? 'Confirmar fecho de caixa' : 'Criar fecho de caixa'}
+        {hasPendingClosing ? (
+          <TextField
+            label="Observação de discrepância"
+            placeholder="Ex.: numerário contado difere do total esperado"
+            value={closingNote}
+            onChange={(event) => setClosingNote(event.target.value)}
+            className="mt-large"
+          />
+        ) : null}
+
+        <Button className="full-width mt-large" onClick={hasPendingClosing ? confirmClosing : createClosing} disabled={hasClosedToday && !hasPendingClosing}>
+          {hasClosedToday && !hasPendingClosing ? 'Caixa fechada hoje' : hasPendingClosing ? 'Confirmar fecho de caixa' : 'Criar fecho de caixa'}
         </Button>
+      </Panel>
+
+      <Panel title="Vendas de hoje">
+        <div className="closing-history">
+          {todaySales.length === 0 ? <p className="mf-empty-state">Sem vendas finalizadas hoje.</p> : null}
+          {todaySales.map((sale) => (
+            <div key={sale.id} className="summary-row">
+              <div className="closing-left">
+                <span className="muted">{new Date(sale.dataHora).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+                <strong>{money.format(sale.total)}</strong>
+              </div>
+              <StatusBadge tone="success">{sale.meioPagamento}</StatusBadge>
+            </div>
+          ))}
+        </div>
       </Panel>
 
       <Panel title="Histórico — 5 dias">
@@ -65,7 +118,11 @@ export function GerenteCashPage() {
           {closings.length === 0 ? <p className="mf-empty-state">Sem fechos registados.</p> : null}
           {closings.map((item) => (
             <div key={item.id} className="summary-row">
-              <div className="closing-left"><span className="muted">{item.data}</span><strong>{money.format(item.totalGeral)}</strong></div>
+              <div className="closing-left">
+                <span className="muted">{item.data}</span>
+                <strong>{money.format(item.totalGeral)}</strong>
+                {item.observacoesDiscrepancia ? <span className="muted faint">{item.observacoesDiscrepancia}</span> : null}
+              </div>
               <StatusBadge tone={item.confirmado ? 'success' : 'warning'}>{item.confirmado ? 'Confirmado' : 'Pendente'}</StatusBadge>
             </div>
           ))}
@@ -73,6 +130,45 @@ export function GerenteCashPage() {
       </Panel>
     </div>
   )
+}
+
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function summarizeSales(sales: VendaResponse[]): FechoCaixaResponse {
+  const totals = sales.reduce((accumulator, sale) => {
+    switch (sale.meioPagamento) {
+      case 'NUMERARIO':
+        accumulator.totalNumerario += sale.total
+        break
+      case 'CARTAO':
+        accumulator.totalCartao += sale.total
+        break
+      case 'MBWAY':
+        accumulator.totalMbway += sale.total
+        break
+    }
+    accumulator.totalGeral += sale.total
+    return accumulator
+  }, {
+    totalNumerario: 0,
+    totalCartao: 0,
+    totalMbway: 0,
+    totalGeral: 0,
+  })
+
+  return {
+    id: 'preview',
+    lojaId: '',
+    gerenteId: '',
+    data: formatLocalDate(new Date()),
+    confirmado: false,
+    ...totals,
+  }
 }
 
 export function GerenteReportsPage() {

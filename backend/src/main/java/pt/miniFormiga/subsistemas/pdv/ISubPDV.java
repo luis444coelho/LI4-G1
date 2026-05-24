@@ -31,6 +31,7 @@ public interface ISubPDV {
     List<FechoCaixa> getFechoCaixaByLoja(UUID lojaId);
     VendaDTO obterVenda(UUID vendaId);
     Page<VendaDTO> listarVendas(UUID lojaId, LocalDate inicio, LocalDate fim, Pageable pageable);
+    Page<VendaDTO> listarVendasPorFechar(UUID lojaId, LocalDate inicio, LocalDate fim, Pageable pageable);
     FaturaDTO obterFatura(UUID faturaId);
     Page<FechoCaixaDTO> listarFechosCaixa(UUID lojaId, Pageable pageable);
     FechoCaixaDTO obterFechoCaixa(UUID fechoCaixaId);

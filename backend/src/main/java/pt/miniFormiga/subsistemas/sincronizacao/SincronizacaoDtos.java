@@ -1,6 +1,7 @@
 package pt.miniFormiga.subsistemas.sincronizacao;
 
 import pt.miniFormiga.domain.Sincronizacao;
+import pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.DashboardResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,6 +43,7 @@ public final class SincronizacaoDtos {
                                        LocalDateTime geradoEm,
                                        LocalDateTime desde,
                                        Map<String, List<RegistoSincronizacao>> registos,
+                                       DashboardResponse dashboard,
                                        List<String> logsAuditoria) {
         public int quantidadeRegistos() {
             int registosDominio = registos.values().stream().mapToInt(List::size).sum();

@@ -1,5 +1,6 @@
 package pt.miniFormiga.subsistemas.relatorios;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -17,6 +18,7 @@ import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
 import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.LojaRepository;
+import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
 import pt.miniFormiga.subsistemas.stock.StockStore;
 
@@ -39,6 +41,7 @@ class RelatoriosFacadeTest {
     private AlertaStockRepository alertaStockRepository;
     private LojaRepository lojaRepository;
     private StockStore stockStore;
+    private SincronizacaoRepository sincronizacaoRepository;
     private RelatoriosFacade facade;
 
     private Loja loja;
@@ -51,7 +54,15 @@ class RelatoriosFacadeTest {
         alertaStockRepository = mock(AlertaStockRepository.class);
         lojaRepository = mock(LojaRepository.class);
         stockStore = mock(StockStore.class);
-        facade = new RelatoriosFacade(vendaRepository, alertaStockRepository, lojaRepository, stockStore);
+        sincronizacaoRepository = mock(SincronizacaoRepository.class);
+        facade = new RelatoriosFacade(
+                vendaRepository,
+                alertaStockRepository,
+                lojaRepository,
+                stockStore,
+                sincronizacaoRepository,
+                new ObjectMapper().findAndRegisterModules()
+        );
 
         loja = new Loja("Loja Braga", "Rua Central", "123456789");
         operador = new Utilizador("operador", "hash", "Operador",

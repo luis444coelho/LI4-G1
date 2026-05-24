@@ -103,7 +103,11 @@ public class VendasController {
     public Page<VendaDTO> listar(@RequestParam UUID lojaId,
                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+                                 @RequestParam(defaultValue = "false") boolean porFechar,
                                  Pageable pageable) {
+        if (porFechar) {
+            return pdv.listarVendasPorFechar(lojaId, inicio, fim, pageable);
+        }
         return pdv.listarVendas(lojaId, inicio, fim, pageable);
     }
 

@@ -75,6 +75,7 @@ class ServidorCentralSincronizacaoServiceTest {
                 LocalDateTime.now(),
                 null,
                 Map.of("stock", List.of()),
+                null,
                 List.of()
         );
 
@@ -82,6 +83,27 @@ class ServidorCentralSincronizacaoServiceTest {
 
         assertTrue(resultado.sucesso());
         assertTrue(resultado.conflitos().isEmpty());
+        verify(sincronizacaoRepository).save(any());
+    }
+
+    @Test
+    void receberPayloadDeLojaAindaNaoRegistadaCriaLojaERegistaSincronizacao() {
+        UUID lojaId = UUID.randomUUID();
+        when(lojaRepository.findById(lojaId)).thenReturn(Optional.empty());
+        when(lojaRepository.save(any(Loja.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        SincronizacaoPayload payload = new SincronizacaoPayload(
+                lojaId,
+                LocalDateTime.now(),
+                null,
+                Map.of("fechos", List.of()),
+                null,
+                List.of()
+        );
+
+        var resultado = service.receber(payload);
+
+        assertTrue(resultado.sucesso());
+        verify(lojaRepository).save(any(Loja.class));
         verify(sincronizacaoRepository).save(any());
     }
 
@@ -104,6 +126,7 @@ class ServidorCentralSincronizacaoServiceTest {
                         LocalDateTime.of(2026, 5, 23, 10, 0),
                         1
                 ))),
+                null,
                 List.of()
         );
 

@@ -17,10 +17,16 @@ import pt.miniFormiga.repository.FechoCaixaRepository;
 import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
+import pt.miniFormiga.subsistemas.relatorios.ISubRelatorios;
+import pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.DashboardResponse;
+import pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.PeriodoResponse;
+import pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.VendasPorLojaResponse;
 import pt.miniFormiga.subsistemas.stock.StockStore;
 
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,6 +54,7 @@ class SincronizacaoFacadeTest {
     private AjusteInventarioRepository ajusteRepository;
     private FechoCaixaRepository fechoRepository;
     private EntradaMercadoriaRepository entradaRepository;
+    private ISubRelatorios relatorios;
     private SincronizacaoTransporte transporte;
     private SincronizacaoFacade facade;
     private Loja loja;
@@ -62,6 +69,7 @@ class SincronizacaoFacadeTest {
         ajusteRepository = mock(AjusteInventarioRepository.class);
         fechoRepository = mock(FechoCaixaRepository.class);
         entradaRepository = mock(EntradaMercadoriaRepository.class);
+        relatorios = mock(ISubRelatorios.class);
         transporte = mock(SincronizacaoTransporte.class);
         facade = new SincronizacaoFacade(
                 sincronizacaoRepository,
@@ -72,6 +80,7 @@ class SincronizacaoFacadeTest {
                 ajusteRepository,
                 fechoRepository,
                 entradaRepository,
+                relatorios,
                 transporte,
                 new ObjectMapper().findAndRegisterModules()
         );
@@ -182,6 +191,20 @@ class SincronizacaoFacadeTest {
         when(stockStore.listar(loja.getId())).thenReturn(List.of());
         when(ajusteRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
         when(fechoRepository.findByLojaId(eq(loja.getId()), any())).thenReturn(new PageImpl<>(List.of()));
+        when(fechoRepository.findByLojaIdAndConfirmadoTrueAndDataBetween(eq(loja.getId()), any(), any()))
+                .thenReturn(List.of());
         when(entradaRepository.findByLojaId(eq(loja.getId()), any())).thenReturn(new PageImpl<>(List.of()));
+        when(relatorios.obterDashboard(any())).thenReturn(new DashboardResponse(
+                new PeriodoResponse(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31)),
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                0,
+                0,
+                1,
+                0,
+                BigDecimal.ZERO,
+                List.<VendasPorLojaResponse>of()
+        ));
     }
 }

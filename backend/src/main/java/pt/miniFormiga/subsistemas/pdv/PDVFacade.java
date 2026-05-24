@@ -119,6 +119,7 @@ public class PDVFacade implements ISubPDV {
 
     @Override
     public Venda registarVenda(UUID lojaId, UUID utilizadorId) {
+        garantirCaixaAberta(lojaId);
         Loja loja = lojaRepository.findById(lojaId).orElseThrow(() -> new RecursoNaoEncontradoException("Loja", lojaId));
         Utilizador operador = utilizadorRepository.findById(utilizadorId).orElseThrow(() -> new RecursoNaoEncontradoException("Utilizador", utilizadorId));
         Venda venda = vendaRepository.save(criarVenda(loja, operador));
@@ -132,6 +133,7 @@ public class PDVFacade implements ISubPDV {
             throw new BusinessException("QUANTIDADE_LINHA_INVALIDA", "Quantidade da linha de venda deve ser positiva");
         }
         Venda venda = obterVendaEntidade(vendaId);
+        garantirCaixaAberta(venda.getLoja().getId());
         if (venda.isAnulada() || venda.getMeioPagamento() != null) {
             throw new BusinessException("VENDA_NAO_ABERTA", "A venda deve estar aberta");
         }
@@ -161,6 +163,7 @@ public class PDVFacade implements ISubPDV {
     @Override
     public Venda finalizarVenda(UUID vendaId, String meioPagamento) {
         Venda venda = obterVendaEntidade(vendaId);
+        garantirCaixaAberta(venda.getLoja().getId());
         MeioPagamentoTipo tipo = meioPagamento(meioPagamento);
         for (LinhaVenda linha : venda.getLinhas()) {
             if (!linha.isAnulada()) {
@@ -193,6 +196,15 @@ public class PDVFacade implements ISubPDV {
         LocalDate dataInicio = inicio == null ? LocalDate.now() : inicio;
         LocalDate dataFim = fim == null ? dataInicio : fim;
         return vendaRepository.findByLojaIdAndDataHoraBetween(lojaId, dataInicio.atStartOfDay(), dataFim.plusDays(1).atStartOfDay(), pageable)
+                .map(VendaDTO::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<VendaDTO> listarVendasPorFechar(UUID lojaId, LocalDate inicio, LocalDate fim, Pageable pageable) {
+        LocalDate dataInicio = inicio == null ? LocalDate.now() : inicio;
+        LocalDate dataFim = fim == null ? dataInicio : fim;
+        return vendaRepository.findVendasPorFechar(lojaId, dataInicio.atStartOfDay(), dataFim.plusDays(1).atStartOfDay(), pageable)
                 .map(VendaDTO::from);
     }
 
@@ -257,7 +269,10 @@ public class PDVFacade implements ISubPDV {
         Loja loja = lojaRepository.findById(lojaId).orElseThrow(() -> new RecursoNaoEncontradoException("Loja", lojaId));
         Utilizador gerente = utilizadorRepository.findById(utilizadorId).orElseThrow(() -> new RecursoNaoEncontradoException("Utilizador", utilizadorId));
         LocalDate data = LocalDate.now();
-        var vendas = vendaRepository.findByLojaIdAndAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(lojaId, data.atStartOfDay(), data.plusDays(1).atStartOfDay());
+        if (fechoCaixaRepository.existsByLojaIdAndData(lojaId, data)) {
+            throw new BusinessException("FECHO_CAIXA_JA_EXISTE", "Fecho de caixa ja registado para hoje");
+        }
+        var vendas = vendaRepository.findVendasPorFechar(lojaId, data.atStartOfDay(), data.plusDays(1).atStartOfDay());
         FechoCaixa fecho = new FechoCaixa(loja, gerente, data, vendas);
         fecho.calcularTotais();
         FechoCaixa guardado = fechoCaixaRepository.save(fecho);
@@ -276,7 +291,7 @@ public class PDVFacade implements ISubPDV {
                 "FECHO_CAIXA",
                 "Fecho de caixa confirmado");
         fecho.getLoja().iniciarSincronizacao();
-        sincronizacao.agendarSincronizacao(fecho.getLoja().getId());
+        sincronizacao.iniciarSincronizacao(fecho.getLoja().getId());
         return fecho;
     }
 
@@ -328,6 +343,12 @@ public class PDVFacade implements ISubPDV {
         String serie = "NC/" + LocalDate.now().getYear();
         int numero = devolucaoRepository.countByVendaLojaIdAndNumeroDocumentoStartingWith(lojaId, serie + "/") + 1;
         return serie + "/" + String.format("%05d", numero);
+    }
+
+    private void garantirCaixaAberta(UUID lojaId) {
+        if (fechoCaixaRepository.existsByLojaIdAndDataAndConfirmadoTrue(lojaId, LocalDate.now())) {
+            throw new BusinessException("CAIXA_FECHADA", "Caixa fechada para hoje");
+        }
     }
 
     private MeioPagamentoTipo meioPagamento(String valor) {

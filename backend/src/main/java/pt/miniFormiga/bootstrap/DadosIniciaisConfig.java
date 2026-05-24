@@ -12,9 +12,11 @@ import pt.miniFormiga.repository.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 @Configuration
 public class DadosIniciaisConfig {
+    private static final UUID LOJA_BRAGA_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
     @Bean
     @Transactional
@@ -29,9 +31,9 @@ public class DadosIniciaisConfig {
                                     CondicaoComercialRepository condicaoComercialRepository,
                                     PasswordEncoder passwordEncoder) {
         return args -> {
-            Loja loja = lojaRepository.findAll().stream()
-                    .findFirst()
-                    .orElseGet(() -> lojaRepository.save(new Loja("Loja Braga", "Rua Central", "123456789", "253000000")));
+            Loja loja = lojaRepository.findById(LOJA_BRAGA_ID)
+                    .or(() -> lojaRepository.findByNif("123456789"))
+                    .orElseGet(() -> lojaRepository.save(new Loja(LOJA_BRAGA_ID, "Loja Braga", "Rua Central", "123456789", "253000000")));
 
             criarUtilizadorSeNecessario(utilizadorRepository, passwordEncoder,
                     "gestor.formiga", "Sr. Formiga", "gestor@mini-formiga.pt", PerfilUtilizador.GESTOR, loja);

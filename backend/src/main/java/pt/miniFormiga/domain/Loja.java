@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "lojas")
@@ -47,6 +48,11 @@ public class Loja extends EntidadeBase {
         this.nif = nif;
         this.telefone = telefone;
         this.ativa = true;
+    }
+
+    public Loja(UUID id, String nome, String morada, String nif, String telefone) {
+        this(nome, morada, nif, telefone);
+        definirId(id);
     }
 
     public FechoCaixa efetuarFechoCaixa(LocalDate data) {

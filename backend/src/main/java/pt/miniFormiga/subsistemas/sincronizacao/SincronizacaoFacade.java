@@ -9,8 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.miniFormiga.domain.EntidadeBase;
 import pt.miniFormiga.domain.EstadoSincronizacaoCodigo;
+import pt.miniFormiga.domain.FechoCaixa;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Sincronizacao;
+import pt.miniFormiga.domain.Venda;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.exception.RecursoNaoEncontradoException;
 import pt.miniFormiga.repository.AjusteInventarioRepository;
@@ -20,15 +22,24 @@ import pt.miniFormiga.repository.FechoCaixaRepository;
 import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
+import pt.miniFormiga.subsistemas.relatorios.ISubRelatorios;
+import pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.DashboardResponse;
+import pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.RelatorioFiltro;
+import pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.VendasPorLojaResponse;
 import pt.miniFormiga.subsistemas.stock.StockStore;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -46,6 +57,7 @@ public class SincronizacaoFacade implements ISubSincronizacao {
     private static final String EM_CURSO = "EM_CURSO";
     private static final String CONCLUIDA = "CONCLUIDA";
     private static final String COM_CONFLITOS = "COM_CONFLITOS";
+    private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
     private final SincronizacaoRepository sincronizacaoRepository;
     private final LojaRepository lojaRepository;
@@ -55,6 +67,7 @@ public class SincronizacaoFacade implements ISubSincronizacao {
     private final AjusteInventarioRepository ajusteRepository;
     private final FechoCaixaRepository fechoRepository;
     private final EntradaMercadoriaRepository entradaRepository;
+    private final ISubRelatorios relatorios;
     private final SincronizacaoTransporte transporte;
     private final ObjectMapper objectMapper;
 
@@ -69,6 +82,7 @@ public class SincronizacaoFacade implements ISubSincronizacao {
                                AjusteInventarioRepository ajusteRepository,
                                FechoCaixaRepository fechoRepository,
                                EntradaMercadoriaRepository entradaRepository,
+                               ISubRelatorios relatorios,
                                SincronizacaoTransporte transporte,
                                ObjectMapper objectMapper) {
         this.sincronizacaoRepository = sincronizacaoRepository;
@@ -79,6 +93,7 @@ public class SincronizacaoFacade implements ISubSincronizacao {
         this.ajusteRepository = ajusteRepository;
         this.fechoRepository = fechoRepository;
         this.entradaRepository = entradaRepository;
+        this.relatorios = relatorios;
         this.transporte = transporte;
         this.objectMapper = objectMapper;
     }
@@ -180,7 +195,64 @@ public class SincronizacaoFacade implements ISubSincronizacao {
         registos.put("entradasMercadoria", entradaRepository.findByLojaId(lojaId, Pageable.unpaged()).getContent().stream()
                 .filter(pendente).map(entidade -> registo("ENTRADA_MERCADORIA", entidade)).toList());
 
-        return new SincronizacaoPayload(lojaId, LocalDateTime.now(), desde, registos, logsAuditoria());
+        DashboardResponse dashboard = dashboardParaSincronizacao(lojaId);
+        return new SincronizacaoPayload(lojaId, LocalDateTime.now(), desde, registos, dashboard, logsAuditoria());
+    }
+
+    private DashboardResponse dashboardParaSincronizacao(UUID lojaId) {
+        DashboardResponse dashboard = relatorios.obterDashboard(new RelatorioFiltro(lojaId, null, null, null));
+        if (dashboard.totalVendas().compareTo(BigDecimal.ZERO) != 0) {
+            return dashboard;
+        }
+
+        LocalDate inicio = dashboard.periodo().inicio();
+        LocalDate fim = dashboard.periodo().fim();
+        List<FechoCaixa> fechos = fechoRepository.findByLojaIdAndConfirmadoTrueAndDataBetween(lojaId, inicio, fim);
+        if (fechos.isEmpty()) {
+            return dashboard;
+        }
+
+        BigDecimal total = fechos.stream()
+                .map(FechoCaixa::getTotalGeral)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (total.compareTo(BigDecimal.ZERO) == 0) {
+            return dashboard;
+        }
+
+        Set<UUID> vendas = new LinkedHashSet<>();
+        for (FechoCaixa fecho : fechos) {
+            fecho.getVendas().stream().map(Venda::getId).forEach(vendas::add);
+        }
+        long numeroVendas = vendas.size();
+        String nomeLoja = fechos.stream()
+                .findFirst()
+                .map(FechoCaixa::getLoja)
+                .map(Loja::getNome)
+                .orElse("Loja Braga");
+
+        return new DashboardResponse(
+                dashboard.periodo(),
+                dinheiro(total),
+                ZERO,
+                ZERO,
+                numeroVendas,
+                1,
+                dashboard.totalLojas(),
+                dashboard.alertasAtivos(),
+                media(total, numeroVendas),
+                List.of(new VendasPorLojaResponse(lojaId, nomeLoja, dinheiro(total), ZERO, ZERO, numeroVendas))
+        );
+    }
+
+    private BigDecimal media(BigDecimal total, long quantidade) {
+        if (quantidade == 0) {
+            return ZERO;
+        }
+        return dinheiro(total.divide(BigDecimal.valueOf(quantidade), 2, RoundingMode.HALF_UP));
+    }
+
+    private BigDecimal dinheiro(BigDecimal valor) {
+        return valor == null ? ZERO : valor.setScale(2, RoundingMode.HALF_UP);
     }
 
     private RegistoSincronizacao registo(String tipo, EntidadeBase entidade) {

@@ -252,15 +252,19 @@ class PDVFacadeTest {
     }
 
     @Test
-    void confirmarFechoCaixaRegistaAuditoriaEAgendaSincronizacao() {
+    void confirmarFechoCaixaRegistaTotaisAuditoriaEIniciaSincronizacao() {
         FechoCaixa fecho = new FechoCaixa(loja, operador, java.time.LocalDate.now(), List.of(vendaFinalizada()));
         when(fechoCaixaRepository.findById(fecho.getId())).thenReturn(Optional.of(fecho));
 
-        facade.confirmarFechoCaixa(fecho.getId(), "sem discrepancias");
+        FechoCaixa confirmado = facade.confirmarFechoCaixa(fecho.getId(), "sem discrepancias");
 
+        assertEquals(true, confirmado.isConfirmado());
+        assertEquals(new BigDecimal("1.23"), confirmado.getTotalNumerario());
+        assertEquals(new BigDecimal("1.23"), confirmado.getTotalGeral());
+        assertEquals("sem discrepancias", confirmado.getObservacoesDiscrepancia());
         verify(auditoria).registar(TipoOperacao.FECHO_CAIXA_CONFIRMADO,
                 operador.getId(), "FECHO_CAIXA", "Fecho de caixa confirmado");
-        verify(sincronizacao).agendarSincronizacao(loja.getId());
+        verify(sincronizacao).iniciarSincronizacao(loja.getId());
     }
 
     @Test

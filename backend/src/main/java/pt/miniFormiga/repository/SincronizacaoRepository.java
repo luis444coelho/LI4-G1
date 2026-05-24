@@ -21,6 +21,9 @@ public interface SincronizacaoRepository extends JpaRepository<Sincronizacao, UU
     Optional<Sincronizacao> findFirstByLojaIdAndEstadoInOrderByDataHoraFimDesc(UUID lojaId, List<pt.miniFormiga.domain.EstadoSincronizacaoCodigo> estados);
 
     @EntityGraph(attributePaths = {"loja"})
+    Optional<Sincronizacao> findFirstByEstadoInOrderByDataHoraFimDesc(List<pt.miniFormiga.domain.EstadoSincronizacaoCodigo> estados);
+
+    @EntityGraph(attributePaths = {"loja"})
     Page<Sincronizacao> findByLojaIdOrderByDataHoraInicioDesc(UUID lojaId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"loja"})

@@ -1,16 +1,22 @@
 package pt.miniFormiga.subsistemas.relatorios;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.miniFormiga.domain.AlertaStock;
+import pt.miniFormiga.domain.EstadoSincronizacaoCodigo;
 import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Produto;
+import pt.miniFormiga.domain.Sincronizacao;
 import pt.miniFormiga.domain.Venda;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.LojaRepository;
+import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
+import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoPayload;
 import pt.miniFormiga.subsistemas.stock.StockItem;
 import pt.miniFormiga.subsistemas.stock.StockStore;
 
@@ -41,21 +47,35 @@ public class RelatoriosFacade implements ISubRelatorios {
     private final AlertaStockRepository alertaStockRepository;
     private final LojaRepository lojaRepository;
     private final StockStore stockStore;
+    private final SincronizacaoRepository sincronizacaoRepository;
+    private final ObjectMapper objectMapper;
 
     public RelatoriosFacade(VendaRepository vendaRepository,
                             AlertaStockRepository alertaStockRepository,
                             LojaRepository lojaRepository,
-                            StockStore stockStore) {
+                            StockStore stockStore,
+                            SincronizacaoRepository sincronizacaoRepository,
+                            ObjectMapper objectMapper) {
         this.vendaRepository = vendaRepository;
         this.alertaStockRepository = alertaStockRepository;
         this.lojaRepository = lojaRepository;
         this.stockStore = stockStore;
+        this.sincronizacaoRepository = sincronizacaoRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Override
     public DashboardResponse obterDashboard(RelatorioFiltro filtro) {
+        boolean permiteSnapshotSincronizado = filtro == null
+                || (filtro.inicio() == null && filtro.fim() == null && filtro.categoriaId() == null);
         RelatorioFiltro normalizado = normalizar(filtro);
         List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado.categoriaId());
+        if (linhas.isEmpty() && permiteSnapshotSincronizado) {
+            DashboardResponse sincronizado = dashboardSincronizado(normalizado);
+            if (sincronizado != null) {
+                return sincronizado;
+            }
+        }
         Resumo resumo = resumir(linhas);
         long totalLojas = normalizado.lojaId() == null ? lojaRepository.findAll().size() : 1;
         List<VendasPorLojaResponse> vendasPorLoja = vendasPorLoja(linhas);
@@ -72,6 +92,30 @@ public class RelatoriosFacade implements ISubRelatorios {
                 media(resumo.comIva, resumo.numeroVendas()),
                 vendasPorLoja
         );
+    }
+
+    private DashboardResponse dashboardSincronizado(RelatorioFiltro filtro) {
+        List<EstadoSincronizacaoCodigo> estados = List.of(
+                EstadoSincronizacaoCodigo.CONCLUIDA,
+                EstadoSincronizacaoCodigo.COM_CONFLITOS
+        );
+        return (filtro.lojaId() == null
+                ? sincronizacaoRepository.findFirstByEstadoInOrderByDataHoraFimDesc(estados)
+                : sincronizacaoRepository.findFirstByLojaIdAndEstadoInOrderByDataHoraFimDesc(filtro.lojaId(), estados))
+                .map(this::dashboardDoPayload)
+                .orElse(null);
+    }
+
+    private DashboardResponse dashboardDoPayload(Sincronizacao sincronizacao) {
+        if (sincronizacao.getPayloadJson() == null || sincronizacao.getPayloadJson().isBlank()) {
+            return null;
+        }
+        try {
+            SincronizacaoPayload payload = objectMapper.readValue(sincronizacao.getPayloadJson(), SincronizacaoPayload.class);
+            return payload.dashboard();
+        } catch (JsonProcessingException e) {
+            return null;
+        }
     }
 
     @Override
