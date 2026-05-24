@@ -2,10 +2,13 @@ package pt.miniFormiga.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.time.LocalDateTime;
 
@@ -13,13 +16,20 @@ import java.time.LocalDateTime;
 @Table(name = "ajustes_inventario")
 public class AjusteInventario extends EntidadeBase {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "stock_id", nullable = false)
-    private Stock stock;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "produto_id")
+    private Produto produto;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "motivo_id", nullable = false)
-    private MotivoAjuste motivoAjuste;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "produto_loja_id")
+    private ProdutoLoja produtoLoja;
+
+    @Transient
+    private Stock stockLegado;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MotivoAjusteCodigo motivo;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "utilizador_id", nullable = false)
@@ -42,24 +52,50 @@ public class AjusteInventario extends EntidadeBase {
                             Utilizador responsavel,
                             int quantidade,
                             String observacoes) {
-        this.stock = stock;
-        this.motivoAjuste = motivo;
+        this(stock.getProduto(), MotivoAjusteCodigo.valueOf(motivo.getCodigo()), responsavel, quantidade, observacoes);
+        this.stockLegado = stock;
+    }
+
+    public AjusteInventario(Produto produto,
+                            MotivoAjusteCodigo motivo,
+                            Utilizador responsavel,
+                            int quantidade,
+                            String observacoes) {
+        this.produto = produto;
+        this.motivo = motivo;
         this.utilizador = responsavel;
         this.quantidade = quantidade;
         this.observacoes = observacoes;
         this.dataHora = LocalDateTime.now();
     }
 
+    public AjusteInventario(ProdutoLoja produtoLoja,
+                            MotivoAjusteCodigo motivo,
+                            Utilizador responsavel,
+                            int quantidade,
+                            String observacoes) {
+        this(produtoLoja.getProduto(), motivo, responsavel, quantidade, observacoes);
+        this.produtoLoja = produtoLoja;
+    }
+
+    public Produto getProduto() {
+        return produto == null && produtoLoja != null ? produtoLoja.getProduto() : produto;
+    }
+
+    public ProdutoLoja getProdutoLoja() {
+        return produtoLoja;
+    }
+
     public Stock getStock() {
-        return stock;
+        return stockLegado;
     }
 
-    public MotivoAjuste getMotivo() {
-        return motivoAjuste;
+    public MotivoAjusteCodigo getMotivo() {
+        return motivo;
     }
 
-    public MotivoAjuste getMotivoAjuste() {
-        return motivoAjuste;
+    public MotivoAjusteCodigo getMotivoAjuste() {
+        return motivo;
     }
 
     public Utilizador getResponsavel() {

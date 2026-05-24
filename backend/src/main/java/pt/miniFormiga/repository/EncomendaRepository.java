@@ -10,10 +10,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface EncomendaRepository extends JpaRepository<Encomenda, UUID> {
-    @EntityGraph(attributePaths = {"loja", "fornecedor", "estado", "linhas", "linhas.produto"})
+    @EntityGraph(attributePaths = {"loja", "fornecedor", "linhas", "linhas.produto"})
     Page<Encomenda> findByLojaId(UUID lojaId, Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = {"loja", "fornecedor", "estado", "linhas", "linhas.produto"})
+    @EntityGraph(attributePaths = {"loja", "fornecedor", "linhas", "linhas.produto"})
     Optional<Encomenda> findById(UUID id);
 }

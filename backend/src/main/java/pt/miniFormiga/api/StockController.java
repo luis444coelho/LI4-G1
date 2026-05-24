@@ -6,28 +6,15 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import pt.miniFormiga.domain.AjusteInventario;
-import pt.miniFormiga.exception.RecursoNaoEncontradoException;
+import pt.miniFormiga.domain.MotivoAjusteCodigo;
 import pt.miniFormiga.repository.AjusteInventarioRepository;
-import pt.miniFormiga.repository.MotivoAjusteRepository;
-import pt.miniFormiga.repository.StockRepository;
 import pt.miniFormiga.subsistemas.stock.ISubStock;
-import pt.miniFormiga.subsistemas.stock.StockDtos.AjusteInventarioResponse;
-import pt.miniFormiga.subsistemas.stock.StockDtos.AlertaStockResponse;
-import pt.miniFormiga.subsistemas.stock.StockDtos.DefinirNivelMinimoRequest;
-import pt.miniFormiga.subsistemas.stock.StockDtos.MotivoAjusteResponse;
-import pt.miniFormiga.subsistemas.stock.StockDtos.RegistarAjusteRequest;
-import pt.miniFormiga.subsistemas.stock.StockDtos.StockResponse;
+import pt.miniFormiga.subsistemas.stock.StockStore;
+import pt.miniFormiga.subsistemas.stock.StockDtos.*;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,18 +23,15 @@ import java.util.UUID;
 public class StockController {
 
     private final ISubStock stock;
-    private final StockRepository stockRepository;
     private final AjusteInventarioRepository ajusteInventarioRepository;
-    private final MotivoAjusteRepository motivoAjusteRepository;
+    private final StockStore stockStore;
 
     public StockController(ISubStock stock,
-                           StockRepository stockRepository,
                            AjusteInventarioRepository ajusteInventarioRepository,
-                           MotivoAjusteRepository motivoAjusteRepository) {
+                           StockStore stockStore) {
         this.stock = stock;
-        this.stockRepository = stockRepository;
         this.ajusteInventarioRepository = ajusteInventarioRepository;
-        this.motivoAjusteRepository = motivoAjusteRepository;
+        this.stockStore = stockStore;
     }
 
     @GetMapping
@@ -55,7 +39,7 @@ public class StockController {
     @Operation(summary = "Consultar stock da loja")
     @ApiResponse(responseCode = "200", description = "Stock listado")
     public List<StockResponse> consultarStock(@RequestParam UUID lojaId) {
-        return stockRepository.findByLojaId(lojaId).stream().map(StockResponse::from).toList();
+        return stockStore.listar(lojaId).stream().map(StockResponse::from).toList();
     }
 
     @GetMapping("/{produtoId}")
@@ -63,9 +47,7 @@ public class StockController {
     @Operation(summary = "Consultar stock de produto")
     @ApiResponse(responseCode = "200", description = "Stock encontrado")
     public StockResponse consultarStockProduto(@PathVariable UUID produtoId, @RequestParam UUID lojaId) {
-        return stockRepository.findByProdutoIdAndLojaId(produtoId, lojaId)
-                .map(StockResponse::from)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Stock", produtoId));
+        return StockResponse.from(stockStore.obter(produtoId, lojaId));
     }
 
     @PutMapping("/{produtoId}/nivel-minimo")
@@ -115,7 +97,7 @@ public class StockController {
     @Operation(summary = "Listar ajustes de inventario")
     @ApiResponse(responseCode = "200", description = "Ajustes listados")
     public Page<AjusteInventarioResponse> listarAjustes(@RequestParam UUID lojaId, Pageable pageable) {
-        return ajusteInventarioRepository.findByStockLojaId(lojaId, pageable).map(AjusteInventarioResponse::from);
+        return ajusteInventarioRepository.findAll(pageable).map(AjusteInventarioResponse::from);
     }
 
     @GetMapping("/motivos-ajuste")
@@ -123,6 +105,6 @@ public class StockController {
     @Operation(summary = "Listar motivos de ajuste")
     @ApiResponse(responseCode = "200", description = "Motivos listados")
     public List<MotivoAjusteResponse> listarMotivosAjuste() {
-        return motivoAjusteRepository.findAll().stream().map(MotivoAjusteResponse::from).toList();
+        return Arrays.stream(MotivoAjusteCodigo.values()).map(MotivoAjusteResponse::from).toList();
     }
 }

@@ -32,7 +32,7 @@ class LogAuditoriaTest {
         assertEquals(entidadeId, log.getEntidadeId());
         assertNotNull(log.getDataHora());
         assertTrue(log.getDataHora().isBefore(LocalDateTime.now().plusSeconds(1)));
-        assertTrue(utilizador.getLogsAuditoria().contains(log));
+        assertTrue(utilizador.getLogsAuditoria().isEmpty());
     }
 
     @Test

@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -47,6 +48,21 @@ public class Produto extends EntidadeBase {
 
     @Column(nullable = false)
     private boolean ativo = true;
+
+    @Column(nullable = false)
+    private int quantidadeStock;
+
+    @Column
+    private Integer nivelMinimo;
+
+    @Column
+    private String corredor;
+
+    @Column
+    private String prateleira;
+
+    @Column(nullable = false)
+    private LocalDateTime stockUpdatedAt = LocalDateTime.now();
 
     protected Produto() {
     }
@@ -98,6 +114,40 @@ public class Produto extends EntidadeBase {
 
     public void desativar() {
         this.ativo = false;
+    }
+
+    public void atualizarStock(int delta) {
+        int novaQuantidade = quantidadeStock + delta;
+        if (novaQuantidade < 0) {
+            throw new IllegalArgumentException("Quantidade de stock nao pode ser negativa");
+        }
+        this.quantidadeStock = novaQuantidade;
+        this.stockUpdatedAt = LocalDateTime.now();
+    }
+
+    public void definirStockInicial(int quantidade) {
+        if (quantidade < 0) {
+            throw new IllegalArgumentException("Quantidade de stock nao pode ser negativa");
+        }
+        this.quantidadeStock = quantidade;
+        this.stockUpdatedAt = LocalDateTime.now();
+    }
+
+    public void definirNivelMinimo(Integer nivelMinimo) {
+        if (nivelMinimo != null && nivelMinimo < 0) {
+            throw new IllegalArgumentException("Nivel minimo nao pode ser negativo");
+        }
+        this.nivelMinimo = nivelMinimo;
+        this.stockUpdatedAt = LocalDateTime.now();
+    }
+
+    public boolean precisaReposicao() {
+        return nivelMinimo != null && quantidadeStock <= nivelMinimo;
+    }
+
+    public void atualizarLocalizacao(String corredor, String prateleira) {
+        this.corredor = corredor;
+        this.prateleira = prateleira;
     }
 
     public void atualizar(String nome,
@@ -179,6 +229,26 @@ public class Produto extends EntidadeBase {
 
     public boolean isAtivo() {
         return ativo;
+    }
+
+    public int getQuantidadeStock() {
+        return quantidadeStock;
+    }
+
+    public Integer getNivelMinimo() {
+        return nivelMinimo;
+    }
+
+    public String getCorredor() {
+        return corredor;
+    }
+
+    public String getPrateleira() {
+        return prateleira;
+    }
+
+    public LocalDateTime getStockUpdatedAt() {
+        return stockUpdatedAt;
     }
 
     private String validarTexto(String valor, String mensagem) {

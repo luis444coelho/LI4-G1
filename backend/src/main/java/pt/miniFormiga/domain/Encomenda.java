@@ -3,6 +3,8 @@ package pt.miniFormiga.domain;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -27,9 +29,9 @@ public class Encomenda extends EntidadeBase {
     @JoinColumn(name = "fornecedor_id", nullable = false)
     private Fornecedor fornecedor;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "estado_id", nullable = false)
-    private EstadoEncomenda estado;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EstadoEncomendaCodigo estado;
 
     @Column(nullable = false)
     private LocalDateTime dataSubmissao;
@@ -50,10 +52,14 @@ public class Encomenda extends EntidadeBase {
     }
 
     public Encomenda(Loja loja, Fornecedor fornecedor) {
-        this(loja, fornecedor, new EstadoEncomenda("PENDENTE", "Pendente"));
+        this(loja, fornecedor, EstadoEncomendaCodigo.PENDENTE);
     }
 
     public Encomenda(Loja loja, Fornecedor fornecedor, EstadoEncomenda estado) {
+        this(loja, fornecedor, estado == null ? null : EstadoEncomendaCodigo.valueOf(estado.getCodigo()));
+    }
+
+    public Encomenda(Loja loja, Fornecedor fornecedor, EstadoEncomendaCodigo estado) {
         this.loja = loja;
         this.fornecedor = fornecedor;
         this.estado = estado;
@@ -86,6 +92,10 @@ public class Encomenda extends EntidadeBase {
     }
 
     public void alterarEstado(EstadoEncomenda estado) {
+        alterarEstado(estado == null ? null : EstadoEncomendaCodigo.valueOf(estado.getCodigo()));
+    }
+
+    public void alterarEstado(EstadoEncomendaCodigo estado) {
         if (estado == null) {
             throw new IllegalArgumentException("Estado da encomenda e obrigatorio");
         }
@@ -106,7 +116,7 @@ public class Encomenda extends EntidadeBase {
         return fornecedor;
     }
 
-    public EstadoEncomenda getEstado() {
+    public EstadoEncomendaCodigo getEstado() {
         return estado;
     }
 

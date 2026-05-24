@@ -24,10 +24,7 @@ import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.InventarioFisicoRepository;
 import pt.miniFormiga.repository.LinhaInventarioRepository;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.MotivoAjusteRepository;
-import pt.miniFormiga.repository.NivelMinimoRepository;
 import pt.miniFormiga.repository.ProdutoRepository;
-import pt.miniFormiga.repository.StockRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
 
 import java.math.BigDecimal;
@@ -49,11 +46,8 @@ import static org.mockito.Mockito.when;
 
 class StockFacadeTest {
 
-    private StockRepository stockRepository;
-    private NivelMinimoRepository nivelMinimoRepository;
     private AlertaStockRepository alertaStockRepository;
     private AjusteInventarioRepository ajusteInventarioRepository;
-    private MotivoAjusteRepository motivoAjusteRepository;
     private InventarioFisicoRepository inventarioFisicoRepository;
     private LinhaInventarioRepository linhaInventarioRepository;
     private LojaRepository lojaRepository;
@@ -64,29 +58,24 @@ class StockFacadeTest {
 
     @BeforeEach
     void setUp() {
-        stockRepository = mock(StockRepository.class);
-        nivelMinimoRepository = mock(NivelMinimoRepository.class);
         alertaStockRepository = mock(AlertaStockRepository.class);
         ajusteInventarioRepository = mock(AjusteInventarioRepository.class);
-        motivoAjusteRepository = mock(MotivoAjusteRepository.class);
         inventarioFisicoRepository = mock(InventarioFisicoRepository.class);
         linhaInventarioRepository = mock(LinhaInventarioRepository.class);
         lojaRepository = mock(LojaRepository.class);
         produtoRepository = mock(ProdutoRepository.class);
         utilizadorRepository = mock(UtilizadorRepository.class);
         auditoria = mock(AuditoriaService.class);
+        StockStore stockStore = new LocalProdutoStockStore(produtoRepository, lojaRepository);
         facade = new StockFacade(
-                stockRepository,
-                nivelMinimoRepository,
                 alertaStockRepository,
                 ajusteInventarioRepository,
-                motivoAjusteRepository,
                 inventarioFisicoRepository,
                 linhaInventarioRepository,
                 lojaRepository,
-                produtoRepository,
                 utilizadorRepository,
-                auditoria
+                auditoria,
+                stockStore
         );
     }
 
@@ -94,11 +83,11 @@ class StockFacadeTest {
     void atualizarStockComDeltaNegativoSuficienteAtualizaQuantidade() {
         Stock stock = stock(10);
         whenStock(stock);
-        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(false);
+        when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(stock.getProduto().getId())).thenReturn(false);
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), -4);
 
-        assertEquals(6, stock.getQuantidade());
+        assertEquals(6, stock.getProduto().getQuantidadeStock());
         verify(alertaStockRepository, never()).save(any());
     }
 
@@ -122,7 +111,7 @@ class StockFacadeTest {
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), 5);
 
-        assertEquals(7, stock.getQuantidade());
+        assertEquals(7, stock.getProduto().getQuantidadeStock());
     }
 
     @Test
@@ -130,12 +119,12 @@ class StockFacadeTest {
         Stock stock = stock(12);
         new NivelMinimo(stock, 10);
         whenStock(stock);
-        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(false);
+        when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(stock.getProduto().getId())).thenReturn(false);
         when(alertaStockRepository.save(any(AlertaStock.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), -2);
 
-        assertEquals(10, stock.getQuantidade());
+        assertEquals(10, stock.getProduto().getQuantidadeStock());
         verify(alertaStockRepository).save(any(AlertaStock.class));
     }
 
@@ -146,7 +135,7 @@ class StockFacadeTest {
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), -10);
 
-        assertEquals(2, stock.getQuantidade());
+        assertEquals(2, stock.getProduto().getQuantidadeStock());
         verify(alertaStockRepository, never()).save(any());
     }
 
@@ -154,13 +143,11 @@ class StockFacadeTest {
     void definirNivelMinimoComStockJaAbaixoEmiteAlertaImediatamente() {
         Stock stock = stock(5);
         whenStock(stock);
-        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(false);
-        when(nivelMinimoRepository.findByStockId(stock.getId())).thenReturn(Optional.empty());
-        when(nivelMinimoRepository.save(any(NivelMinimo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(stock.getProduto().getId())).thenReturn(false);
 
         facade.definirNivelMinimo(stock.getProduto().getId(), stock.getLoja().getId(), 10);
 
-        assertEquals(10, stock.getNivelMinimo().getQuantidade());
+        assertEquals(10, stock.getProduto().getNivelMinimo());
         verify(alertaStockRepository).save(any(AlertaStock.class));
     }
 
@@ -168,12 +155,9 @@ class StockFacadeTest {
     void definirNivelMinimoAbaixoDoStockNaoCriaAlerta() {
         Stock stock = stock(12);
         whenStock(stock);
-        when(nivelMinimoRepository.findByStockId(stock.getId())).thenReturn(Optional.empty());
-        when(nivelMinimoRepository.save(any(NivelMinimo.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
         facade.definirNivelMinimo(stock.getProduto().getId(), stock.getLoja().getId(), 10);
 
-        assertEquals(10, stock.getNivelMinimo().getQuantidade());
+        assertEquals(10, stock.getProduto().getNivelMinimo());
         verify(alertaStockRepository, never()).save(any());
     }
 
@@ -182,7 +166,7 @@ class StockFacadeTest {
         Stock stock = stock(5);
         new NivelMinimo(stock, 10);
         whenStock(stock);
-        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(true);
+        when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(stock.getProduto().getId())).thenReturn(true);
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), 0);
 
@@ -197,17 +181,15 @@ class StockFacadeTest {
         Utilizador gerente = utilizador(stock.getLoja(), "GERENTE");
 
         whenStock(stock);
-        when(alertaStockRepository.existsByStockIdAndResolvidoFalse(stock.getId())).thenReturn(false);
-        when(utilizadorRepository.findByAtivoTrueAndPerfilNomeIn(List.of("GESTOR"))).thenReturn(List.of(gestor));
-        when(utilizadorRepository.findByAtivoTrueAndLojaIdAndPerfilNomeIn(stock.getLoja().getId(), List.of("GERENTE")))
-                .thenReturn(List.of(gerente));
+        when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(stock.getProduto().getId())).thenReturn(false);
         when(alertaStockRepository.save(any(AlertaStock.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), 0);
 
         ArgumentCaptor<AlertaStock> captor = forClass(AlertaStock.class);
         verify(alertaStockRepository).save(captor.capture());
-        assertEquals(List.of(gestor, gerente), captor.getValue().getDestinatarios());
+        assertEquals(stock.getProduto(), captor.getValue().getProduto());
+        assertEquals(List.of(), captor.getValue().getDestinatarios());
     }
 
     @Test
@@ -243,7 +225,6 @@ class StockFacadeTest {
         Produto produto = stock.getProduto();
 
         when(inventarioFisicoRepository.findById(inventario.getId())).thenReturn(Optional.of(inventario));
-        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         whenStock(stock);
         when(linhaInventarioRepository.save(any(LinhaInventario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -265,7 +246,7 @@ class StockFacadeTest {
 
         assertTrue(inventario.isFechado());
         assertNotNull(inventario.getDataFecho());
-        assertEquals(8, stock.getQuantidade());
+        assertEquals(8, stock.getProduto().getQuantidadeStock());
         verify(auditoria).registar(TipoOperacao.INVENTARIO_FECHADO,
                 inventario.getResponsavel().getId(), "INVENTARIO_FISICO", "Inventario fisico fechado");
     }
@@ -274,16 +255,14 @@ class StockFacadeTest {
     void registarAjusteComMotivoQuebraAtualizaStockEAudita() {
         Stock stock = stock(10);
         Utilizador utilizador = utilizador(stock.getLoja());
-        MotivoAjuste motivo = new MotivoAjuste("QUEBRA", "Produto danificado ou partido");
 
         whenStock(stock);
-        when(motivoAjusteRepository.findByCodigo("QUEBRA")).thenReturn(Optional.of(motivo));
         when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
         when(ajusteInventarioRepository.save(any(AjusteInventario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         AjusteInventario ajuste = facade.registarAjuste(stock.getProduto().getId(), stock.getLoja().getId(), -2, "QUEBRA", utilizador.getId());
 
-        assertEquals(8, stock.getQuantidade());
+        assertEquals(8, stock.getProduto().getQuantidadeStock());
         assertEquals(-2, ajuste.getQuantidade());
         assertEquals("QUEBRA", ajuste.getMotivoAjuste().getCodigo());
         verify(auditoria).registar(TipoOperacao.AJUSTE_STOCK, utilizador.getId(), "STOCK", "Ajuste de stock registado");
@@ -293,17 +272,15 @@ class StockFacadeTest {
     void registarAjustePositivoAumentaStock() {
         Stock stock = stock(10);
         Utilizador utilizador = utilizador(stock.getLoja());
-        MotivoAjuste motivo = new MotivoAjuste("CORRECAO_ERRO", "Correcao de erro de registo");
 
         whenStock(stock);
-        when(motivoAjusteRepository.findByCodigo("CORRECAO_ERRO")).thenReturn(Optional.of(motivo));
         when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
         when(ajusteInventarioRepository.save(any(AjusteInventario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         AjusteInventario ajuste = facade.registarAjuste(stock.getProduto().getId(), stock.getLoja().getId(), 4,
                 "CORRECAO_ERRO", utilizador.getId());
 
-        assertEquals(14, stock.getQuantidade());
+        assertEquals(14, stock.getProduto().getQuantidadeStock());
         assertEquals(4, ajuste.getQuantidade());
     }
 
@@ -311,10 +288,8 @@ class StockFacadeTest {
     void registarAjusteNegativoNaoPermiteStockNegativo() {
         Stock stock = stock(3);
         Utilizador utilizador = utilizador(stock.getLoja());
-        MotivoAjuste motivo = new MotivoAjuste("QUEBRA", "Produto danificado ou partido");
 
         whenStock(stock);
-        when(motivoAjusteRepository.findByCodigo("QUEBRA")).thenReturn(Optional.of(motivo));
         when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
 
         assertThrows(StockInsuficienteException.class,
@@ -328,7 +303,7 @@ class StockFacadeTest {
         Stock stock = new Stock(produto(), loja, 5);
         AlertaStock recente = new AlertaStock(stock, 5);
         AlertaStock antigo = new AlertaStock(stock, 7);
-        when(alertaStockRepository.findByStockLojaIdAndResolvidoFalseOrderByDataHoraDesc(loja.getId()))
+        when(alertaStockRepository.findByLojaIdAndResolvidoFalseOrderByDataHoraDesc(loja.getId()))
                 .thenReturn(List.of(recente, antigo));
 
         List<AlertaStock> alertas = facade.getAlertasAtivos(loja.getId());
@@ -356,11 +331,14 @@ class StockFacadeTest {
         Utilizador utilizador = utilizador(loja);
         Stock agua = new Stock(produto("Agua"), loja, 8);
         Stock pao = new Stock(produto("Pao"), loja, 4);
+        agua.getProduto().definirStockInicial(8);
+        pao.getProduto().definirStockInicial(4);
 
         when(inventarioFisicoRepository.existsByLojaIdAndFechadoFalse(loja.getId())).thenReturn(false);
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
-        when(stockRepository.findByLojaId(loja.getId())).thenReturn(List.of(agua, pao));
+        when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
+        when(produtoRepository.findAll()).thenReturn(List.of(agua.getProduto(), pao.getProduto()));
         when(inventarioFisicoRepository.save(any(InventarioFisico.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         InventarioFisico inventario = facade.iniciarInventarioFisico(loja.getId(), utilizador.getId());
@@ -378,7 +356,6 @@ class StockFacadeTest {
         LinhaInventario linha = new LinhaInventario(inventario, stock.getProduto(), 0, 8);
 
         when(inventarioFisicoRepository.findById(inventario.getId())).thenReturn(Optional.of(inventario));
-        when(produtoRepository.findById(stock.getProduto().getId())).thenReturn(Optional.of(stock.getProduto()));
         whenStock(stock);
         when(linhaInventarioRepository.findByInventarioIdAndProdutoId(inventario.getId(), stock.getProduto().getId()))
                 .thenReturn(Optional.of(linha));
@@ -391,12 +368,18 @@ class StockFacadeTest {
     }
 
     private void whenStock(Stock stock) {
-        when(stockRepository.findByProdutoIdAndLojaId(stock.getProduto().getId(), stock.getLoja().getId()))
-                .thenReturn(Optional.of(stock));
+        stock.getProduto().definirStockInicial(stock.getQuantidade());
+        if (stock.getNivelMinimo() != null) {
+            stock.getProduto().definirNivelMinimo(stock.getNivelMinimo().getQuantidade());
+        }
+        when(produtoRepository.findById(stock.getProduto().getId())).thenReturn(Optional.of(stock.getProduto()));
+        when(lojaRepository.findById(stock.getLoja().getId())).thenReturn(Optional.of(stock.getLoja()));
     }
 
     private Stock stock(int quantidade) {
-        return new Stock(produto(), loja(), quantidade);
+        Stock stock = new Stock(produto(), loja(), quantidade);
+        stock.getProduto().definirStockInicial(quantidade);
+        return stock;
     }
 
     private Produto produto() {

@@ -20,6 +20,7 @@ import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.LocalizacaoProduto;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MeioPagamento;
+import pt.miniFormiga.domain.MeioPagamentoTipo;
 import pt.miniFormiga.domain.MotivoAjuste;
 import pt.miniFormiga.domain.NivelMinimo;
 import pt.miniFormiga.domain.Perfil;
@@ -198,8 +199,7 @@ public class MiniFormigaFacade implements IMiniFormigaLN {
     public Venda registarVenda(UUID lojaId, UUID utilizadorId, String meioPagamentoTipo, String meioPagamentoDescricao, List<LinhaVendaRequest> linhasRequest) {
         Loja loja = require(lojas, lojaId, "Loja");
         Utilizador utilizador = require(utilizadores, utilizadorId, "Utilizador");
-        MeioPagamento meioPagamento = new MeioPagamento(meioPagamentoTipo, meioPagamentoDescricao);
-        Venda venda = new Venda(loja, utilizador, meioPagamento);
+        Venda venda = new Venda(loja, utilizador, MeioPagamentoTipo.valueOf(meioPagamentoTipo));
 
         List<LinhaVendaRequest> linhas = linhasRequest == null ? List.of() : linhasRequest;
         for (LinhaVendaRequest linhaRequest : linhas) {

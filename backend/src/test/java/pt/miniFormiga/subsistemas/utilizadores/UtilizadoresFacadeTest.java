@@ -7,10 +7,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import pt.miniFormiga.auditoria.AuditoriaService;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.PerfilRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
 
 import java.util.List;
@@ -28,7 +28,6 @@ import static org.mockito.Mockito.when;
 class UtilizadoresFacadeTest {
 
     private UtilizadorRepository utilizadorRepository;
-    private PerfilRepository perfilRepository;
     private LojaRepository lojaRepository;
     private PasswordEncoder passwordEncoder;
     private AuditoriaService auditoriaService;
@@ -43,13 +42,11 @@ class UtilizadoresFacadeTest {
     @BeforeEach
     void setUp() {
         utilizadorRepository = mock(UtilizadorRepository.class);
-        perfilRepository = mock(PerfilRepository.class);
         lojaRepository = mock(LojaRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
         auditoriaService = mock(AuditoriaService.class);
         facade = new UtilizadoresFacade(
                 utilizadorRepository,
-                perfilRepository,
                 lojaRepository,
                 passwordEncoder,
                 auditoriaService
@@ -65,14 +62,13 @@ class UtilizadoresFacadeTest {
     @Test
     void atualizarUtilizadorPermiteAlterarDadosPerfilLojaPasswordEEstado() {
         when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
-        when(perfilRepository.findById(gerente.getId())).thenReturn(Optional.of(gerente));
         when(lojaRepository.findById(lojaGuimaraes.getId())).thenReturn(Optional.of(lojaGuimaraes));
         when(passwordEncoder.encode("NovaSenha2026")).thenReturn("hash-novo");
 
         Utilizador atualizado = facade.atualizarUtilizador(utilizador.getId(), new AtualizarUtilizadorCommand(
                 "Novo Nome",
                 "NOVO@MINI.PT",
-                gerente.getId(),
+                "GERENTE",
                 lojaGuimaraes.getId(),
                 "NovaSenha2026",
                 false
@@ -81,7 +77,7 @@ class UtilizadoresFacadeTest {
         assertSame(utilizador, atualizado);
         assertEquals("Novo Nome", atualizado.getNome());
         assertEquals("novo@mini.pt", atualizado.getEmail());
-        assertSame(gerente, atualizado.getPerfil());
+        assertEquals(PerfilUtilizador.GERENTE, atualizado.getPerfil());
         assertSame(lojaGuimaraes, atualizado.getLoja());
         assertEquals("hash-novo", atualizado.getPasswordHash());
         assertFalse(atualizado.isAtivo());

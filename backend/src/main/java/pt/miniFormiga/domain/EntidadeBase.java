@@ -43,6 +43,13 @@ public abstract class EntidadeBase {
         return id;
     }
 
+    protected void definirId(UUID id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Id e obrigatorio");
+        }
+        this.id = id;
+    }
+
     public long getVersion() {
         return version;
     }

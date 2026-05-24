@@ -7,7 +7,7 @@ public record CriarUtilizadorCommand(
         String password,
         String nome,
         String email,
-        UUID perfilId,
+        String perfil,
         UUID lojaId
 ) {
 }

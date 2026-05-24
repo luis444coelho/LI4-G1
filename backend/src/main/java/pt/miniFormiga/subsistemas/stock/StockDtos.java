@@ -9,6 +9,8 @@ import pt.miniFormiga.domain.InventarioFisico;
 import pt.miniFormiga.domain.LinhaInventario;
 import pt.miniFormiga.domain.LocalizacaoProduto;
 import pt.miniFormiga.domain.MotivoAjuste;
+import pt.miniFormiga.domain.MotivoAjusteCodigo;
+import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.Stock;
 
 import java.time.LocalDateTime;
@@ -57,6 +59,28 @@ public final class StockDtos {
                     stock.precisaReposicao()
             );
         }
+
+        public static StockResponse from(Produto produto, UUID lojaId) {
+            return new StockResponse(
+                    produto.getId(),
+                    produto.getNome(),
+                    lojaId,
+                    produto.getQuantidadeStock(),
+                    produto.getNivelMinimo(),
+                    produto.precisaReposicao()
+            );
+        }
+
+        public static StockResponse from(StockItem item) {
+            return new StockResponse(
+                    item.produtoId(),
+                    item.produto().getNome(),
+                    item.lojaId(),
+                    item.quantidade(),
+                    item.nivelMinimo(),
+                    item.precisaReposicao()
+            );
+        }
     }
 
     public record AlertaStockResponse(UUID id,
@@ -70,12 +94,11 @@ public final class StockDtos {
                                       LocalDateTime dataResolucao,
                                       List<UUID> destinatarios) {
         public static AlertaStockResponse from(AlertaStock alerta) {
-            Stock stock = alerta.getStock();
             return new AlertaStockResponse(
                     alerta.getId(),
-                    stock.getProduto().getId(),
-                    stock.getProduto().getNome(),
-                    stock.getLoja().getId(),
+                    alerta.getProduto().getId(),
+                    alerta.getProduto().getNome(),
+                    alerta.getLoja() == null ? null : alerta.getLoja().getId(),
                     alerta.getDataHora(),
                     alerta.getQuantidadeNoMomento(),
                     alerta.isLido(),
@@ -97,9 +120,9 @@ public final class StockDtos {
         public static AjusteInventarioResponse from(AjusteInventario ajuste) {
             return new AjusteInventarioResponse(
                     ajuste.getId(),
-                    ajuste.getStock().getProduto().getId(),
-                    ajuste.getStock().getProduto().getNome(),
-                    ajuste.getStock().getLoja().getId(),
+                    ajuste.getProduto().getId(),
+                    ajuste.getProduto().getNome(),
+                    ajuste.getProdutoLoja() == null ? null : ajuste.getProdutoLoja().getLoja().getId(),
                     ajuste.getQuantidade(),
                     ajuste.getMotivoAjuste().getCodigo(),
                     ajuste.getUtilizador().getId(),
@@ -111,6 +134,10 @@ public final class StockDtos {
     public record MotivoAjusteResponse(UUID id, String codigo, String descricao) {
         public static MotivoAjusteResponse from(MotivoAjuste motivo) {
             return new MotivoAjusteResponse(motivo.getId(), motivo.getCodigo(), motivo.getDescricao());
+        }
+
+        public static MotivoAjusteResponse from(MotivoAjusteCodigo motivo) {
+            return new MotivoAjusteResponse(null, motivo.name(), motivo.name());
         }
     }
 
@@ -159,6 +186,10 @@ public final class StockDtos {
                     localizacao.getCorredor(),
                     localizacao.getPrateleira()
             );
+        }
+
+        public static LocalizacaoResponse from(StockItem item) {
+            return new LocalizacaoResponse(item.produtoId(), item.corredor(), item.prateleira());
         }
     }
 }

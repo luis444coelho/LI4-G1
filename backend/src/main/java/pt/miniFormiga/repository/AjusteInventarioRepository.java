@@ -9,6 +9,6 @@ import pt.miniFormiga.domain.AjusteInventario;
 import java.util.UUID;
 
 public interface AjusteInventarioRepository extends JpaRepository<AjusteInventario, UUID> {
-    @EntityGraph(attributePaths = {"stock", "stock.produto", "stock.loja", "motivoAjuste", "utilizador"})
-    Page<AjusteInventario> findByStockLojaId(UUID lojaId, Pageable pageable);
+    @EntityGraph(attributePaths = {"produto", "produtoLoja", "produtoLoja.produto", "utilizador"})
+    Page<AjusteInventario> findAll(Pageable pageable);
 }

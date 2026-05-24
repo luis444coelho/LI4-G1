@@ -8,6 +8,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,7 +33,7 @@ public class InventarioFisico extends EntidadeBase {
     @Column
     private LocalDateTime dataFecho;
 
-    @Column(nullable = false)
+    @Transient
     private int totalDiscrepancias;
 
     @Column(nullable = false)

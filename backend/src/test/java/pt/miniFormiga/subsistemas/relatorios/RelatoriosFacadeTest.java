@@ -17,8 +17,8 @@ import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
 import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.StockRepository;
 import pt.miniFormiga.repository.VendaRepository;
+import pt.miniFormiga.subsistemas.stock.StockStore;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -36,9 +36,9 @@ import static pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.*;
 class RelatoriosFacadeTest {
 
     private VendaRepository vendaRepository;
-    private StockRepository stockRepository;
     private AlertaStockRepository alertaStockRepository;
     private LojaRepository lojaRepository;
+    private StockStore stockStore;
     private RelatoriosFacade facade;
 
     private Loja loja;
@@ -48,10 +48,10 @@ class RelatoriosFacadeTest {
     @BeforeEach
     void setUp() {
         vendaRepository = mock(VendaRepository.class);
-        stockRepository = mock(StockRepository.class);
         alertaStockRepository = mock(AlertaStockRepository.class);
         lojaRepository = mock(LojaRepository.class);
-        facade = new RelatoriosFacade(vendaRepository, stockRepository, alertaStockRepository, lojaRepository);
+        stockStore = mock(StockStore.class);
+        facade = new RelatoriosFacade(vendaRepository, alertaStockRepository, lojaRepository, stockStore);
 
         loja = new Loja("Loja Braga", "Rua Central", "123456789");
         operador = new Utilizador("operador", "hash", "Operador",
@@ -151,8 +151,9 @@ class RelatoriosFacadeTest {
     }
 
     private Venda vendaFinalizada(int quantidade, LocalDateTime dataHora) {
-        Venda venda = new Venda(loja, operador, new MeioPagamento("NUMERARIO", "Numerario"));
+        Venda venda = new Venda(loja, operador);
         new LinhaVenda(venda, produto, quantidade);
+        venda.finalizar(new MeioPagamento("NUMERARIO", "Numerario"));
         venda.calcularTotais();
         ReflectionTestUtils.setField(venda, "dataHora", dataHora);
         return venda;

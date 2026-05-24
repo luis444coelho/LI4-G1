@@ -22,10 +22,9 @@ import pt.miniFormiga.api.dto.AtualizarUtilizadorRequest;
 import pt.miniFormiga.api.dto.CriarUtilizadorRequest;
 import pt.miniFormiga.api.dto.UtilizadorResponse;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.PerfilRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
 import pt.miniFormiga.subsistemas.utilizadores.AtualizarUtilizadorCommand;
 import pt.miniFormiga.subsistemas.utilizadores.CriarUtilizadorCommand;
@@ -40,23 +39,20 @@ import java.util.UUID;
 public class UtilizadoresController {
 
     private final ISubUtilizadores utilizadores;
-    private final PerfilRepository perfilRepository;
     private final LojaRepository lojaRepository;
     private final UtilizadorRepository utilizadorRepository;
 
     public UtilizadoresController(ISubUtilizadores utilizadores,
-                                  PerfilRepository perfilRepository,
                                   LojaRepository lojaRepository,
                                   UtilizadorRepository utilizadorRepository) {
         this.utilizadores = utilizadores;
-        this.perfilRepository = perfilRepository;
         this.lojaRepository = lojaRepository;
         this.utilizadorRepository = utilizadorRepository;
     }
 
     public record PerfilResponse(UUID id, String nome, List<String> permissoes) {
-        static PerfilResponse from(Perfil perfil) {
-            return new PerfilResponse(perfil.getId(), perfil.getNome(), perfil.getPermissoes());
+        static PerfilResponse from(PerfilUtilizador perfil) {
+            return new PerfilResponse(null, perfil.getNome(), perfil.getPermissoes());
         }
     }
 
@@ -89,7 +85,7 @@ public class UtilizadoresController {
     @Operation(summary = "Listar perfis de acesso")
     @ApiResponse(responseCode = "200", description = "Perfis listados")
     public List<PerfilResponse> listarPerfis() {
-        return perfilRepository.findAll().stream().map(PerfilResponse::from).toList();
+        return java.util.Arrays.stream(PerfilUtilizador.values()).map(PerfilResponse::from).toList();
     }
 
     @GetMapping("/lojas")
@@ -124,7 +120,7 @@ public class UtilizadoresController {
                 request.password(),
                 request.nome(),
                 request.email(),
-                request.perfilId(),
+                request.perfil(),
                 request.lojaId()
         )));
     }
@@ -137,7 +133,7 @@ public class UtilizadoresController {
         return UtilizadorResponse.from(utilizadores.atualizarUtilizador(id, new AtualizarUtilizadorCommand(
                 request.nome(),
                 request.email(),
-                request.perfilId(),
+                request.perfil(),
                 request.lojaId(),
                 request.password(),
                 request.ativo()

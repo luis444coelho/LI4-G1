@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "linhas_inventario")
@@ -25,7 +26,7 @@ public class LinhaInventario extends EntidadeBase {
     @Column(nullable = false)
     private int quantidadeSistema;
 
-    @Column(nullable = false)
+    @Transient
     private int discrepancia;
 
     protected LinhaInventario() {

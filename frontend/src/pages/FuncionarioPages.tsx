@@ -12,8 +12,9 @@ export function FuncionarioSalePage() {
   const [products, setProducts] = useState<ProdutoResponse[]>([])
   const [payments, setPayments] = useState<MeioPagamentoResponse[]>([])
   const [query, setQuery] = useState('')
+  const [selectedProductId, setSelectedProductId] = useState('')
   const [quantity, setQuantity] = useState(1)
-  const [paymentId, setPaymentId] = useState('')
+  const [paymentType, setPaymentType] = useState('')
   const [nifCliente, setNifCliente] = useState('')
   const [nomeCliente, setNomeCliente] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,7 +30,7 @@ export function FuncionarioSalePage() {
       if (ignore) return
       setProducts(productPage.content)
       setPayments(paymentRows)
-      setPaymentId(paymentRows[0]?.id ?? '')
+      setPaymentType('')
     }).catch(() => {
       if (!ignore) setError('Não foi possível carregar produtos/meios de pagamento.')
     })
@@ -38,11 +39,20 @@ export function FuncionarioSalePage() {
     }
   }, [session?.lojaId])
 
-  const matchingProduct = useMemo(() => {
+  const matchingProducts = useMemo(() => {
     const term = query.trim().toLowerCase()
-    if (!term) return null
-    return products.find((product) => product.codigoBarras === query.trim() || product.nome.toLowerCase().includes(term)) ?? null
+    if (!term) return []
+    return products
+      .filter((product) => product.codigoBarras === query.trim() || product.nome.toLowerCase().includes(term))
+      .slice(0, 8)
   }, [products, query])
+
+  const selectedProduct = useMemo(
+    () => products.find((product) => product.id === selectedProductId) ?? null,
+    [products, selectedProductId],
+  )
+
+  const selectedSubtotal = selectedProduct ? selectedProduct.precoVenda * Math.max(1, quantity || 1) : 0
 
   async function ensureSale() {
     if (sale) return sale
@@ -59,7 +69,7 @@ export function FuncionarioSalePage() {
     setError(null)
     setMessage(null)
     try {
-      const product = matchingProduct
+      const product = selectedProduct
       if (!product) throw new Error('Produto não encontrado.')
       const currentSale = await ensureSale()
       const updated = await apiRequest<VendaResponse>(`/vendas/${currentSale.id}/linhas`, {
@@ -68,6 +78,7 @@ export function FuncionarioSalePage() {
       })
       setSale(updated)
       setQuery('')
+      setSelectedProductId('')
       setQuantity(1)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao adicionar produto.')
@@ -83,15 +94,16 @@ export function FuncionarioSalePage() {
   }
 
   async function finalizeSale() {
-    if (!sale || !paymentId) return
+    if (!sale || !paymentType) return
     setLoading(true)
     setError(null)
+    setMessage(null)
     try {
       const finalized = await apiRequest<VendaResponse>(`/vendas/${sale.id}/finalizar`, {
         method: 'POST',
-        body: JSON.stringify({ meioPagamentoId: paymentId }),
+        body: JSON.stringify({ meioPagamento: paymentType }),
       })
-      await apiRequest<FaturaResponse>(`/vendas/${finalized.id}/fatura`, {
+      const fatura = await apiRequest<FaturaResponse>(`/vendas/${finalized.id}/fatura`, {
         method: 'POST',
         body: JSON.stringify({
           nifCliente: nifCliente.trim() || null,
@@ -101,7 +113,8 @@ export function FuncionarioSalePage() {
       setSale(null)
       setNifCliente('')
       setNomeCliente('')
-      setMessage('Venda finalizada e fatura emitida.')
+      setPaymentType('')
+      setMessage(`Venda finalizada com sucesso. Fatura ${fatura.numeroFatura} emitida.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao finalizar venda.')
     } finally {
@@ -113,6 +126,7 @@ export function FuncionarioSalePage() {
     if (!sale) return
     await apiRequest<void>(`/vendas/${sale.id}/anular`, { method: 'POST' })
     setSale(null)
+    setPaymentType('')
     setMessage('Venda anulada.')
   }
 
@@ -120,13 +134,43 @@ export function FuncionarioSalePage() {
     <div className="sale-layout">
       <div className="sale-left">
         <div className="sale-search-row">
-          <TextField placeholder="Código de barras ou pesquisa rápida..." className="grow" value={query} onChange={(event) => setQuery(event.target.value)} />
-          <TextField type="number" min={1} value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className="small-field" />
-          <Button variant="secondary" className="scan-button" onClick={addLine} disabled={loading || !matchingProduct}>
+          <TextField
+            placeholder="Código de barras ou pesquisa rápida..."
+            className="grow"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              setSelectedProductId('')
+            }}
+          />
+          <TextField type="number" min={1} value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} className="small-field" />
+          <Button variant="secondary" className="scan-button" onClick={addLine} disabled={loading || !selectedProduct}>
             Adicionar
           </Button>
         </div>
-        {matchingProduct ? <p className="mf-section-note">Selecionado: {matchingProduct.nome} · {money.format(matchingProduct.precoVenda)}</p> : null}
+        {matchingProducts.length > 0 ? (
+          <div className="product-search-results" role="listbox" aria-label="Artigos encontrados">
+            {matchingProducts.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                className={`product-search-option ${selectedProductId === product.id ? 'is-selected' : ''}`}
+                onClick={() => setSelectedProductId(product.id)}
+              >
+                <span>
+                  <strong>{product.nome}</strong>
+                  <small>{product.codigoBarras}</small>
+                </span>
+                <span>{money.format(product.precoVenda)}</span>
+              </button>
+            ))}
+          </div>
+        ) : query.trim() ? <p className="mf-empty-state compact">Sem artigos encontrados.</p> : null}
+        {selectedProduct ? (
+          <p className="mf-section-note">
+            Artigo selecionado: {selectedProduct.nome} · {quantity} × {money.format(selectedProduct.precoVenda)} = {money.format(selectedSubtotal)}
+          </p>
+        ) : null}
         {error ? <Callout tone="warning">{error}</Callout> : null}
         {message ? <Callout tone="info">{message}</Callout> : null}
 
@@ -152,7 +196,7 @@ export function FuncionarioSalePage() {
                   <td className="muted">{row.quantidade}</td>
                   <td>
                     <div className="sale-subtotal">
-                      <strong>{money.format(row.totalLinha)}</strong>
+                      <strong>{money.format(row.totalLinha || row.precoUnitario * row.quantidade)}</strong>
                       <button type="button" className="sale-remove" onClick={() => removeLine(row.id)}>×</button>
                     </div>
                   </td>
@@ -167,7 +211,13 @@ export function FuncionarioSalePage() {
         <Panel title="MEIO DE PAGAMENTO">
           <div className="payment-stack">
             {payments.map((payment) => (
-              <button key={payment.id} type="button" className="payment-button" onClick={() => setPaymentId(payment.id)}>
+              <button
+                key={payment.tipo}
+                type="button"
+                className={`payment-button ${paymentType === payment.tipo ? 'is-selected' : ''}`}
+                aria-pressed={paymentType === payment.tipo}
+                onClick={() => setPaymentType(payment.tipo)}
+              >
                 {payment.descricao || payment.tipo}
               </button>
             ))}
@@ -185,7 +235,10 @@ export function FuncionarioSalePage() {
             <div className="summary-row total"><strong>Total</strong><strong>{money.format(sale?.total ?? 0)}</strong></div>
           </div>
 
-          <Button className="full-width mt-large" onClick={finalizeSale} disabled={!sale?.linhas.length || !paymentId || loading}>Finalizar venda</Button>
+          {!paymentType ? <p className="mf-section-note">Selecione um meio de pagamento para finalizar.</p> : null}
+          <Button className="full-width mt-large" onClick={finalizeSale} disabled={!sale?.linhas.length || !paymentType || loading}>
+            {loading ? 'A finalizar...' : 'Finalizar venda'}
+          </Button>
           <Button variant="secondary" className="full-width mt-compact" onClick={cancelSale} disabled={!sale || loading}>Cancelar</Button>
         </Panel>
       </div>

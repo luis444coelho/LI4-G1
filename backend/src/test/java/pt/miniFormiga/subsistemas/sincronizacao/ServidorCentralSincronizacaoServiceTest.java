@@ -3,17 +3,16 @@ package pt.miniFormiga.subsistemas.sincronizacao;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import pt.miniFormiga.domain.EstadoSincronizacao;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.Stock;
+import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.repository.AjusteInventarioRepository;
 import pt.miniFormiga.repository.EntradaMercadoriaRepository;
-import pt.miniFormiga.repository.EstadoSincronizacaoRepository;
 import pt.miniFormiga.repository.FaturaRepository;
 import pt.miniFormiga.repository.FechoCaixaRepository;
 import pt.miniFormiga.repository.LojaRepository;
+import pt.miniFormiga.repository.ProdutoLojaRepository;
+import pt.miniFormiga.repository.ProdutoRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
-import pt.miniFormiga.repository.StockRepository;
 import pt.miniFormiga.repository.VendaRepository;
 
 import java.time.LocalDateTime;
@@ -35,38 +34,36 @@ import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.Sincron
 class ServidorCentralSincronizacaoServiceTest {
 
     private SincronizacaoRepository sincronizacaoRepository;
-    private EstadoSincronizacaoRepository estadoRepository;
     private LojaRepository lojaRepository;
-    private StockRepository stockRepository;
+    private ProdutoRepository produtoRepository;
+    private ProdutoLojaRepository produtoLojaRepository;
     private ServidorCentralSincronizacaoService service;
     private Loja loja;
 
     @BeforeEach
     void setUp() {
         sincronizacaoRepository = mock(SincronizacaoRepository.class);
-        estadoRepository = mock(EstadoSincronizacaoRepository.class);
         lojaRepository = mock(LojaRepository.class);
         VendaRepository vendaRepository = mock(VendaRepository.class);
         FaturaRepository faturaRepository = mock(FaturaRepository.class);
-        stockRepository = mock(StockRepository.class);
+        produtoRepository = mock(ProdutoRepository.class);
+        produtoLojaRepository = mock(ProdutoLojaRepository.class);
         AjusteInventarioRepository ajusteRepository = mock(AjusteInventarioRepository.class);
         FechoCaixaRepository fechoRepository = mock(FechoCaixaRepository.class);
         EntradaMercadoriaRepository entradaRepository = mock(EntradaMercadoriaRepository.class);
         service = new ServidorCentralSincronizacaoService(
                 sincronizacaoRepository,
-                estadoRepository,
                 lojaRepository,
                 vendaRepository,
                 faturaRepository,
-                stockRepository,
+                produtoRepository,
+                produtoLojaRepository,
                 ajusteRepository,
                 fechoRepository,
                 entradaRepository,
                 new ObjectMapper().findAndRegisterModules()
         );
         loja = new Loja("Central", "Rua Central", "123456789");
-        when(estadoRepository.findByCodigo(any())).thenAnswer(invocation ->
-                Optional.of(new EstadoSincronizacao(invocation.getArgument(0), invocation.getArgument(0))));
         when(sincronizacaoRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -91,11 +88,12 @@ class ServidorCentralSincronizacaoServiceTest {
     @Test
     void receberPayloadComRegistoMaisAntigoRegistaConflitoLastWriteWinsCentral() {
         UUID stockId = UUID.randomUUID();
-        Stock stockCentral = mock(Stock.class);
+        Produto stockCentral = mock(Produto.class);
         when(stockCentral.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 5, 23, 12, 0));
         when(stockCentral.getVersion()).thenReturn(2L);
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
-        when(stockRepository.findById(stockId)).thenReturn(Optional.of(stockCentral));
+        when(produtoLojaRepository.findById(stockId)).thenReturn(Optional.empty());
+        when(produtoRepository.findById(stockId)).thenReturn(Optional.of(stockCentral));
         SincronizacaoPayload payload = new SincronizacaoPayload(
                 loja.getId(),
                 LocalDateTime.now(),

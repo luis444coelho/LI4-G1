@@ -39,9 +39,7 @@ class PDVFacadeTest {
     @Mock UtilizadorRepository utilizadorRepository;
     @Mock VendaRepository vendaRepository;
     @Mock FaturaRepository faturaRepository;
-    @Mock FaturaSequenciaRepository faturaSequenciaRepository;
     @Mock FechoCaixaRepository fechoCaixaRepository;
-    @Mock MeioPagamentoRepository meioPagamentoRepository;
     @Mock DevolucaoRepository devolucaoRepository;
     @Mock ISubStock stock;
     @Mock ISubSincronizacao sincronizacao;
@@ -55,8 +53,8 @@ class PDVFacadeTest {
     @BeforeEach
     void setUp() {
         facade = new PDVFacade(produtoRepository, categoriaRepository, taxaIVARepository, fornecedorRepository,
-                lojaRepository, utilizadorRepository, vendaRepository, faturaRepository, faturaSequenciaRepository,
-                fechoCaixaRepository, meioPagamentoRepository, devolucaoRepository, stock, sincronizacao, auditoria);
+                lojaRepository, utilizadorRepository, vendaRepository, faturaRepository,
+                fechoCaixaRepository, devolucaoRepository, stock, sincronizacao, auditoria);
         loja = new Loja("Loja Braga", "Rua Central", "123456789");
         operador = new Utilizador("operador", "hash", "Operador", new Perfil("FUNCIONARIO", java.util.List.of("PDV_WRITE")), loja);
         produto = new Produto("5600000000011", "Agua", new BigDecimal("1.00"), new BigDecimal("0.40"),
@@ -88,26 +86,24 @@ class PDVFacadeTest {
     @Test
     void emissaoFaturaUsaSequenciaIninterruptaRd03() {
         Venda venda = vendaFinalizada();
-        FaturaSequencia sequencia = new FaturaSequencia("A/2026");
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
         when(faturaRepository.existsByVendaId(venda.getId())).thenReturn(false);
-        when(faturaSequenciaRepository.findBySerie(anyString())).thenReturn(Optional.of(sequencia));
+        when(faturaRepository.findFirstByLojaIdAndSerieOrderByNumeroDesc(eq(loja.getId()), anyString())).thenReturn(Optional.empty());
         when(faturaRepository.save(any(Fatura.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Fatura primeira = facade.emitirFatura(venda.getId(), null, null);
 
         assertEquals("A/2026/00001", primeira.getNumeroFatura());
-        assertEquals(1, sequencia.getUltimoNumero());
+        assertEquals(1, primeira.getNumeroSequencial());
         verify(auditoria).registar(TipoOperacao.FATURA_EMITIDA, operador.getId(), "FATURA", "Fatura emitida");
     }
 
     @Test
     void emitirFaturaSimplificadaSemNifAteMilEuros() {
         Venda venda = vendaFinalizada();
-        FaturaSequencia sequencia = new FaturaSequencia("A/2026");
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
         when(faturaRepository.existsByVendaId(venda.getId())).thenReturn(false);
-        when(faturaSequenciaRepository.findBySerie(anyString())).thenReturn(Optional.of(sequencia));
+        when(faturaRepository.findFirstByLojaIdAndSerieOrderByNumeroDesc(eq(loja.getId()), anyString())).thenReturn(Optional.empty());
         when(faturaRepository.save(any(Fatura.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Fatura fatura = facade.emitirFatura(venda.getId(), null, null);
@@ -118,10 +114,9 @@ class PDVFacadeTest {
     @Test
     void emitirFaturaCompletaQuandoClienteForneceNif() {
         Venda venda = vendaFinalizada();
-        FaturaSequencia sequencia = new FaturaSequencia("A/2026");
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
         when(faturaRepository.existsByVendaId(venda.getId())).thenReturn(false);
-        when(faturaSequenciaRepository.findBySerie(anyString())).thenReturn(Optional.of(sequencia));
+        when(faturaRepository.findFirstByLojaIdAndSerieOrderByNumeroDesc(eq(loja.getId()), anyString())).thenReturn(Optional.empty());
         when(faturaRepository.save(any(Fatura.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Fatura fatura = facade.emitirFatura(venda.getId(), "123456789", "Cliente");
@@ -134,9 +129,8 @@ class PDVFacadeTest {
     void finalizarVendaComMeioPagamentoInvalidoFalha() {
         Venda venda = vendaFinalizada();
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
-        when(meioPagamentoRepository.findById(produto.getId())).thenReturn(Optional.empty());
 
-        assertThrows(RecursoNaoEncontradoException.class, () -> facade.finalizarVenda(venda.getId(), produto.getId()));
+        assertThrows(BusinessException.class, () -> facade.finalizarVenda(venda.getId(), produto.getId().toString()));
     }
 
     @Test
@@ -156,19 +150,17 @@ class PDVFacadeTest {
     @Test
     void fluxoCompletoVendaAdicionaLinhaEFinaliza() {
         Venda venda = new Venda(loja, operador);
-        MeioPagamento cartao = new MeioPagamento("CARTAO", "Cartao");
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(stock.consultarStock(loja.getId()))
                 .thenReturn(List.of(new ISubStock.StockDTO(produto.getId(), loja.getId(), 5)));
-        when(meioPagamentoRepository.findById(cartao.getId())).thenReturn(Optional.of(cartao));
         when(vendaRepository.save(venda)).thenReturn(venda);
 
         LinhaVenda linha = facade.adicionarLinhaVenda(venda.getId(), produto.getId(), 2);
-        Venda finalizada = facade.finalizarVenda(venda.getId(), cartao.getId());
+        Venda finalizada = facade.finalizarVenda(venda.getId(), "CARTAO");
 
         assertEquals(2, linha.getQuantidade());
-        assertEquals(cartao, finalizada.getMeioPagamento());
+        assertEquals(MeioPagamentoTipo.CARTAO, finalizada.getMeioPagamento());
         verify(stock).consultarStock(loja.getId());
         verify(stock).atualizarStock(produto.getId(), loja.getId(), -2);
         verify(auditoria).registar(TipoOperacao.VENDA_FINALIZADA, operador.getId(), "VENDA", "Venda finalizada");
@@ -178,14 +170,12 @@ class PDVFacadeTest {
     void finalizarVendaAceitaNumerarioCartaoEMbWay() {
         for (String tipo : List.of("NUMERARIO", "CARTAO", "MBWAY")) {
             Venda venda = vendaComLinhaAberta();
-            MeioPagamento meioPagamento = new MeioPagamento(tipo, "Pagamento " + tipo);
             when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
-            when(meioPagamentoRepository.findById(meioPagamento.getId())).thenReturn(Optional.of(meioPagamento));
             when(vendaRepository.save(venda)).thenReturn(venda);
 
-            Venda finalizada = facade.finalizarVenda(venda.getId(), meioPagamento.getId());
+            Venda finalizada = facade.finalizarVenda(venda.getId(), tipo);
 
-            assertEquals(tipo, finalizada.getMeioPagamento().getTipo());
+            assertEquals(MeioPagamentoTipo.valueOf(tipo), finalizada.getMeioPagamento());
         }
         verify(stock, times(3)).atualizarStock(produto.getId(), loja.getId(), -1);
     }
@@ -193,28 +183,19 @@ class PDVFacadeTest {
     @Test
     void finalizarVendaPropagaBloqueioDeStockNegativoNoMomentoDaEscrita() {
         Venda venda = vendaComLinhaAberta();
-        MeioPagamento numerario = new MeioPagamento("NUMERARIO", "Numerario");
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
-        when(meioPagamentoRepository.findById(numerario.getId())).thenReturn(Optional.of(numerario));
         doThrow(new StockInsuficienteException(produto.getId(), 0, 1))
                 .when(stock).atualizarStock(produto.getId(), loja.getId(), -1);
 
-        assertThrows(StockInsuficienteException.class, () -> facade.finalizarVenda(venda.getId(), numerario.getId()));
+        assertThrows(StockInsuficienteException.class, () -> facade.finalizarVenda(venda.getId(), "NUMERARIO"));
 
         verify(vendaRepository, never()).save(venda);
     }
 
     @Test
-    void garantirMeiosPagamentoObrigatoriosCriaNumerarioCartaoEMbway() {
-        when(meioPagamentoRepository.findByTipo(anyString())).thenReturn(Optional.empty());
-        when(meioPagamentoRepository.save(any(MeioPagamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        facade.garantirMeiosPagamentoObrigatorios();
-
-        verify(meioPagamentoRepository).findByTipo("NUMERARIO");
-        verify(meioPagamentoRepository).findByTipo("CARTAO");
-        verify(meioPagamentoRepository).findByTipo("MBWAY");
-        verify(meioPagamentoRepository, times(3)).save(any(MeioPagamento.class));
+    void meiosPagamentoObrigatoriosSaoEnumDoDominio() {
+        assertEquals(List.of(MeioPagamentoTipo.NUMERARIO, MeioPagamentoTipo.CARTAO, MeioPagamentoTipo.MBWAY),
+                List.of(MeioPagamentoTipo.values()));
     }
 
     @Test
@@ -286,8 +267,7 @@ class PDVFacadeTest {
     void devolucaoReverteStock() {
         Venda venda = vendaFinalizada();
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
-        FaturaSequencia sequencia = new FaturaSequencia("NC/2026");
-        when(faturaSequenciaRepository.findBySerie(anyString())).thenReturn(Optional.of(sequencia));
+        when(faturaRepository.findFirstByLojaIdAndSerieOrderByNumeroDesc(eq(loja.getId()), anyString())).thenReturn(Optional.empty());
         when(devolucaoRepository.save(any(Devolucao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         VendaDTO devolucao = facade.processarDevolucao(venda.getId(), new ProcessarDevolucaoRequest(produto.getId(), 1));
@@ -302,8 +282,8 @@ class PDVFacadeTest {
         Venda vendaForaHorario = new Venda(loja, operador);
         ReflectionTestUtils.setField(vendaForaHorario, "dataHora", LocalDateTime.of(2026, 5, 17, 22, 0));
         PDVFacade facadeComVendaForaHorario = new PDVFacade(produtoRepository, categoriaRepository, taxaIVARepository, fornecedorRepository,
-                lojaRepository, utilizadorRepository, vendaRepository, faturaRepository, faturaSequenciaRepository,
-                fechoCaixaRepository, meioPagamentoRepository, devolucaoRepository, stock, sincronizacao, auditoria) {
+                lojaRepository, utilizadorRepository, vendaRepository, faturaRepository,
+                fechoCaixaRepository, devolucaoRepository, stock, sincronizacao, auditoria) {
             @Override
             protected Venda criarVenda(Loja loja, Utilizador operador) {
                 return vendaForaHorario;

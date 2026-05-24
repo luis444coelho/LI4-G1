@@ -2,15 +2,15 @@ package pt.miniFormiga.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -40,25 +40,26 @@ public class Utilizador extends EntidadeBase {
     @Column(nullable = false)
     private LocalDateTime dataCriacao;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "perfil_id", nullable = false)
-    private Perfil perfil;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PerfilUtilizador perfil;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "loja_id", nullable = false)
     private Loja loja;
 
-    @OneToMany(mappedBy = "utilizador")
-    private List<LogAuditoria> logsAuditoria = new ArrayList<>();
-
     protected Utilizador() {
     }
 
     public Utilizador(String username, String passwordHash, String nome, Perfil perfil, Loja loja) {
-        this(username, passwordHash, nome, null, perfil, loja);
+        this(username, passwordHash, nome, null, perfil == null ? null : perfil(perfil.getNome()), loja);
     }
 
     public Utilizador(String username, String passwordHash, String nome, String email, Perfil perfil, Loja loja) {
+        this(username, passwordHash, nome, email, perfil == null ? null : perfil(perfil.getNome()), loja);
+    }
+
+    public Utilizador(String username, String passwordHash, String nome, String email, PerfilUtilizador perfil, Loja loja) {
         this.username = validarTexto(username, "Username e obrigatorio");
         this.passwordHash = validarTexto(passwordHash, "Password e obrigatoria");
         this.nome = validarTexto(nome, "Nome e obrigatorio");
@@ -67,7 +68,6 @@ public class Utilizador extends EntidadeBase {
         this.loja = Objects.requireNonNull(loja, "Loja e obrigatoria");
         this.ativo = true;
         this.dataCriacao = LocalDateTime.now();
-        this.perfil.adicionarUtilizador(this);
         this.loja.adicionarUtilizador(this);
     }
 
@@ -80,6 +80,10 @@ public class Utilizador extends EntidadeBase {
     }
 
     public void atualizarDados(String nome, String email, Perfil perfil, Loja loja) {
+        atualizarDados(nome, email, perfil == null ? null : perfil(perfil.getNome()), loja);
+    }
+
+    public void atualizarDados(String nome, String email, PerfilUtilizador perfil, Loja loja) {
         if (nome != null) {
             this.nome = validarTexto(nome, "Nome e obrigatorio");
         }
@@ -88,7 +92,6 @@ public class Utilizador extends EntidadeBase {
         }
         if (perfil != null && !perfil.equals(this.perfil)) {
             this.perfil = perfil;
-            this.perfil.adicionarUtilizador(this);
         }
         if (loja != null && !loja.equals(this.loja)) {
             this.loja = loja;
@@ -128,9 +131,7 @@ public class Utilizador extends EntidadeBase {
     }
 
     void adicionarLogAuditoria(LogAuditoria logAuditoria) {
-        if (logAuditoria != null && !logsAuditoria.contains(logAuditoria)) {
-            logsAuditoria.add(logAuditoria);
-        }
+        // Auditoria e persistida em JSONL, fora da BD relacional.
     }
 
     public String getUsername() {
@@ -161,7 +162,7 @@ public class Utilizador extends EntidadeBase {
         return tentativasFalhadas;
     }
 
-    public Perfil getPerfil() {
+    public PerfilUtilizador getPerfil() {
         return perfil;
     }
 
@@ -170,7 +171,7 @@ public class Utilizador extends EntidadeBase {
     }
 
     public List<LogAuditoria> getLogsAuditoria() {
-        return Collections.unmodifiableList(logsAuditoria);
+        return Collections.emptyList();
     }
 
     private String validarTexto(String valor, String mensagem) {
@@ -186,5 +187,12 @@ public class Utilizador extends EntidadeBase {
             return null;
         }
         return valor.trim().toLowerCase();
+    }
+
+    private static PerfilUtilizador perfil(String nome) {
+        if ("RESPONSAVEL_ARMAZEM".equals(nome)) {
+            return PerfilUtilizador.ARMAZEM;
+        }
+        return PerfilUtilizador.valueOf(nome);
     }
 }

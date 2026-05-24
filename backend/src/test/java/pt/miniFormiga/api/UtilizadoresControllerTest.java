@@ -9,7 +9,6 @@ import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Perfil;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.PerfilRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
 import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
@@ -28,12 +27,10 @@ class UtilizadoresControllerTest {
     @Test
     void utilizadorSemGlobalAdminFicaLimitadoALojaPropriaAoListarUtilizadores() {
         ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
-        PerfilRepository perfilRepository = mock(PerfilRepository.class);
         LojaRepository lojaRepository = mock(LojaRepository.class);
         UtilizadorRepository utilizadorRepository = mock(UtilizadorRepository.class);
         UtilizadoresController controller = new UtilizadoresController(
                 utilizadores,
-                perfilRepository,
                 lojaRepository,
                 utilizadorRepository
         );
