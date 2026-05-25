@@ -32,6 +32,10 @@ import pt.miniFormiga.subsistemas.utilizadores.CriarUtilizadorCommand;
 import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
 
 import java.util.List;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -97,9 +101,33 @@ public class UtilizadoresController {
     @ApiResponse(responseCode = "200", description = "Lojas listadas")
     public List<LojaResponse> listarLojas(Authentication authentication) {
         if (temAutoridade(authentication, "GLOBAL_ADMIN")) {
-            return lojaRepository.findAll().stream().map(LojaResponse::from).toList();
+            return lojasSemDuplicados(lojaRepository.findAll()).stream().map(LojaResponse::from).toList();
         }
         return List.of(LojaResponse.from(utilizadorAtual(authentication).getLoja()));
+    }
+
+    private List<Loja> lojasSemDuplicados(List<Loja> lojas) {
+        Map<String, Loja> porNome = new LinkedHashMap<>();
+        lojas.stream()
+                .sorted(Comparator.comparing(Loja::getNome, String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(Loja::getNif, Comparator.nullsLast(String::compareTo)))
+                .forEach(loja -> porNome.merge(chaveNomeLoja(loja), loja, this::escolherLojaVisivel));
+        return List.copyOf(porNome.values());
+    }
+
+    private Loja escolherLojaVisivel(Loja atual, Loja candidata) {
+        if (candidata.isAtiva() && !atual.isAtiva()) {
+            return candidata;
+        }
+        if (atual.getNif() != null && atual.getNif().startsWith("9")
+                && candidata.getNif() != null && !candidata.getNif().startsWith("9")) {
+            return candidata;
+        }
+        return atual;
+    }
+
+    private String chaveNomeLoja(Loja loja) {
+        return loja.getNome() == null ? "" : loja.getNome().trim().toLowerCase(Locale.ROOT);
     }
 
     @GetMapping("/{id}")

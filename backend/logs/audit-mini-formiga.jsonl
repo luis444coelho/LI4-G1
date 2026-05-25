@@ -29,3 +29,4 @@
 {"dataHora":"2026-05-25T19:07:43.625666830Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
 {"dataHora":"2026-05-25T19:09:54.270209423Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
 {"dataHora":"2026-05-25T19:10:11.639439643Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T19:19:33.785964465Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}

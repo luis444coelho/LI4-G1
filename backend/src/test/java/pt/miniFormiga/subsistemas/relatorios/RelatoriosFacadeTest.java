@@ -172,6 +172,20 @@ class RelatoriosFacadeTest {
     }
 
     @Test
+    void exportacaoPdfStockMostraNomeDaLojaEmVezDoIdentificador() {
+        when(stockStore.listar(loja.getId())).thenReturn(List.of(
+                new pt.miniFormiga.subsistemas.stock.StockItem(produto, loja.getId(), loja.getNome(), 5, 10, null, null, null, null)
+        ));
+
+        ExportacaoRelatorio exportacao = facade.exportar(new ExportarRelatorioRequest(
+                "stock", "pdf", loja.getId(), LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+
+        String pdf = new String(exportacao.conteudo(), StandardCharsets.UTF_8);
+        assertTrue(pdf.contains("Loja: Loja Braga"));
+        assertTrue(!pdf.contains("Loja: " + loja.getId()));
+    }
+
+    @Test
     void relatorioVendasFiltraPorProdutoETurno() {
         Produto sumo = new Produto("5600000000028", "Sumo", new BigDecimal("3.00"), new BigDecimal("1.20"),
                 new TaxaIVA("Taxa Normal", new BigDecimal("23")), new Categoria("Bebidas", "Bebidas frias"));

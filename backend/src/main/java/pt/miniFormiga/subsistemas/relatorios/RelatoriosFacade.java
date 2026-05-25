@@ -994,9 +994,9 @@ public class RelatoriosFacade implements ISubRelatorios {
         List<String> linhas = new ArrayList<>();
         linhas.add("Mini-Formiga - Relatorio de vendas");
         linhas.add("Periodo: " + response.periodo().inicio() + " a " + response.periodo().fim());
-        linhas.add("Loja: " + (response.lojaId() == null ? "Todas" : response.lojaId()));
-        linhas.add("Categoria: " + (response.categoriaId() == null ? "Todas" : response.categoriaId()));
-        linhas.add("Produto: " + (response.produtoId() == null ? "Todos" : response.produtoId()));
+        linhas.add("Loja: " + nomeLoja(response.lojaId(), response.linhas().stream().map(LinhaVendaRelatorioResponse::loja).toList()));
+        linhas.add("Categoria: " + nomeCategoria(response.categoriaId(), response.linhas().stream().map(LinhaVendaRelatorioResponse::categoria).toList()));
+        linhas.add("Produto: " + nomeProduto(response.produtoId(), response.linhas().stream().map(LinhaVendaRelatorioResponse::produto).toList()));
         linhas.add("Turno: " + (response.turno() == null ? "Todos" : response.turno()));
         linhas.add("Total: " + response.totalComIva() + " | IVA: " + response.totalIva() + " | Vendas: " + response.numeroVendas());
         linhas.add("Data | Loja | Produto | Qtd | Total | Margem");
@@ -1026,8 +1026,8 @@ public class RelatoriosFacade implements ISubRelatorios {
     private List<String> linhasPdfStock(RelatorioStockResponse response) {
         List<String> linhas = new ArrayList<>();
         linhas.add("Mini-Formiga - Relatorio de stock");
-        linhas.add("Loja: " + (response.lojaId() == null ? "Todas" : response.lojaId()));
-        linhas.add("Categoria: " + (response.categoriaId() == null ? "Todas" : response.categoriaId()));
+        linhas.add("Loja: " + nomeLoja(response.lojaId(), response.itens().stream().map(StockItemResponse::loja).toList()));
+        linhas.add("Categoria: " + nomeCategoria(response.categoriaId(), response.itens().stream().map(StockItemResponse::categoria).toList()));
         linhas.add("Produtos: " + response.totalProdutos() + " | Unidades: " + response.totalUnidades() + " | Valor: " + response.valorStockPrecoCusto());
         linhas.add("Produto | Categoria | Loja | Unidades | Valor | Estado");
         if (response.itens().isEmpty()) {
@@ -1048,9 +1048,9 @@ public class RelatoriosFacade implements ISubRelatorios {
         List<String> linhas = new ArrayList<>();
         linhas.add("Mini-Formiga - Relatorio de rentabilidade");
         linhas.add("Periodo: " + response.periodo().inicio() + " a " + response.periodo().fim());
-        linhas.add("Loja: " + (response.lojaId() == null ? "Todas" : response.lojaId()));
-        linhas.add("Categoria: " + (response.categoriaId() == null ? "Todas" : response.categoriaId()));
-        linhas.add("Produto: " + (response.produtoId() == null ? "Todos" : response.produtoId()));
+        linhas.add("Loja: " + nomeLoja(response.lojaId(), List.of()));
+        linhas.add("Categoria: " + nomeCategoria(response.categoriaId(), response.produtos().stream().map(RentabilidadeProdutoResponse::categoria).toList()));
+        linhas.add("Produto: " + nomeProduto(response.produtoId(), response.produtos().stream().map(RentabilidadeProdutoResponse::produto).toList()));
         linhas.add("Turno: " + (response.turno() == null ? "Todos" : response.turno()));
         linhas.add("Receita: " + response.receitaSemIva() + " | Custo: " + response.custoTotal() + " | Margem: " + response.margemTotal());
         linhas.add("Produto | Categoria | Qtd | Receita | Custo | Margem");
@@ -1066,6 +1066,37 @@ public class RelatoriosFacade implements ISubRelatorios {
                         + " | " + produto.custo()
                         + " | " + produto.margem()));
         return linhas;
+    }
+
+    private String nomeLoja(UUID lojaId, List<String> nomes) {
+        if (lojaId == null) {
+            return "Todas";
+        }
+        return nomes.stream()
+                .filter(nome -> nome != null && !nome.isBlank())
+                .findFirst()
+                .or(() -> lojaRepository.findById(lojaId).map(Loja::getNome))
+                .orElse(lojaId.toString());
+    }
+
+    private String nomeCategoria(UUID categoriaId, List<String> nomes) {
+        if (categoriaId == null) {
+            return "Todas";
+        }
+        return nomes.stream()
+                .filter(nome -> nome != null && !nome.isBlank())
+                .findFirst()
+                .orElse(categoriaId.toString());
+    }
+
+    private String nomeProduto(UUID produtoId, List<String> nomes) {
+        if (produtoId == null) {
+            return "Todos";
+        }
+        return nomes.stream()
+                .filter(nome -> nome != null && !nome.isBlank())
+                .findFirst()
+                .orElse(produtoId.toString());
     }
 
     private byte[] xlsxSimples(String nomeFolha, List<List<Object>> linhas) {

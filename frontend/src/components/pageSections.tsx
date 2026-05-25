@@ -24,9 +24,9 @@ type ReportType = 'STOCK' | 'VENDAS' | 'RENTABILIDADE'
 type ReportData = RelatorioStockResponse | RelatorioVendasResponse | RelatorioRentabilidadeResponse
 
 const reportTypeOptions = [
-  { value: 'STOCK', label: 'Stock' },
-  { value: 'VENDAS', label: 'Vendas' },
   { value: 'RENTABILIDADE', label: 'Rentabilidade' },
+  { value: 'VENDAS', label: 'Vendas' },
+  { value: 'STOCK', label: 'Stock' },
 ]
 
 const shiftOptions = [
@@ -84,7 +84,7 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 export function ReportsContent() {
-  const [reportType, setReportType] = useState<ReportType>('STOCK')
+  const [reportType, setReportType] = useState<ReportType>('RENTABILIDADE')
   const [stores, setStores] = useState<LojaResponse[]>([])
   const [categories, setCategories] = useState<CategoriaResponse[]>([])
   const [products, setProducts] = useState<ProdutoResponse[]>([])

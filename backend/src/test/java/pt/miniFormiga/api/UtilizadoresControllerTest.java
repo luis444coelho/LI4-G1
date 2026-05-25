@@ -31,6 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -191,6 +192,32 @@ class UtilizadoresControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("teste.gestor.1"))
                 .andExpect(jsonPath("$.perfil").value("FUNCIONARIO"));
+    }
+
+    @Test
+    void listarLojasRemoveDuplicadosPorNomeParaGestor() throws Exception {
+        ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
+        LojaRepository lojaRepository = mock(LojaRepository.class);
+        UtilizadorRepository utilizadorRepository = mock(UtilizadorRepository.class);
+        UtilizadoresController controller = new UtilizadoresController(
+                utilizadores,
+                lojaRepository,
+                utilizadorRepository
+        );
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
+        Loja braga = new Loja("Loja Braga", "Rua Central", "123456789");
+        Loja bragaDuplicada = new Loja(" Loja Braga ", "Morada sincronizada", "900000000");
+        Loja porto = new Loja("Loja Porto", "Rua Norte", "223456789");
+        when(lojaRepository.findAll()).thenReturn(List.of(bragaDuplicada, porto, braga));
+
+        mockMvc.perform(get("/api/v1/utilizadores/lojas")
+                        .principal(authenticationGestor()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].nome").value("Loja Braga"))
+                .andExpect(jsonPath("$[1].nome").value("Loja Porto"));
     }
 
     private Authentication authenticationGerente() {
