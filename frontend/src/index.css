@@ -281,6 +281,7 @@ select {
   overflow: hidden;
   display: flex;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  max-width: 100%;
 }
 
 .mf-sidebar {
@@ -496,6 +497,7 @@ select {
 .mf-page-content {
   padding: 16px 18px 18px;
   overflow-y: auto;
+  min-width: 0;
 }
 
 .mf-page-content::-webkit-scrollbar {
@@ -518,6 +520,7 @@ select {
   border: 1px solid #2a3042;
   border-radius: 13px;
   padding: 16px;
+  min-width: 0;
 }
 
 .mf-empty-state {
@@ -582,6 +585,7 @@ select {
   display: flex;
   flex-direction: column;
   gap: 7px;
+  min-width: 0;
 }
 
 .mf-metric-label {
@@ -623,6 +627,7 @@ select {
 
 .sales-bar-column {
   flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -664,6 +669,7 @@ select {
   align-items: center;
   gap: 10px;
   font-size: 14px;
+  min-width: 0;
 }
 
 .alert-right {
@@ -718,6 +724,7 @@ select {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .mf-field-label {
@@ -1343,20 +1350,63 @@ select {
   body,
   #root {
     width: 100%;
+    max-width: 100%;
     overflow-x: hidden;
   }
 
   .mf-screen {
     padding: 0;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
   .mf-shell {
     border-radius: 0;
     border-inline: 0;
+    width: 100%;
+    max-width: 100vw;
   }
 
   .mf-page-content {
     padding: 12px;
+    overflow-x: hidden;
+  }
+
+  .mf-topbar {
+    min-height: auto;
+    padding: 10px 12px;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .mf-topbar-left {
+    flex-wrap: wrap;
+    gap: 7px 8px;
+  }
+
+  .mf-online {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .mf-sidebar-scroll {
+    padding: 12px 8px;
+  }
+
+  .mf-sidebar-footer {
+    padding-inline: 8px;
+  }
+
+  .mf-menu-item {
+    min-width: 0;
+  }
+
+  .mf-menu-item span:last-child,
+  .mf-user-brand,
+  .mf-user-role {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .mf-menu,
@@ -1384,8 +1434,13 @@ select {
     padding: 13px;
   }
 
-  .mf-metric-card {
-    min-width: 0;
+  .mf-panel-header {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .mf-metrics-grid {
+    gap: 8px;
   }
 
   .mf-metric-value,
@@ -1395,10 +1450,34 @@ select {
     overflow-wrap: anywhere;
   }
 
+  .dashboard-period-fields {
+    width: 100%;
+  }
+
   .sales-bars {
     height: auto;
     min-height: 168px;
-    gap: 8px;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .sales-bar-column {
+    gap: 6px;
+  }
+
+  .sales-bar {
+    min-height: 24px;
+  }
+
+  .alert-left,
+  .alert-right {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .alert-right {
+    justify-content: flex-start;
+    margin-left: 0;
   }
 
   .mf-table {

@@ -79,3 +79,5 @@
 {"dataHora":"2026-05-25T19:42:44.056861590Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
 {"dataHora":"2026-05-25T19:42:57.950333671Z","tipoOperacao":"ENTRADA_MERCADORIA_REGISTADA","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"ENTRADA_MERCADORIA","entidadeId":null,"descricao":"Entrada de mercadoria registada"}
 {"dataHora":"2026-05-25T19:43:42.298631369Z","tipoOperacao":"AJUSTE_STOCK","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"STOCK","entidadeId":null,"descricao":"Ajuste de stock registado"}
+{"dataHora":"2026-05-25T20:21:45.981594263Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T20:22:23.665603854Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
