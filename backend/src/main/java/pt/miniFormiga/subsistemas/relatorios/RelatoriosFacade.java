@@ -72,15 +72,9 @@ public class RelatoriosFacade implements ISubRelatorios {
 
     @Override
     public DashboardResponse obterDashboard(RelatorioFiltro filtro) {
-        boolean permiteSnapshotSincronizado = filtro == null
-                || (filtro.inicio() == null
-                && filtro.fim() == null
-                && filtro.categoriaId() == null
-                && filtro.produtoId() == null
-                && filtro.turno() == null);
         RelatorioFiltro normalizado = normalizar(filtro);
         List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado);
-        if (linhas.isEmpty() && permiteSnapshotSincronizado) {
+        if (linhas.isEmpty()) {
             DashboardResponse sincronizado = dashboardSincronizado(normalizado);
             if (sincronizado != null) {
                 return sincronizado;
@@ -105,20 +99,74 @@ public class RelatoriosFacade implements ISubRelatorios {
     }
 
     private DashboardResponse dashboardSincronizado(RelatorioFiltro filtro) {
-        List<EstadoSincronizacaoCodigo> estados = List.of(
-                EstadoSincronizacaoCodigo.CONCLUIDA,
-                EstadoSincronizacaoCodigo.COM_CONFLITOS
+        List<SincronizacaoPayload> payloads = payloadsSincronizados(filtro);
+        if (payloads.isEmpty()) {
+            return null;
+        }
+
+        List<VendaRelatorioSync> linhasSync = filtrarVendasSincronizadas(payloads, filtro);
+        if (!linhasSync.isEmpty()) {
+            ResumoSync resumo = resumirSync(linhasSync);
+            List<VendasPorLojaResponse> vendasPorLoja = vendasPorLojaSync(linhasSync);
+            return new DashboardResponse(
+                    periodo(filtro),
+                    dinheiro(resumo.comIva),
+                    dinheiro(resumo.iva),
+                    dinheiro(resumo.margem),
+                    resumo.numeroVendas(),
+                    vendasPorLoja.size(),
+                    totalLojasSincronizadas(filtro, payloads),
+                    alertasAtivos(filtro).size(),
+                    media(resumo.comIva, resumo.numeroVendas()),
+                    vendasPorLoja
+            );
+        }
+
+        if (filtro.categoriaId() != null || filtro.produtoId() != null || filtro.turno() != null) {
+            return null;
+        }
+
+        List<DashboardResponse> dashboards = payloads.stream()
+                .map(SincronizacaoPayload::dashboard)
+                .filter(dashboard -> dashboard != null && periodoCompativel(filtro, dashboard.periodo()))
+                .toList();
+        if (dashboards.isEmpty()) {
+            return null;
+        }
+
+        BigDecimal totalVendas = dashboards.stream().map(DashboardResponse::totalVendas).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalIva = dashboards.stream().map(DashboardResponse::totalIva).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal margem = dashboards.stream().map(DashboardResponse::margem).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long numeroVendas = dashboards.stream().mapToLong(DashboardResponse::numeroVendas).sum();
+        List<VendasPorLojaResponse> vendasPorLoja = dashboards.stream()
+                .flatMap(dashboard -> dashboard.vendasPorLoja().stream())
+                .toList();
+
+        return new DashboardResponse(
+                periodo(filtro),
+                dinheiro(totalVendas),
+                dinheiro(totalIva),
+                dinheiro(margem),
+                numeroVendas,
+                vendasPorLoja.size(),
+                totalLojasSincronizadas(filtro, payloads),
+                alertasAtivos(filtro).size(),
+                media(totalVendas, numeroVendas),
+                vendasPorLoja
         );
-        return (filtro.lojaId() == null
-                ? sincronizacaoRepository.findFirstByEstadoInOrderByDataHoraFimDesc(estados)
-                : sincronizacaoRepository.findFirstByLojaIdAndEstadoInOrderByDataHoraFimDesc(filtro.lojaId(), estados))
-                .map(this::dashboardDoPayload)
-                .orElse(null);
     }
 
-    private DashboardResponse dashboardDoPayload(Sincronizacao sincronizacao) {
-        SincronizacaoPayload payload = payload(sincronizacao);
-        return payload == null ? null : payload.dashboard();
+    private long totalLojasSincronizadas(RelatorioFiltro filtro, List<SincronizacaoPayload> payloads) {
+        if (filtro.lojaId() != null) {
+            return 1;
+        }
+        long totalLojas = lojaRepository.findAll().size();
+        long lojasPayload = payloads.stream()
+                .map(SincronizacaoPayload::lojaId)
+                .filter(id -> id != null)
+                .distinct()
+                .count();
+        return lojasPayload > 0 ? lojasPayload : totalLojas;
     }
 
     private SincronizacaoPayload payload(Sincronizacao sincronizacao) {
@@ -324,17 +372,43 @@ public class RelatoriosFacade implements ISubRelatorios {
     }
 
     private List<VendaRelatorioSync> vendasSincronizadas(RelatorioFiltro filtro) {
+        return filtrarVendasSincronizadas(payloadsSincronizados(filtro), filtro);
+    }
+
+    private List<SincronizacaoPayload> payloadsSincronizados(RelatorioFiltro filtro) {
         List<EstadoSincronizacaoCodigo> estados = List.of(
                 EstadoSincronizacaoCodigo.CONCLUIDA,
                 EstadoSincronizacaoCodigo.COM_CONFLITOS
         );
-        return (filtro.lojaId() == null
-                ? sincronizacaoRepository.findFirstByEstadoInOrderByDataHoraFimDesc(estados)
-                : sincronizacaoRepository.findFirstByLojaIdAndEstadoInOrderByDataHoraFimDesc(filtro.lojaId(), estados))
-                .map(this::payload)
-                .map(SincronizacaoPayload::vendasRelatorio)
-                .orElse(List.of())
-                .stream()
+        if (filtro.lojaId() != null) {
+            return sincronizacaoRepository.findFirstByLojaIdAndEstadoInOrderByDataHoraFimDesc(filtro.lojaId(), estados)
+                    .map(this::payload)
+                    .stream()
+                    .filter(payload -> payload != null)
+                    .toList();
+        }
+        Set<UUID> lojasIncluidas = new LinkedHashSet<>();
+        List<SincronizacaoPayload> payloads = new ArrayList<>();
+        List<Sincronizacao> sincronizacoes = sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(estados);
+        if (sincronizacoes == null) {
+            return List.of();
+        }
+        for (Sincronizacao sincronizacao : sincronizacoes) {
+            SincronizacaoPayload payload = payload(sincronizacao);
+            UUID lojaId = payload != null ? payload.lojaId() : sincronizacao.getLoja() == null ? null : sincronizacao.getLoja().getId();
+            if (lojaId == null || !lojasIncluidas.add(lojaId)) {
+                continue;
+            }
+            if (payload != null) {
+                payloads.add(payload);
+            }
+        }
+        return payloads;
+    }
+
+    private List<VendaRelatorioSync> filtrarVendasSincronizadas(List<SincronizacaoPayload> payloads, RelatorioFiltro filtro) {
+        return payloads.stream()
+                .flatMap(payload -> (payload.vendasRelatorio() == null ? List.<VendaRelatorioSync>of() : payload.vendasRelatorio()).stream())
                 .filter(linha -> linha != null
                         && !linha.dataHora().toLocalDate().isBefore(filtro.inicio())
                         && !linha.dataHora().toLocalDate().isAfter(filtro.fim())

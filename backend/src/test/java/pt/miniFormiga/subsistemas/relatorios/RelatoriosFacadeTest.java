@@ -32,7 +32,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -249,8 +248,8 @@ class RelatoriosFacadeTest {
                 0);
         when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
                 .thenReturn(List.of());
-        when(sincronizacaoRepository.findFirstByEstadoInOrderByDataHoraFimDesc(any()))
-                .thenReturn(Optional.of(sync));
+        when(sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(any()))
+                .thenReturn(List.of(sync));
 
         RelatorioVendasResponse vendas = facade.relatorioVendas(
                 new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
@@ -267,6 +266,51 @@ class RelatoriosFacadeTest {
         assertEquals(1, vendas.numeroVendas());
         assertTrue(conteudoPdf.contains("Agua"));
         assertTrue(!conteudoPdf.contains("Sem vendas no periodo selecionado."));
+    }
+
+    @Test
+    void dashboardCentralAgregaUltimaSincronizacaoDeCadaLoja() throws Exception {
+        Loja lojaPorto = new Loja(UUID.randomUUID(), "Loja Porto", "Rua Porto", "223456789", "222000000");
+        Loja lojaTecnicaAntiga = new Loja(UUID.randomUUID(), "Loja Tecnica", "Rua Sync", "923456789", "900000000");
+        VendaRelatorioSync linhaBraga = vendaSync(loja.getId(), loja.getNome(), new BigDecimal("4.92"));
+        VendaRelatorioSync linhaPorto = vendaSync(lojaPorto.getId(), lojaPorto.getNome(), new BigDecimal("2.46"));
+
+        Sincronizacao syncPorto = syncComPayload(lojaPorto, linhaPorto, LocalDateTime.of(2026, 5, 10, 15, 0));
+        Sincronizacao syncBraga = syncComPayload(loja, linhaBraga, LocalDateTime.of(2026, 5, 10, 14, 0));
+
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of());
+        when(sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(any()))
+                .thenReturn(List.of(syncPorto, syncBraga));
+        when(lojaRepository.findAll()).thenReturn(List.of(loja, lojaPorto, lojaTecnicaAntiga));
+        when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()).thenReturn(List.of());
+
+        DashboardResponse response = facade.obterDashboard(
+                new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+
+        assertEquals(new BigDecimal("7.38"), response.totalVendas());
+        assertEquals(2, response.numeroVendas());
+        assertEquals(2, response.numeroLojasComVendas());
+        assertEquals(2, response.totalLojas());
+        assertEquals(2, response.vendasPorLoja().size());
+        assertTrue(response.vendasPorLoja().stream().anyMatch(loja -> "Loja Braga".equals(loja.loja())));
+        assertTrue(response.vendasPorLoja().stream().anyMatch(loja -> "Loja Porto".equals(loja.loja())));
+    }
+
+    @Test
+    void dashboardCalculaMargemComLinhasRecarregadasDaPersistencia() {
+        Venda venda = vendaFinalizada(2, LocalDateTime.of(2026, 5, 10, 12, 0));
+        venda.getLinhas().forEach(linha -> org.springframework.test.util.ReflectionTestUtils.setField(linha, "totalLinha", BigDecimal.ZERO));
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of(venda));
+        when(lojaRepository.findAll()).thenReturn(List.of(loja));
+        when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()).thenReturn(List.of());
+
+        DashboardResponse response = facade.obterDashboard(
+                new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+
+        assertEquals(new BigDecimal("4.92"), response.totalVendas());
+        assertEquals(new BigDecimal("2.50"), response.margem());
     }
 
     @Test
@@ -300,5 +344,46 @@ class RelatoriosFacadeTest {
         Stock stock = new Stock(produto, loja, 5);
         new NivelMinimo(stock, 10);
         return new AlertaStock(stock, 5);
+    }
+
+    private VendaRelatorioSync vendaSync(UUID lojaId, String lojaNome, BigDecimal valorComIva) {
+        BigDecimal valorSemIva = valorComIva.divide(new BigDecimal("1.23"), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal iva = valorComIva.subtract(valorSemIva);
+        BigDecimal custo = new BigDecimal("0.75");
+        return new VendaRelatorioSync(
+                UUID.randomUUID(),
+                LocalDateTime.of(2026, 5, 10, 12, 0),
+                lojaId,
+                lojaNome,
+                produto.getId(),
+                produto.getNome(),
+                produto.getCategoria().getId(),
+                produto.getCategoria().getNome(),
+                1,
+                valorSemIva,
+                iva,
+                valorComIva,
+                custo,
+                valorSemIva.subtract(custo)
+        );
+    }
+
+    private Sincronizacao syncComPayload(Loja lojaSync, VendaRelatorioSync linha, LocalDateTime geradoEm) throws Exception {
+        SincronizacaoPayload payload = new SincronizacaoPayload(
+                lojaSync.getId(),
+                geradoEm,
+                null,
+                Map.of(),
+                null,
+                List.of(linha),
+                List.of()
+        );
+        Sincronizacao sync = new Sincronizacao(lojaSync, EstadoSincronizacaoCodigo.CONCLUIDA);
+        sync.concluir(EstadoSincronizacaoCodigo.CONCLUIDA,
+                new ObjectMapper().findAndRegisterModules().writeValueAsString(payload),
+                1,
+                "[]",
+                0);
+        return sync;
     }
 }

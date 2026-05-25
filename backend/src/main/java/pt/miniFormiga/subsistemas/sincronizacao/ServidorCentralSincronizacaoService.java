@@ -73,15 +73,13 @@ public class ServidorCentralSincronizacaoService {
 
     public ResultadoTransmissao receber(SincronizacaoPayload payload) {
         Loja loja = lojaRepository.findById(payload.lojaId())
-                .orElseGet(() -> lojaRepository.findAll().stream()
-                        .findFirst()
-                        .orElseGet(() -> lojaRepository.save(new Loja(
-                                payload.lojaId(),
-                                "Loja Braga",
-                                "Rua Central",
-                                nifTecnico(payload.lojaId()),
-                                null
-                        ))));
+                .orElseGet(() -> lojaRepository.save(new Loja(
+                        payload.lojaId(),
+                        nomeLoja(payload),
+                        "Morada sincronizada",
+                        nifTecnico(payload.lojaId()),
+                        null
+                )));
 
         List<Conflito> conflitos = detetarConflitos(payload);
         Sincronizacao sincronizacao = new Sincronizacao(loja, estado(conflitos.isEmpty() ? CONCLUIDA : COM_CONFLITOS));
@@ -141,6 +139,18 @@ public class ServidorCentralSincronizacaoService {
 
     private String nifTecnico(UUID lojaId) {
         return String.format("%09d", Math.floorMod(lojaId.hashCode(), 1_000_000_000));
+    }
+
+    private String nomeLoja(SincronizacaoPayload payload) {
+        if (payload.dashboard() != null
+                && payload.dashboard().vendasPorLoja() != null
+                && !payload.dashboard().vendasPorLoja().isEmpty()) {
+            return payload.dashboard().vendasPorLoja().get(0).loja();
+        }
+        if (payload.vendasRelatorio() != null && !payload.vendasRelatorio().isEmpty()) {
+            return payload.vendasRelatorio().get(0).loja();
+        }
+        return "Loja " + payload.lojaId().toString().substring(0, 8);
     }
 
     private String toJson(Object valor) {

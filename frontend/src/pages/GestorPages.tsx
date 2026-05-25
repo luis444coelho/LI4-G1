@@ -17,6 +17,26 @@ function money(value: number) {
   return currencyFormatter.format(value)
 }
 
+function formatDateInput(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function firstDayOfCurrentMonth() {
+  const today = new Date()
+  return formatDateInput(new Date(today.getFullYear(), today.getMonth(), 1))
+}
+
+function buildDashboardQuery(inicio: string, fim: string) {
+  const params = new URLSearchParams()
+  if (inicio) params.set('inicio', inicio)
+  if (fim) params.set('fim', fim)
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}
+
 type DraftOrderLine = {
   produtoId: string
   produto: string
@@ -31,16 +51,43 @@ type DraftOrderLine = {
 export function GestorDashboardPage() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null)
   const [stock, setStock] = useState<RelatorioStockResponse | null>(null)
+  const [inicio, setInicio] = useState(firstDayOfCurrentMonth)
+  const [fim, setFim] = useState(() => formatDateInput(new Date()))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const carregarDashboard = useCallback((showLoading = false) => {
+    if (showLoading) {
+      setLoading(true)
+    }
+    const query = buildDashboardQuery(inicio, fim)
+    return Promise.all([
+      apiRequest<DashboardResponse>(`/dashboard${query}`),
+      apiRequest<RelatorioStockResponse>('/relatorios/stock'),
+    ])
+      .then(([dashboardResponse, stockResponse]) => {
+        setDashboard(dashboardResponse)
+        setStock(stockResponse)
+        setError(null)
+      })
+      .catch(() => {
+        setError('Não foi possível carregar o dashboard.')
+      })
+      .finally(() => {
+        if (showLoading) {
+          setLoading(false)
+        }
+      })
+  }, [fim, inicio])
 
   useEffect(() => {
     let ignore = false
     let primeiraCarga = true
 
     const carregar = () => {
+      const query = buildDashboardQuery(inicio, fim)
       Promise.all([
-        apiRequest<DashboardResponse>('/dashboard'),
+        apiRequest<DashboardResponse>(`/dashboard${query}`),
         apiRequest<RelatorioStockResponse>('/relatorios/stock'),
       ])
         .then(([dashboardResponse, stockResponse]) => {
@@ -70,7 +117,7 @@ export function GestorDashboardPage() {
       ignore = true
       window.clearInterval(intervalo)
     }
-  }, [])
+  }, [fim, inicio])
 
   const metrics = useMemo(() => {
     if (!dashboard) {
@@ -125,6 +172,16 @@ export function GestorDashboardPage() {
 
   return (
     <div className="mf-stack">
+      <Panel title="Filtros">
+        <div className="mf-toolbar-space">
+          <div className="mf-fields-grid two dashboard-period-fields">
+            <TextField label="Início" type="date" value={inicio} onChange={(event) => setInicio(event.target.value)} />
+            <TextField label="Fim" type="date" value={fim} onChange={(event) => setFim(event.target.value)} />
+          </div>
+          <Button onClick={() => void carregarDashboard(true)} disabled={loading}>Atualizar</Button>
+        </div>
+      </Panel>
+
       <div className="mf-metrics-grid">
         {metrics.map((metric) => (
           <MetricCard

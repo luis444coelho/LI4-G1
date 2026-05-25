@@ -96,6 +96,7 @@ public class LinhaVenda extends EntidadeBase {
     }
 
     public BigDecimal getTotalLinha() {
+        calcularTotal();
         return totalLinha;
     }
 

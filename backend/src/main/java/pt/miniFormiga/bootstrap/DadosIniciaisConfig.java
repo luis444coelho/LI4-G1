@@ -17,6 +17,8 @@ import java.util.UUID;
 @Configuration
 public class DadosIniciaisConfig {
     private static final UUID LOJA_BRAGA_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final UUID LOJA_PORTO_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
+    private static final UUID LOJA_LISBOA_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
 
     @Bean
     @Transactional
@@ -31,18 +33,25 @@ public class DadosIniciaisConfig {
                                     CondicaoComercialRepository condicaoComercialRepository,
                                     PasswordEncoder passwordEncoder) {
         return args -> {
-            Loja loja = lojaRepository.findById(LOJA_BRAGA_ID)
-                    .or(() -> lojaRepository.findByNif("123456789"))
-                    .orElseGet(() -> lojaRepository.save(new Loja(LOJA_BRAGA_ID, "Loja Braga", "Rua Central", "123456789", "253000000")));
+            Loja lojaBraga = criarLojaSeNecessaria(lojaRepository, LOJA_BRAGA_ID,
+                    "Loja Braga", "Rua Central", "123456789", "253000000");
+            Loja lojaPorto = criarLojaSeNecessaria(lojaRepository, LOJA_PORTO_ID,
+                    "Loja Porto", "Rua de Santa Catarina", "223456789", "222000000");
+            Loja lojaLisboa = criarLojaSeNecessaria(lojaRepository, LOJA_LISBOA_ID,
+                    "Loja Lisboa", "Avenida da Liberdade", "323456789", "210000000");
 
             criarUtilizadorSeNecessario(utilizadorRepository, passwordEncoder,
-                    "gestor.formiga", "Sr. Formiga", "gestor@mini-formiga.pt", PerfilUtilizador.GESTOR, loja);
+                    "gestor.formiga", "Sr. Formiga", "gestor@mini-formiga.pt", PerfilUtilizador.GESTOR, lojaBraga);
             criarUtilizadorSeNecessario(utilizadorRepository, passwordEncoder,
-                    "gerente.braga", "Gerente Braga", "gerente@mini-formiga.pt", PerfilUtilizador.GERENTE, loja);
+                    "gerente.braga", "Gerente Braga", "gerente@mini-formiga.pt", PerfilUtilizador.GERENTE, lojaBraga);
             criarUtilizadorSeNecessario(utilizadorRepository, passwordEncoder,
-                    "operador.braga", "Operador Braga", "operador@mini-formiga.pt", PerfilUtilizador.FUNCIONARIO, loja);
+                    "operador.braga", "Operador Braga", "operador@mini-formiga.pt", PerfilUtilizador.FUNCIONARIO, lojaBraga);
             criarUtilizadorSeNecessario(utilizadorRepository, passwordEncoder,
-                    "armazem.braga", "Responsavel Armazem", "armazem@mini-formiga.pt", PerfilUtilizador.ARMAZEM, loja);
+                    "armazem.braga", "Responsavel Armazem", "armazem@mini-formiga.pt", PerfilUtilizador.ARMAZEM, lojaBraga);
+            criarUtilizadoresDemoDaLoja(utilizadorRepository, passwordEncoder, lojaPorto,
+                    "porto", "Porto", "porto");
+            criarUtilizadoresDemoDaLoja(utilizadorRepository, passwordEncoder, lojaLisboa,
+                    "lisboa", "Lisboa", "lisboa");
 
             TaxaIVA reduzida = criarTaxaSeNecessaria(taxaIVARepository, "Taxa Reduzida", new BigDecimal("6"));
             TaxaIVA normal = criarTaxaSeNecessaria(taxaIVARepository, "Taxa Normal", new BigDecimal("23"));
@@ -55,10 +64,9 @@ public class DadosIniciaisConfig {
             Produto sandes = criarProdutoSeNecessario(produtoRepository, "5600000000028", "Sandes Mista", "Sandes pronta", new BigDecimal("2.50"), new BigDecimal("1.20"), snacks, reduzida, 50);
             Produto champo = criarProdutoSeNecessario(produtoRepository, "5600000000035", "Champo 200ml", "Champo de higiene pessoal", new BigDecimal("3.50"), new BigDecimal("1.80"), higiene, normal, 50);
             Produto acucar = criarProdutoSeNecessario(produtoRepository, "5600000000042", "Acucar 1kg", "Acucar branco 1kg", new BigDecimal("1.80"), new BigDecimal("0.90"), mercearia, reduzida, 50);
-            criarProdutoLojaSeNecessario(produtoLojaRepository, agua, loja, 5, 10);
-            criarProdutoLojaSeNecessario(produtoLojaRepository, sandes, loja, 50, 10);
-            criarProdutoLojaSeNecessario(produtoLojaRepository, champo, loja, 50, 10);
-            criarProdutoLojaSeNecessario(produtoLojaRepository, acucar, loja, 50, 10);
+            criarProdutosBaseDaLoja(produtoLojaRepository, lojaBraga, agua, sandes, champo, acucar);
+            criarProdutosBaseDaLoja(produtoLojaRepository, lojaPorto, agua, sandes, champo, acucar);
+            criarProdutosBaseDaLoja(produtoLojaRepository, lojaLisboa, agua, sandes, champo, acucar);
 
             Fornecedor fornecedor = criarFornecedorSeNecessario(fornecedorRepository);
             criarCondicaoSeNecessaria(condicaoComercialRepository, fornecedor, agua);
@@ -66,6 +74,37 @@ public class DadosIniciaisConfig {
             criarCondicaoSeNecessaria(condicaoComercialRepository, fornecedor, champo);
             criarCondicaoSeNecessaria(condicaoComercialRepository, fornecedor, acucar);
         };
+    }
+
+    private Loja criarLojaSeNecessaria(LojaRepository repository,
+                                       UUID id,
+                                       String nome,
+                                       String morada,
+                                       String nif,
+                                       String telefone) {
+        return repository.findById(id)
+                .or(() -> repository.findByNif(nif))
+                .orElseGet(() -> repository.save(new Loja(id, nome, morada, nif, telefone)));
+    }
+
+    private void criarUtilizadoresDemoDaLoja(UtilizadorRepository repository,
+                                             PasswordEncoder passwordEncoder,
+                                             Loja loja,
+                                             String sufixoUsername,
+                                             String sufixoNome,
+                                             String dominioEmail) {
+        criarUtilizadorSeNecessario(repository, passwordEncoder,
+                "gestor." + sufixoUsername, "Gestor " + sufixoNome,
+                "gestor@" + dominioEmail + ".mini-formiga.pt", PerfilUtilizador.GESTOR, loja);
+        criarUtilizadorSeNecessario(repository, passwordEncoder,
+                "gerente." + sufixoUsername, "Gerente " + sufixoNome,
+                "gerente@" + dominioEmail + ".mini-formiga.pt", PerfilUtilizador.GERENTE, loja);
+        criarUtilizadorSeNecessario(repository, passwordEncoder,
+                "operador." + sufixoUsername, "Operador " + sufixoNome,
+                "operador@" + dominioEmail + ".mini-formiga.pt", PerfilUtilizador.FUNCIONARIO, loja);
+        criarUtilizadorSeNecessario(repository, passwordEncoder,
+                "armazem." + sufixoUsername, "Responsavel Armazem " + sufixoNome,
+                "armazem@" + dominioEmail + ".mini-formiga.pt", PerfilUtilizador.ARMAZEM, loja);
     }
 
     private void criarUtilizadorSeNecessario(UtilizadorRepository repository,
@@ -137,6 +176,18 @@ public class DadosIniciaisConfig {
         if ("5600000000011".equals(produto.getCodigo()) && produtoLoja.getQuantidadeStock() >= nivelMinimo) {
             produtoLoja.definirStockInicial(quantidade);
         }
+    }
+
+    private void criarProdutosBaseDaLoja(ProdutoLojaRepository repository,
+                                         Loja loja,
+                                         Produto agua,
+                                         Produto sandes,
+                                         Produto champo,
+                                         Produto acucar) {
+        criarProdutoLojaSeNecessario(repository, agua, loja, 5, 10);
+        criarProdutoLojaSeNecessario(repository, sandes, loja, 50, 10);
+        criarProdutoLojaSeNecessario(repository, champo, loja, 50, 10);
+        criarProdutoLojaSeNecessario(repository, acucar, loja, 50, 10);
     }
 
     private void criarCondicaoSeNecessaria(CondicaoComercialRepository repository, Fornecedor fornecedor, Produto produto) {

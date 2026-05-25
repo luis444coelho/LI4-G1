@@ -38,6 +38,14 @@ Utilizadores:
 - `gerente.braga`
 - `operador.braga`
 - `armazem.braga`
+- `gestor.porto`
+- `gerente.porto`
+- `operador.porto`
+- `armazem.porto`
+- `gestor.lisboa`
+- `gerente.lisboa`
+- `operador.lisboa`
+- `armazem.lisboa`
 
 ## Arranque rapido com Docker Compose
 

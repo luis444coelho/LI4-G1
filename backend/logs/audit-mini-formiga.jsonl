@@ -1,49 +1,31 @@
-{"dataHora":"2026-05-24T21:09:46.471094093Z","tipoOperacao":"LOGIN","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:09:51.432234010Z","tipoOperacao":"VENDA_FORA_HORARIO","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"VENDA","entidadeId":null,"descricao":"Venda fora do horario normal"}
-{"dataHora":"2026-05-24T21:09:58.403480139Z","tipoOperacao":"VENDA_FINALIZADA","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"VENDA","entidadeId":null,"descricao":"Venda finalizada"}
-{"dataHora":"2026-05-24T21:09:58.403659289Z","tipoOperacao":"VENDA_FORA_HORARIO","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"VENDA","entidadeId":null,"descricao":"Venda fora do horario normal"}
-{"dataHora":"2026-05-24T21:09:58.428032116Z","tipoOperacao":"FATURA_EMITIDA","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"FATURA","entidadeId":null,"descricao":"Fatura emitida"}
-{"dataHora":"2026-05-24T21:10:00.221223184Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de operador.braga"}
-{"dataHora":"2026-05-24T21:10:01.882187346Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:10:17.674339977Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
-{"dataHora":"2026-05-24T21:11:27.871373793Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:12:11.087480557Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
-{"dataHora":"2026-05-24T21:23:18.320084142Z","tipoOperacao":"LOGIN","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:23:23.917712619Z","tipoOperacao":"VENDA_FORA_HORARIO","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"VENDA","entidadeId":null,"descricao":"Venda fora do horario normal"}
-{"dataHora":"2026-05-24T21:23:27.160146234Z","tipoOperacao":"VENDA_FINALIZADA","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"VENDA","entidadeId":null,"descricao":"Venda finalizada"}
-{"dataHora":"2026-05-24T21:23:27.160379393Z","tipoOperacao":"VENDA_FORA_HORARIO","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"VENDA","entidadeId":null,"descricao":"Venda fora do horario normal"}
-{"dataHora":"2026-05-24T21:23:27.276990316Z","tipoOperacao":"FATURA_EMITIDA","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"FATURA","entidadeId":null,"descricao":"Fatura emitida"}
-{"dataHora":"2026-05-24T21:23:28.722260817Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de operador.braga"}
-{"dataHora":"2026-05-24T21:23:30.366180398Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:23:41.717601587Z","tipoOperacao":"FECHO_CAIXA_INICIADO","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"FECHO_CAIXA","entidadeId":null,"descricao":"Fecho de caixa iniciado"}
-{"dataHora":"2026-05-24T21:23:46.269735487Z","tipoOperacao":"FECHO_CAIXA_CONFIRMADO","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"FECHO_CAIXA","entidadeId":null,"descricao":"Fecho de caixa confirmado"}
-{"dataHora":"2026-05-24T21:25:07.945877040Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
-{"dataHora":"2026-05-24T21:25:26.465235783Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:27:12.678430926Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
-{"dataHora":"2026-05-24T21:27:24.473175757Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:28:21.929535345Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
-{"dataHora":"2026-05-24T21:29:06.306893517Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:29:58.295031762Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
-{"dataHora":"2026-05-24T21:30:13.923316012Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:31:35.966698590Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
-{"dataHora":"2026-05-24T21:31:37.930004449Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:31:42.927244953Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
-{"dataHora":"2026-05-24T21:31:46.890155306Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:36:07.242880035Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
-{"dataHora":"2026-05-24T21:38:27.732442543Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:39:00.725227569Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:39:01.113406856Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:39:22.528282607Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:41:02.877614917Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:41:03.440454084Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:41:36.437023919Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:49:32.974334142Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:50:12.815243807Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
-{"dataHora":"2026-05-24T21:51:47.697245049Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:52:00.988944326Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:53:29.471306561Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:54:01.918590240Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:54:39.058357796Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
-{"dataHora":"2026-05-24T21:54:40.658201577Z","tipoOperacao":"LOGIN","utilizadorId":"6f4c52e5-828a-4b73-9b5a-9c7cde7556c2","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
-{"dataHora":"2026-05-24T21:55:05.769492535Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de armazem.braga"}
-{"dataHora":"2026-05-24T21:55:07.688086197Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T18:48:33.242716422Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T18:49:02.312587406Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
+{"dataHora":"2026-05-25T18:49:03.744803187Z","tipoOperacao":"LOGIN","utilizadorId":"6f4c52e5-828a-4b73-9b5a-9c7cde7556c2","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T18:49:16.871163911Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de armazem.braga"}
+{"dataHora":"2026-05-25T18:56:25.460366616Z","tipoOperacao":"LOGIN_FALHADO","utilizadorId":"SISTEMA","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Tentativa de login com username inexistente"}
+{"dataHora":"2026-05-25T18:57:08.368644764Z","tipoOperacao":"LOGIN","utilizadorId":"75852ea8-cf66-4faf-bd6d-d6c0e8b2b9b9","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T18:57:12.668581568Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.porto"}
+{"dataHora":"2026-05-25T18:57:14.620148970Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T18:57:23.927536753Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
+{"dataHora":"2026-05-25T18:57:39.375465800Z","tipoOperacao":"LOGIN","utilizadorId":"73a33084-1da1-4dbe-91aa-6a9979005d5d","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T18:57:50.729078468Z","tipoOperacao":"VENDA_FINALIZADA","utilizadorId":"73a33084-1da1-4dbe-91aa-6a9979005d5d","entidade":"VENDA","entidadeId":null,"descricao":"Venda finalizada"}
+{"dataHora":"2026-05-25T18:57:50.878737349Z","tipoOperacao":"FATURA_EMITIDA","utilizadorId":"73a33084-1da1-4dbe-91aa-6a9979005d5d","entidade":"FATURA","entidadeId":null,"descricao":"Fatura emitida"}
+{"dataHora":"2026-05-25T18:57:53.636079726Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de operador.porto"}
+{"dataHora":"2026-05-25T18:57:56.759554365Z","tipoOperacao":"LOGIN","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T18:58:02.673190002Z","tipoOperacao":"VENDA_FINALIZADA","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"VENDA","entidadeId":null,"descricao":"Venda finalizada"}
+{"dataHora":"2026-05-25T18:58:02.752176103Z","tipoOperacao":"FATURA_EMITIDA","utilizadorId":"bc4c9a40-25a4-40ab-b79f-418a652b3880","entidade":"FATURA","entidadeId":null,"descricao":"Fatura emitida"}
+{"dataHora":"2026-05-25T18:58:06.951068129Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de operador.braga"}
+{"dataHora":"2026-05-25T18:58:23.505026853Z","tipoOperacao":"LOGIN_FALHADO","utilizadorId":"SISTEMA","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Tentativa de login com username inexistente"}
+{"dataHora":"2026-05-25T18:58:26.778672888Z","tipoOperacao":"LOGIN","utilizadorId":"bd920c17-47b6-4973-8aad-2a73606a4da0","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T18:58:37.773739983Z","tipoOperacao":"VENDA_FINALIZADA","utilizadorId":"bd920c17-47b6-4973-8aad-2a73606a4da0","entidade":"VENDA","entidadeId":null,"descricao":"Venda finalizada"}
+{"dataHora":"2026-05-25T18:58:37.837395705Z","tipoOperacao":"FATURA_EMITIDA","utilizadorId":"bd920c17-47b6-4973-8aad-2a73606a4da0","entidade":"FATURA","entidadeId":null,"descricao":"Fatura emitida"}
+{"dataHora":"2026-05-25T18:58:39.432772082Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de operador.lisboa"}
+{"dataHora":"2026-05-25T18:58:41.088357797Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T19:01:06.934205642Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
+{"dataHora":"2026-05-25T19:01:08.410995085Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T19:05:22.550924800Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
+{"dataHora":"2026-05-25T19:05:40.496076178Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T19:07:41.855345421Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
+{"dataHora":"2026-05-25T19:07:43.625666830Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T19:09:54.270209423Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
+{"dataHora":"2026-05-25T19:10:11.639439643Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}

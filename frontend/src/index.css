@@ -699,6 +699,10 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.dashboard-period-fields {
+  width: min(100%, 420px);
+}
+
 .mf-fields-grid.three {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
