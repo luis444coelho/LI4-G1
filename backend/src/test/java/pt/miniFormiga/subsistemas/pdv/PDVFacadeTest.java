@@ -16,6 +16,7 @@ import pt.miniFormiga.subsistemas.sincronizacao.ISubSincronizacao;
 import pt.miniFormiga.subsistemas.stock.ISubStock;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -123,6 +125,22 @@ class PDVFacadeTest {
 
         assertEquals("COMPLETA", fatura.getTipo());
         assertEquals("123456789", fatura.getNifCliente());
+    }
+
+    @Test
+    void gerarDocumentoFiscalDisponibilizaFaturaERecibo() {
+        Venda venda = vendaFinalizada();
+        Fatura fatura = new Fatura(venda, "00001", "A/2026", "SIMPLIFICADA", null, null);
+        fatura.emitir();
+        when(faturaRepository.findById(fatura.getId())).thenReturn(Optional.of(fatura));
+
+        String conteudoFatura = new String(facade.gerarDocumentoFiscal(fatura.getId(), "FATURA"), StandardCharsets.UTF_8);
+        String conteudoRecibo = new String(facade.gerarDocumentoFiscal(fatura.getId(), "RECIBO"), StandardCharsets.UTF_8);
+
+        assertTrue(conteudoFatura.contains("Fatura A/2026/1"));
+        assertTrue(conteudoRecibo.contains("Recibo A/2026/1"));
+        assertTrue(conteudoRecibo.contains("Fatura associada: A/2026/00001"));
+        assertTrue(conteudoRecibo.contains("Total recebido: 1.23"));
     }
 
     @Test

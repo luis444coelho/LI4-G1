@@ -12,7 +12,15 @@ public final class RelatoriosDtos {
     private RelatoriosDtos() {
     }
 
-    public record RelatorioFiltro(UUID lojaId, LocalDate inicio, LocalDate fim, UUID categoriaId) {
+    public record RelatorioFiltro(UUID lojaId,
+                                  LocalDate inicio,
+                                  LocalDate fim,
+                                  UUID categoriaId,
+                                  UUID produtoId,
+                                  String turno) {
+        public RelatorioFiltro(UUID lojaId, LocalDate inicio, LocalDate fim, UUID categoriaId) {
+            this(lojaId, inicio, fim, categoriaId, null, null);
+        }
     }
 
     public record PeriodoResponse(LocalDate inicio, LocalDate fim) {
@@ -33,6 +41,8 @@ public final class RelatoriosDtos {
     public record RelatorioVendasResponse(PeriodoResponse periodo,
                                           UUID lojaId,
                                           UUID categoriaId,
+                                          UUID produtoId,
+                                          String turno,
                                           BigDecimal totalSemIva,
                                           BigDecimal totalIva,
                                           BigDecimal totalComIva,
@@ -97,6 +107,8 @@ public final class RelatoriosDtos {
     public record RelatorioRentabilidadeResponse(PeriodoResponse periodo,
                                                  UUID lojaId,
                                                  UUID categoriaId,
+                                                 UUID produtoId,
+                                                 String turno,
                                                  BigDecimal receitaSemIva,
                                                  BigDecimal custoTotal,
                                                  BigDecimal margemTotal,
@@ -128,7 +140,17 @@ public final class RelatoriosDtos {
                                            UUID lojaId,
                                            LocalDate inicio,
                                            LocalDate fim,
-                                           UUID categoriaId) {
+                                           UUID categoriaId,
+                                           UUID produtoId,
+                                           String turno) {
+        public ExportarRelatorioRequest(String tipo,
+                                        String formato,
+                                        UUID lojaId,
+                                        LocalDate inicio,
+                                        LocalDate fim,
+                                        UUID categoriaId) {
+            this(tipo, formato, lojaId, inicio, fim, categoriaId, null, null);
+        }
     }
 
     public record ExportacaoRelatorio(String nomeFicheiro, String mediaType, byte[] conteudo) {

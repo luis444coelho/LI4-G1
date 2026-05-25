@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.*;
 
@@ -161,6 +162,48 @@ class EncomendasFacadeTest {
         assertEquals(new BigDecimal("1.20"), response.totalEstimado());
         assertEquals(1, response.linhas().size());
         verify(auditoria).registar(TipoOperacao.ENCOMENDA_CRIADA, null, "ENCOMENDA", "Encomenda criada");
+    }
+
+    @Test
+    void criarEncomendaConsolidadaCriaUmaEncomendaPorLojaMantendoFornecedorELinhas() {
+        Loja lojaPorto = new Loja("Loja Porto", "Rua Norte", "123456780");
+        LocalDateTime submissao = LocalDateTime.of(2026, 5, 20, 10, 0);
+        when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
+        when(lojaRepository.findById(lojaPorto.getId())).thenReturn(Optional.of(lojaPorto));
+        when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
+        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
+        when(condicaoComercialRepository.findByFornecedorIdAndProdutoId(fornecedor.getId(), produto.getId()))
+                .thenReturn(Optional.of(condicao(produto)));
+        when(encomendaRepository.save(any(Encomenda.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<EncomendaResponse> response = facade.criarEncomendaConsolidada(new CriarEncomendaConsolidadaRequest(
+                List.of(loja.getId(), lojaPorto.getId()),
+                fornecedor.getId(),
+                List.of(new CriarLinhaEncomendaRequest(produto.getId(), 2, new BigDecimal("0.60"))),
+                submissao
+        ));
+
+        assertEquals(2, response.size());
+        assertEquals(loja.getId(), response.get(0).lojaId());
+        assertEquals(lojaPorto.getId(), response.get(1).lojaId());
+        assertEquals(fornecedor.getId(), response.get(0).fornecedorId());
+        assertEquals(fornecedor.getId(), response.get(1).fornecedorId());
+        assertEquals(new BigDecimal("1.20"), response.get(0).totalEstimado());
+        assertEquals(new BigDecimal("1.20"), response.get(1).totalEstimado());
+        verify(encomendaRepository, times(2)).save(any(Encomenda.class));
+    }
+
+    @Test
+    void criarEncomendaConsolidadaComMenosDeDuasLojasDistintasFalha() {
+        assertThrows(pt.miniFormiga.exception.BusinessException.class, () -> facade.criarEncomendaConsolidada(
+                new CriarEncomendaConsolidadaRequest(
+                        List.of(loja.getId(), loja.getId()),
+                        fornecedor.getId(),
+                        List.of(new CriarLinhaEncomendaRequest(produto.getId(), 2, new BigDecimal("0.60"))),
+                        null
+                )));
+
+        verify(encomendaRepository, never()).save(any());
     }
 
     @Test

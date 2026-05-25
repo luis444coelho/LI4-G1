@@ -52,6 +52,15 @@ public class EncomendasController {
         return encomendas.criarEncomenda(request);
     }
 
+    @PostMapping("/consolidada")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','ENCOMENDAS_WRITE')")
+    @Operation(summary = "Criar encomenda consolidada para varias lojas")
+    @ApiResponse(responseCode = "201", description = "Encomendas criadas")
+    public List<EncomendaResponse> criarConsolidada(@Valid @RequestBody CriarEncomendaConsolidadaRequest request) {
+        return encomendas.criarEncomendaConsolidada(request);
+    }
+
     @GetMapping("/sugestoes")
     @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','ENCOMENDAS_WRITE','RELATORIOS_READ')")
     @Operation(summary = "Gerar sugestoes automaticas de encomenda")

@@ -1196,6 +1196,26 @@ select {
   accent-color: #5d8cff;
 }
 
+.target-store-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
+.target-store-option {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.target-store-option input {
+  flex: 0 0 auto;
+}
+
+.fiscal-actions {
+  flex-wrap: wrap;
+}
+
 .invoice-preview {
   margin-top: 10px;
   padding: 10px 12px;
@@ -1311,5 +1331,84 @@ select {
 
   .profile-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .mf-screen {
+    padding: 0;
+  }
+
+  .mf-shell {
+    border-radius: 0;
+    border-inline: 0;
+  }
+
+  .mf-page-content {
+    padding: 12px;
+  }
+
+  .mf-menu,
+  .target-store-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mf-actions-row,
+  .mf-toolbar-space,
+  .alert-row,
+  .employee-row,
+  .sale-search-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mf-actions-row .mf-button,
+  .scan-button,
+  .small-field {
+    width: 100%;
+    max-width: none;
+  }
+
+  .mf-panel {
+    padding: 13px;
+  }
+
+  .mf-metric-card {
+    min-width: 0;
+  }
+
+  .mf-metric-value,
+  .mf-metric-footnote,
+  .sales-bar-label,
+  .sales-bar-value {
+    overflow-wrap: anywhere;
+  }
+
+  .sales-bars {
+    height: auto;
+    min-height: 168px;
+    gap: 8px;
+  }
+
+  .mf-table {
+    table-layout: fixed;
+  }
+
+  .mf-table thead th,
+  .mf-table tbody td {
+    padding-inline: 8px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .mf-status {
+    white-space: normal;
   }
 }

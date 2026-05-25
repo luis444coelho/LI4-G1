@@ -75,12 +75,16 @@ public class Fatura extends EntidadeBase implements Persistable<UUID> {
     }
 
     public void emitir() {
+        atualizarTotaisDocumento();
+        this.dataEmissao = LocalDateTime.now();
+        this.emitida = true;
+    }
+
+    private void atualizarTotaisDocumento() {
         venda.calcularTotais();
         this.totalSemIVA = venda.getTotalSemIVA();
         this.totalIVA = venda.getTotalIVA();
         this.totalComIVA = venda.getTotalComIVA();
-        this.dataEmissao = LocalDateTime.now();
-        this.emitida = true;
     }
 
     public static String decidirTipo(BigDecimal totalComIva, String nifCliente) {
@@ -94,6 +98,8 @@ public class Fatura extends EntidadeBase implements Persistable<UUID> {
     public byte[] gerarPDF() {
         if (!emitida) {
             emitir();
+        } else {
+            atualizarTotaisDocumento();
         }
         String conteudo = "%PDF-1.4\n"
                 + "% Mini-Formiga\n"
@@ -104,6 +110,23 @@ public class Fatura extends EntidadeBase implements Persistable<UUID> {
                 + "Total sem IVA: " + totalSemIVA + "\n"
                 + "Total IVA: " + totalIVA + "\n"
                 + "Total com IVA: " + totalComIVA + "\n"
+                + "%%EOF\n";
+        return conteudo.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public byte[] gerarReciboPDF() {
+        if (!emitida) {
+            emitir();
+        } else {
+            atualizarTotaisDocumento();
+        }
+        String conteudo = "%PDF-1.4\n"
+                + "% Mini-Formiga\n"
+                + "Recibo " + serie + "/" + numero + "\n"
+                + "Fatura associada: " + getNumeroFatura() + "\n"
+                + "Meio pagamento: " + (venda.getMeioPagamento() == null ? "" : venda.getMeioPagamento().name()) + "\n"
+                + "Total recebido: " + totalComIVA + "\n"
+                + "Data: " + dataEmissao + "\n"
                 + "%%EOF\n";
         return conteudo.getBytes(StandardCharsets.UTF_8);
     }

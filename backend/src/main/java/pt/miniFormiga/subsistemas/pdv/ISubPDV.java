@@ -33,6 +33,7 @@ public interface ISubPDV {
     Page<VendaDTO> listarVendas(UUID lojaId, LocalDate inicio, LocalDate fim, Pageable pageable);
     Page<VendaDTO> listarVendasPorFechar(UUID lojaId, LocalDate inicio, LocalDate fim, Pageable pageable);
     FaturaDTO obterFatura(UUID faturaId);
+    byte[] gerarDocumentoFiscal(UUID faturaId, String tipoDocumento);
     Page<FechoCaixaDTO> listarFechosCaixa(UUID lojaId, Pageable pageable);
     FechoCaixaDTO obterFechoCaixa(UUID fechoCaixaId);
 }

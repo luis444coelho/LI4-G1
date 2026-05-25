@@ -8,6 +8,8 @@ import {
   type CategoriaResponse,
   type LocalizacaoProdutoResponse,
   type LojaResponse,
+  type PageResponse,
+  type ProdutoResponse,
   type RelatorioRentabilidadeResponse,
   type RelatorioStockResponse,
   type RelatorioVendasResponse,
@@ -27,6 +29,13 @@ const reportTypeOptions = [
   { value: 'RENTABILIDADE', label: 'Rentabilidade' },
 ]
 
+const shiftOptions = [
+  { value: '', label: 'Todos os turnos' },
+  { value: 'MANHA', label: 'Manhã' },
+  { value: 'TARDE', label: 'Tarde' },
+  { value: 'NOITE', label: 'Fora de horário' },
+]
+
 function formatDateInput(date: Date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -39,12 +48,14 @@ function firstDayOfCurrentMonth() {
   return formatDateInput(new Date(today.getFullYear(), today.getMonth(), 1))
 }
 
-function buildReportQuery(filters: { lojaId: string; inicio: string; fim: string; categoriaId: string }) {
+function buildReportQuery(filters: { lojaId: string; inicio: string; fim: string; categoriaId: string; produtoId: string; turno: string }) {
   const params = new URLSearchParams()
   if (filters.lojaId) params.set('lojaId', filters.lojaId)
   if (filters.inicio) params.set('inicio', filters.inicio)
   if (filters.fim) params.set('fim', filters.fim)
   if (filters.categoriaId) params.set('categoriaId', filters.categoriaId)
+  if (filters.produtoId) params.set('produtoId', filters.produtoId)
+  if (filters.turno) params.set('turno', filters.turno)
   const query = params.toString()
   return query ? `?${query}` : ''
 }
@@ -76,8 +87,11 @@ export function ReportsContent() {
   const [reportType, setReportType] = useState<ReportType>('STOCK')
   const [stores, setStores] = useState<LojaResponse[]>([])
   const [categories, setCategories] = useState<CategoriaResponse[]>([])
+  const [products, setProducts] = useState<ProdutoResponse[]>([])
   const [lojaId, setLojaId] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
+  const [produtoId, setProdutoId] = useState('')
+  const [turno, setTurno] = useState('')
   const [inicio, setInicio] = useState(firstDayOfCurrentMonth)
   const [fim, setFim] = useState(() => formatDateInput(new Date()))
   const [report, setReport] = useState<ReportData | null>(null)
@@ -100,16 +114,19 @@ export function ReportsContent() {
     Promise.all([
       apiRequest<LojaResponse[]>('/utilizadores/lojas'),
       apiRequest<CategoriaResponse[]>('/categorias'),
+      apiRequest<PageResponse<ProdutoResponse>>('/produtos?size=200'),
     ])
-      .then(([storeRows, categoryRows]) => {
+      .then(([storeRows, categoryRows, productPage]) => {
         if (ignore) return
         setStores(storeRows)
         setCategories(categoryRows)
+        setProducts(productPage.content)
       })
       .catch(() => {
         if (ignore) return
         setStores([])
         setCategories([])
+        setProducts([])
       })
 
     return () => {
@@ -123,7 +140,7 @@ export function ReportsContent() {
     setMessage(null)
 
     try {
-      const query = buildReportQuery({ lojaId, inicio, fim, categoriaId })
+      const query = buildReportQuery({ lojaId, inicio, fim, categoriaId, produtoId, turno })
       const nextReport = await apiRequest<ReportData>(`${reportEndpoint(reportType)}${query}`)
       setReport(nextReport)
     } catch (caught) {
@@ -132,7 +149,7 @@ export function ReportsContent() {
     } finally {
       setLoading(false)
     }
-  }, [categoriaId, fim, inicio, lojaId, reportType])
+  }, [categoriaId, fim, inicio, lojaId, produtoId, reportType, turno])
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -167,7 +184,7 @@ export function ReportsContent() {
     ]
   }, [report, reportType])
 
-  async function exportReport(formato: 'CSV' | 'PDF') {
+  async function exportReport(formato: 'CSV' | 'PDF' | 'XLSX') {
     setExporting(true)
     setError(null)
     setMessage(null)
@@ -181,6 +198,8 @@ export function ReportsContent() {
           inicio: inicio || null,
           fim: fim || null,
           categoriaId: categoriaId || null,
+          produtoId: produtoId || null,
+          turno: turno || null,
         }),
       })
       downloadBlob(response.blob, response.filename)
@@ -360,6 +379,13 @@ export function ReportsContent() {
             options={[{ value: '', label: 'Todas as categorias' }, ...categories.map((category) => ({ value: category.id, label: category.nome }))]}
             onChange={(event) => setCategoriaId(event.target.value)}
           />
+          <SelectField
+            label="Produto"
+            value={produtoId}
+            options={[{ value: '', label: 'Todos os produtos' }, ...products.map((product) => ({ value: product.id, label: product.nome }))]}
+            onChange={(event) => setProdutoId(event.target.value)}
+          />
+          <SelectField label="Turno" value={turno} options={shiftOptions} onChange={(event) => setTurno(event.target.value)} />
           <TextField label="Início" type="date" value={inicio} onChange={(event) => setInicio(event.target.value)} />
           <TextField label="Fim" type="date" value={fim} onChange={(event) => setFim(event.target.value)} />
         </div>
@@ -367,6 +393,7 @@ export function ReportsContent() {
           <Button onClick={loadReport} disabled={loading}>Gerar relatório</Button>
           <Button variant="secondary" onClick={() => void exportReport('CSV')} disabled={exporting}>Exportar CSV</Button>
           <Button variant="secondary" onClick={() => void exportReport('PDF')} disabled={exporting}>Exportar PDF</Button>
+          <Button variant="secondary" onClick={() => void exportReport('XLSX')} disabled={exporting}>Exportar XLSX</Button>
         </div>
         {message ? <Callout tone="info" className="mt-compact">{message}</Callout> : null}
       </Panel>

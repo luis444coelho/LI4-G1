@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import pt.miniFormiga.domain.CondicaoComercial;
 import pt.miniFormiga.domain.Encomenda;
 import pt.miniFormiga.domain.EntradaMercadoria;
@@ -60,6 +61,12 @@ public final class EncomendasDtos {
         public CriarEncomendaRequest(UUID lojaId, UUID fornecedorId, List<CriarLinhaEncomendaRequest> linhas) {
             this(lojaId, fornecedorId, linhas, null);
         }
+    }
+
+    public record CriarEncomendaConsolidadaRequest(@Valid @NotEmpty @Size(min = 2) List<@NotNull UUID> lojaIds,
+                                                   @NotNull UUID fornecedorId,
+                                                   @Valid @NotEmpty List<CriarLinhaEncomendaRequest> linhas,
+                                                   LocalDateTime dataHoraSubmissao) {
     }
 
     public record AtualizarEstadoEncomendaRequest(@NotBlank String estadoCodigo) {

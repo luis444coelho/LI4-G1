@@ -315,6 +315,7 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
   const [stores, setStores] = useState<LojaResponse[]>([])
   const [suppliers, setSuppliers] = useState<FornecedorResponse[]>([])
   const [storeId, setStoreId] = useState(session?.lojaId ?? '')
+  const [targetStoreIds, setTargetStoreIds] = useState<string[]>(session?.lojaId ? [session.lojaId] : [])
   const [supplierId, setSupplierId] = useState('')
   const [manualProductId, setManualProductId] = useState('')
   const [manualQuantity, setManualQuantity] = useState(1)
@@ -333,6 +334,12 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
   const activeSuggestionIds = new Set(selectedDraftLines.filter((line) => line.origem === 'auto').map((line) => line.produtoId))
   const removedSuggestions = selectedSuggestions.filter((item) => !activeSuggestionIds.has(item.produtoId))
   const productOptions = conditions.map((condition) => ({ value: condition.produtoId, label: condition.produto }))
+  const selectedTargetStoreIds = fixedStore ? (session?.lojaId ? [session.lojaId] : []) : targetStoreIds
+  const targetStoreNames = selectedTargetStoreIds
+    .map((id) => stores.find((store) => store.id === id)?.nome)
+    .filter(Boolean)
+    .join(', ')
+  const storeNameById = useMemo(() => new Map(stores.map((store) => [store.id, store.nome])), [stores])
 
   useEffect(() => {
     Promise.all([
@@ -342,8 +349,9 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
       setStores(storeRows)
       setSuppliers(supplierPage.content)
       setStoreId((current) => {
-        if (fixedStore) return session?.lojaId || current
-        return current || storeRows[0]?.id || session?.lojaId || ''
+        const next = fixedStore ? session?.lojaId || current : current || storeRows[0]?.id || session?.lojaId || ''
+        setTargetStoreIds((ids) => ids.length > 0 ? ids : next ? [next] : [])
+        return next
       })
       setSupplierId((current) => current || supplierPage.content.find((supplier) => supplier.ativo)?.id || '')
     }).catch(() => undefined)
@@ -373,45 +381,72 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
 
   useEffect(() => {
     if (!supplierId) {
-      setConditions([])
-      setManualProductId('')
-      return
+      const timeoutId = window.setTimeout(() => {
+        setConditions([])
+        setManualProductId('')
+      }, 0)
+      return () => window.clearTimeout(timeoutId)
     }
+    let ignore = false
     apiRequest<CondicaoComercialResponse[]>(`/fornecedores/${supplierId}/condicoes`)
       .then((rows) => {
+        if (ignore) return
         setConditions(rows)
         setManualProductId((current) => rows.some((row) => row.produtoId === current) ? current : rows[0]?.produtoId || '')
       })
       .catch(() => {
+        if (ignore) return
         setConditions([])
         setManualProductId('')
       })
+    return () => {
+      ignore = true
+    }
   }, [supplierId])
+
+  function toggleTargetStore(id: string) {
+    setTargetStoreIds((ids) => {
+      if (ids.includes(id)) {
+        return ids.filter((item) => item !== id)
+      }
+      return [...ids, id]
+    })
+  }
 
   async function submitSuggestedOrder() {
     setError(null)
     setMessage(null)
     const selectedLines = selectedDraftLines
-    if (!storeId || !supplierId || selectedLines.length === 0) {
+    if (!supplierId || selectedLines.length === 0 || selectedTargetStoreIds.length === 0) {
       setError('Adicione pelo menos um produto à encomenda.')
       return
     }
     try {
-      const created = await apiRequest<EncomendaResponse>('/encomendas', {
-        method: 'POST',
-        body: JSON.stringify({
-          lojaId: storeId,
-          fornecedorId: supplierId,
-          linhas: selectedLines.map((item) => ({
-            produtoId: item.produtoId,
-            quantidade: item.quantidade,
-            precoUnitario: item.precoUnitario,
-          })),
-        }),
-      })
-      setOrders((items) => [created, ...items])
+      const linhas = selectedLines.map((item) => ({
+        produtoId: item.produtoId,
+        quantidade: item.quantidade,
+        precoUnitario: item.precoUnitario,
+      }))
+      const created = selectedTargetStoreIds.length > 1
+        ? await apiRequest<EncomendaResponse[]>('/encomendas/consolidada', {
+          method: 'POST',
+          body: JSON.stringify({
+            lojaIds: selectedTargetStoreIds,
+            fornecedorId: supplierId,
+            linhas,
+          }),
+        })
+        : [await apiRequest<EncomendaResponse>('/encomendas', {
+          method: 'POST',
+          body: JSON.stringify({
+            lojaId: selectedTargetStoreIds[0],
+            fornecedorId: supplierId,
+            linhas,
+          }),
+        })]
+      setOrders((items) => [...created, ...items])
       setDraftLines((items) => items.filter((item) => item.fornecedorId !== supplierId))
-      setMessage('Encomenda criada.')
+      setMessage(created.length > 1 ? `Encomenda consolidada criada para ${created.length} lojas.` : 'Encomenda criada.')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Não foi possível criar encomenda.')
     }
@@ -469,9 +504,26 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
           {fixedStore ? (
             <TextField label="Loja destino" value={selectedStoreName} disabled />
           ) : (
-            <SelectField label="Loja destino" value={storeId} options={storeOptions} onChange={(event) => setStoreId(event.target.value)} />
+            <SelectField label="Loja base / histórico" value={storeId} options={storeOptions} onChange={(event) => setStoreId(event.target.value)} />
           )}
         </div>
+        {!fixedStore ? (
+          <div className="target-store-grid">
+            {stores.map((store) => (
+              <label key={store.id} className="mf-checkbox-row target-store-option">
+                <input
+                  type="checkbox"
+                  checked={targetStoreIds.includes(store.id)}
+                  onChange={() => toggleTargetStore(store.id)}
+                />
+                {store.nome}
+              </label>
+            ))}
+          </div>
+        ) : null}
+        <p className="mf-section-note mt-compact">
+          Destino: {targetStoreNames || 'selecione pelo menos uma loja'}
+        </p>
       </Panel>
 
       <Panel title="Adicionar produto">
@@ -535,7 +587,9 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
         {message ? <Callout tone="info" className="mt-compact">{message}</Callout> : null}
 
         <div className="mf-actions-row">
-          <Button onClick={submitSuggestedOrder} disabled={!supplierId || selectedDraftLines.length === 0}>Submeter encomenda</Button>
+          <Button onClick={submitSuggestedOrder} disabled={!supplierId || selectedDraftLines.length === 0 || selectedTargetStoreIds.length === 0}>
+            {selectedTargetStoreIds.length > 1 ? 'Submeter encomenda consolidada' : 'Submeter encomenda'}
+          </Button>
         </div>
       </Panel>
 
@@ -545,6 +599,7 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
           <thead>
             <tr>
               <th>N.º</th>
+              <th>LOJA</th>
               <th>FORNECEDOR</th>
               <th>PRODUTOS</th>
               <th>DATA</th>
@@ -555,6 +610,7 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
             {orders.map((row) => (
               <tr key={row.id}>
                 <td className="muted">{row.numeroDocumento}</td>
+                <td>{storeNameById.get(row.lojaId) ?? row.lojaId}</td>
                 <td>{row.fornecedor}</td>
                 <td>{row.linhas.map((line) => line.produto).join(', ') || 'Sem produtos'}</td>
                 <td className="muted">{new Date(row.dataSubmissao).toLocaleString('pt-PT')}</td>
