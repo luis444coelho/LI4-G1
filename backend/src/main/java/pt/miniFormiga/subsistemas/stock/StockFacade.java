@@ -144,6 +144,13 @@ public class StockFacade implements ISubStock {
         if (inventario.isFechado()) {
             throw new BusinessException("INVENTARIO_FECHADO", "Inventario fisico ja esta fechado");
         }
+        UUID lojaId = inventario.getLoja().getId();
+        inventario.getLinhas().forEach(linha -> {
+            StockItem item = stockStore.obter(linha.getProduto().getId(), lojaId);
+            int delta = linha.getQuantidadeContada() - item.quantidade();
+            atualizarStock(linha.getProduto().getId(), lojaId, delta);
+            linha.consolidarComStockAtualizado();
+        });
         inventario.fechar();
         auditoria.registar(TipoOperacao.INVENTARIO_FECHADO,
                 inventario.getResponsavel().getId(), "INVENTARIO_FISICO", "Inventario fisico fechado");

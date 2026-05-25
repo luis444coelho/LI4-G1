@@ -29,6 +29,7 @@ import pt.miniFormiga.repository.UtilizadorRepository;
 import pt.miniFormiga.subsistemas.stock.ISubStock;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -176,13 +177,13 @@ public class EncomendasFacade implements ISubEncomendas {
     @Override
     @Transactional(readOnly = true)
     public Page<EncomendaResponse> listarEncomendas(UUID lojaId, Pageable pageable) {
-        return encomendaRepository.findByLojaId(lojaId, pageable).map(EncomendaResponse::from);
+        return encomendaRepository.findByLojaId(lojaId, pageable).map(this::toEncomendaResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public EncomendaResponse obterEncomenda(UUID id) {
-        return EncomendaResponse.from(obterEncomendaEntidade(id));
+        return toEncomendaResponse(obterEncomendaEntidade(id));
     }
 
     @Override
@@ -209,7 +210,7 @@ public class EncomendasFacade implements ISubEncomendas {
         encomenda.submeter(request.dataHoraSubmissao());
         Encomenda guardada = encomendaRepository.save(encomenda);
         auditoria.registar(TipoOperacao.ENCOMENDA_CRIADA, null, "ENCOMENDA", "Encomenda criada");
-        return EncomendaResponse.from(guardada);
+        return toEncomendaResponse(guardada);
     }
 
     @Override
@@ -218,7 +219,7 @@ public class EncomendasFacade implements ISubEncomendas {
         EstadoEncomendaCodigo estado = estado(request.estadoCodigo());
         encomenda.alterarEstado(estado);
         auditoria.registar(TipoOperacao.ENCOMENDA_ESTADO_ATUALIZADO, null, "ENCOMENDA", "Estado de encomenda atualizado");
-        return EncomendaResponse.from(encomenda);
+        return toEncomendaResponse(encomenda);
     }
 
     @Override
@@ -300,6 +301,46 @@ public class EncomendasFacade implements ISubEncomendas {
     @Transactional(readOnly = true)
     public Page<EntradaMercadoriaResponse> listarEntradasMercadoria(UUID lojaId, Pageable pageable) {
         return entradaMercadoriaRepository.findByLojaId(lojaId, pageable).map(EntradaMercadoriaResponse::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProximaGuiaRemessaResponse obterProximaGuiaRemessa(UUID lojaId) {
+        if (!lojaRepository.existsById(lojaId)) {
+            throw new RecursoNaoEncontradoException("Loja", lojaId);
+        }
+        int ano = LocalDate.now().getYear();
+        String prefixo = "GR/" + ano + "/";
+        int ultimo = guiaRemessaRepository.findNumerosPorLojaEPrefixo(lojaId, prefixo + "%").stream()
+                .map(numero -> numero.substring(prefixo.length()))
+                .filter(sufixo -> sufixo.chars().allMatch(Character::isDigit))
+                .mapToInt(Integer::parseInt)
+                .max()
+                .orElse(0);
+        return new ProximaGuiaRemessaResponse(prefixo + String.format("%05d", ultimo + 1));
+    }
+
+    private EncomendaResponse toEncomendaResponse(Encomenda encomenda) {
+        return EncomendaResponse.from(encomenda, numeroDocumentoEncomenda(encomenda));
+    }
+
+    private String numeroDocumentoEncomenda(Encomenda encomenda) {
+        LocalDateTime data = encomenda.getDataSubmissao();
+        int ano = data == null ? LocalDate.now().getYear() : data.getYear();
+        LocalDateTime inicio = LocalDate.of(ano, 1, 1).atStartOfDay();
+        LocalDateTime fim = LocalDate.of(ano + 1, 1, 1).atStartOfDay();
+        List<Encomenda> encomendasDoAno = Optional.ofNullable(encomendaRepository
+                        .findByLojaIdAndDataSubmissaoBetweenOrderByDataSubmissaoAsc(encomenda.getLoja().getId(), inicio, fim))
+                .orElse(List.of());
+        int indice = -1;
+        for (int i = 0; i < encomendasDoAno.size(); i++) {
+            if (encomendasDoAno.get(i).getId().equals(encomenda.getId())) {
+                indice = i;
+                break;
+            }
+        }
+        int sequencia = indice >= 0 ? indice + 1 : encomendasDoAno.size() + 1;
+        return "ENC/" + ano + "/" + String.format("%05d", sequencia);
     }
 
     private Fornecedor obterFornecedorEntidade(UUID id) {

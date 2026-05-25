@@ -86,6 +86,14 @@ export function ReportsContent() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
+  function changeReportType(type: ReportType) {
+    setReportType(type)
+    setReport(null)
+    setError(null)
+    setMessage(null)
+    setLoading(true)
+  }
+
   useEffect(() => {
     let ignore = false
 
@@ -189,35 +197,54 @@ export function ReportsContent() {
 
     if (reportType === 'VENDAS') {
       const sales = report as RelatorioVendasResponse
+      const showStoreSummary = sales.linhas.length === 0 && sales.vendasPorLoja.length > 0
       return (
         <>
-          {sales.linhas.length === 0 ? <p className="mf-empty-state">Sem vendas no período selecionado.</p> : null}
+          {sales.linhas.length === 0 && !showStoreSummary ? <p className="mf-empty-state">Sem vendas no período selecionado.</p> : null}
           <table className="mf-table">
             <thead>
-              <tr>
-                <th>DATA</th>
-                <th>LOJA</th>
-                <th>PRODUTO</th>
-                <th>QTD</th>
-                <th>TOTAL</th>
-                <th>MARGEM</th>
-              </tr>
+              {showStoreSummary ? (
+                <tr>
+                  <th>LOJA</th>
+                  <th>VENDAS</th>
+                  <th>TOTAL</th>
+                  <th>IVA</th>
+                  <th>MARGEM</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th>DATA</th>
+                  <th>LOJA</th>
+                  <th>PRODUTO</th>
+                  <th>QTD</th>
+                  <th>TOTAL</th>
+                  <th>MARGEM</th>
+                </tr>
+              )}
             </thead>
             <tbody>
-              {sales.linhas.slice(0, 30).map((row) => (
-                <tr key={`${row.vendaId}-${row.produtoId}-${row.dataHora}`}>
-                  <td className="muted">{new Date(row.dataHora).toLocaleDateString('pt-PT')}</td>
+              {showStoreSummary ? sales.vendasPorLoja.map((row) => (
+                <tr key={row.lojaId}>
                   <td>{row.loja}</td>
-                  <td>{row.produto}</td>
-                  <td className="muted">{row.quantidade}</td>
-                  <td>{money.format(row.valorComIva)}</td>
-                  <td>
-                    <StatusBadge tone={row.margem >= 0 ? 'success' : 'danger'} compact>
-                      {money.format(row.margem)}
-                    </StatusBadge>
-                  </td>
+                  <td className="muted">{row.numeroVendas}</td>
+                  <td>{money.format(row.total)}</td>
+                  <td className="muted">{money.format(row.iva)}</td>
+                  <td><StatusBadge tone={row.margem >= 0 ? 'success' : 'danger'} compact>{money.format(row.margem)}</StatusBadge></td>
                 </tr>
-              ))}
+              )) : sales.linhas.slice(0, 30).map((row) => (
+                  <tr key={`${row.vendaId}-${row.produtoId}-${row.dataHora}`}>
+                    <td className="muted">{new Date(row.dataHora).toLocaleDateString('pt-PT')}</td>
+                    <td>{row.loja}</td>
+                    <td>{row.produto}</td>
+                    <td className="muted">{row.quantidade}</td>
+                    <td>{money.format(row.valorComIva)}</td>
+                    <td>
+                      <StatusBadge tone={row.margem >= 0 ? 'success' : 'danger'} compact>
+                        {money.format(row.margem)}
+                      </StatusBadge>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </>
@@ -226,35 +253,54 @@ export function ReportsContent() {
 
     if (reportType === 'RENTABILIDADE') {
       const profitability = report as RelatorioRentabilidadeResponse
+      const showCategories = profitability.produtos.length === 0 && profitability.categorias.length > 0
       return (
         <>
-          {profitability.produtos.length === 0 ? <p className="mf-empty-state">Sem rentabilidade para apresentar.</p> : null}
+          {profitability.produtos.length === 0 && !showCategories ? <p className="mf-empty-state">Sem rentabilidade para apresentar.</p> : null}
           <table className="mf-table">
             <thead>
-              <tr>
-                <th>PRODUTO</th>
-                <th>CATEGORIA</th>
-                <th>QTD</th>
-                <th>RECEITA</th>
-                <th>CUSTO</th>
-                <th>MARGEM</th>
-              </tr>
+              {showCategories ? (
+                <tr>
+                  <th>GRUPO</th>
+                  <th>VENDAS</th>
+                  <th>RECEITA</th>
+                  <th>CUSTO</th>
+                  <th>MARGEM</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th>PRODUTO</th>
+                  <th>CATEGORIA</th>
+                  <th>QTD</th>
+                  <th>RECEITA</th>
+                  <th>CUSTO</th>
+                  <th>MARGEM</th>
+                </tr>
+              )}
             </thead>
             <tbody>
-              {profitability.produtos.slice(0, 30).map((row) => (
-                <tr key={row.produtoId}>
-                  <td>{row.produto}</td>
-                  <td className="muted">{row.categoria}</td>
+              {showCategories ? profitability.categorias.map((row) => (
+                <tr key={row.categoria}>
+                  <td>{row.categoria}</td>
                   <td className="muted">{row.quantidadeVendida}</td>
                   <td>{money.format(row.receitaSemIva)}</td>
                   <td className="muted">{money.format(row.custo)}</td>
-                  <td>
-                    <StatusBadge tone={row.margem >= 0 ? 'success' : 'danger'} compact>
-                      {money.format(row.margem)}
-                    </StatusBadge>
-                  </td>
+                  <td><StatusBadge tone={row.margem >= 0 ? 'success' : 'danger'} compact>{money.format(row.margem)}</StatusBadge></td>
                 </tr>
-              ))}
+              )) : profitability.produtos.slice(0, 30).map((row) => (
+                  <tr key={row.produtoId}>
+                    <td>{row.produto}</td>
+                    <td className="muted">{row.categoria}</td>
+                    <td className="muted">{row.quantidadeVendida}</td>
+                    <td>{money.format(row.receitaSemIva)}</td>
+                    <td className="muted">{money.format(row.custo)}</td>
+                    <td>
+                      <StatusBadge tone={row.margem >= 0 ? 'success' : 'danger'} compact>
+                        {money.format(row.margem)}
+                      </StatusBadge>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </>
@@ -301,7 +347,7 @@ export function ReportsContent() {
     <div className="mf-stack">
       <Panel title="Filtros">
         <div className="mf-fields-grid three">
-          <SelectField label="Relatório" value={reportType} options={reportTypeOptions} onChange={(event) => setReportType(event.target.value as ReportType)} />
+          <SelectField label="Relatório" value={reportType} options={reportTypeOptions} onChange={(event) => changeReportType(event.target.value as ReportType)} />
           <SelectField
             label="Loja"
             value={lojaId}

@@ -156,6 +156,7 @@ public final class EncomendasDtos {
     }
 
     public record EncomendaResponse(UUID id,
+                                    String numeroDocumento,
                                     UUID lojaId,
                                     UUID fornecedorId,
                                     String fornecedor,
@@ -165,8 +166,13 @@ public final class EncomendasDtos {
                                     BigDecimal totalEstimado,
                                     List<LinhaEncomendaResponse> linhas) {
         public static EncomendaResponse from(Encomenda encomenda) {
+            return from(encomenda, null);
+        }
+
+        public static EncomendaResponse from(Encomenda encomenda, String numeroDocumento) {
             return new EncomendaResponse(
                     encomenda.getId(),
+                    numeroDocumento,
                     encomenda.getLoja().getId(),
                     encomenda.getFornecedor().getId(),
                     encomenda.getFornecedor().getNome(),
@@ -177,6 +183,9 @@ public final class EncomendasDtos {
                     encomenda.getLinhas().stream().map(LinhaEncomendaResponse::from).toList()
             );
         }
+    }
+
+    public record ProximaGuiaRemessaResponse(String numero) {
     }
 
     public record EntradaMercadoriaResponse(UUID id,

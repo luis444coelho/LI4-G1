@@ -3,6 +3,7 @@ package pt.miniFormiga.subsistemas.sincronizacao;
 import pt.miniFormiga.domain.Sincronizacao;
 import pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.DashboardResponse;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -44,11 +45,22 @@ public final class SincronizacaoDtos {
                                        LocalDateTime desde,
                                        Map<String, List<RegistoSincronizacao>> registos,
                                        DashboardResponse dashboard,
+                                       List<VendaRelatorioSync> vendasRelatorio,
                                        List<String> logsAuditoria) {
+        public SincronizacaoPayload(UUID lojaId,
+                                    LocalDateTime geradoEm,
+                                    LocalDateTime desde,
+                                    Map<String, List<RegistoSincronizacao>> registos,
+                                    DashboardResponse dashboard,
+                                    List<String> logsAuditoria) {
+            this(lojaId, geradoEm, desde, registos, dashboard, List.of(), logsAuditoria);
+        }
+
         public int quantidadeRegistos() {
             int registosDominio = registos.values().stream().mapToInt(List::size).sum();
+            int vendasParaRelatorio = vendasRelatorio == null ? 0 : vendasRelatorio.size();
             int logs = logsAuditoria == null ? 0 : logsAuditoria.size();
-            return registosDominio + logs;
+            return registosDominio + vendasParaRelatorio + logs;
         }
     }
 
@@ -56,6 +68,22 @@ public final class SincronizacaoDtos {
                                        UUID id,
                                        LocalDateTime updatedAt,
                                        long version) {
+    }
+
+    public record VendaRelatorioSync(UUID vendaId,
+                                     LocalDateTime dataHora,
+                                     UUID lojaId,
+                                     String loja,
+                                     UUID produtoId,
+                                     String produto,
+                                     UUID categoriaId,
+                                     String categoria,
+                                     int quantidade,
+                                     BigDecimal valorSemIva,
+                                     BigDecimal iva,
+                                     BigDecimal valorComIva,
+                                     BigDecimal custo,
+                                     BigDecimal margem) {
     }
 
     public record ConflitoSincronizacaoResponse(UUID sincronizacaoId,

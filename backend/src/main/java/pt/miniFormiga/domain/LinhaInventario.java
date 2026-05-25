@@ -58,6 +58,11 @@ public class LinhaInventario extends EntidadeBase {
         calcularDiscrepancia();
     }
 
+    public void consolidarComStockAtualizado() {
+        this.quantidadeSistema = this.quantidadeContada;
+        calcularDiscrepancia();
+    }
+
     public InventarioFisico getInventario() {
         return inventario;
     }

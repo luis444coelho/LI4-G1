@@ -36,4 +36,6 @@ public interface ISubEncomendas {
     List<EntradaMercadoriaResponse> registarEntradaMercadoria(RegistarEntradaMercadoriaRequest request);
 
     Page<EntradaMercadoriaResponse> listarEntradasMercadoria(UUID lojaId, Pageable pageable);
+
+    ProximaGuiaRemessaResponse obterProximaGuiaRemessa(UUID lojaId);
 }

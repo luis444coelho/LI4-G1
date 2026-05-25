@@ -235,18 +235,21 @@ class StockFacadeTest {
     }
 
     @Test
-    void fecharInventarioPreencheDataFechoENaoAlteraStock() {
+    void fecharInventarioPreencheDataFechoEAtualizaStockParaQuantidadeContada() {
         Stock stock = stock(8);
         InventarioFisico inventario = new InventarioFisico(stock.getLoja(), utilizador(stock.getLoja()));
         new LinhaInventario(inventario, stock.getProduto(), 3, 8);
 
         when(inventarioFisicoRepository.findById(inventario.getId())).thenReturn(Optional.of(inventario));
+        whenStock(stock);
 
         facade.fecharInventario(inventario.getId());
 
         assertTrue(inventario.isFechado());
         assertNotNull(inventario.getDataFecho());
-        assertEquals(8, stock.getProduto().getQuantidadeStock());
+        assertEquals(3, stock.getProduto().getQuantidadeStock());
+        assertEquals(3, inventario.getLinhas().getFirst().getQuantidadeSistema());
+        assertEquals(0, inventario.getLinhas().getFirst().getDiscrepancia());
         verify(auditoria).registar(TipoOperacao.INVENTARIO_FECHADO,
                 inventario.getResponsavel().getId(), "INVENTARIO_FISICO", "Inventario fisico fechado");
     }
