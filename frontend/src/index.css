@@ -1068,6 +1068,13 @@ select {
   gap: 12px;
 }
 
+.return-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 12px;
+  align-items: start;
+}
+
 .sale-left,
 .sale-right {
   display: flex;
@@ -1264,6 +1271,55 @@ select {
   gap: 6px;
 }
 
+.return-sales-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.return-sale-option {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid #30384d;
+  border-radius: 8px;
+  background: #101621;
+  color: #dce4f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.return-sale-option:hover,
+.return-sale-option.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.return-sale-option span:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.return-sale-option strong,
+.return-sale-option small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.return-sale-option small {
+  color: #93a0ba;
+}
+
 .small-field {
   max-width: 90px;
 }
@@ -1328,6 +1384,7 @@ select {
 
   .mf-two-column,
   .sale-layout,
+  .return-layout,
   .mf-metrics-grid,
   .mf-metrics-grid.three,
   .mf-fields-grid.two,
@@ -1418,7 +1475,8 @@ select {
   .mf-toolbar-space,
   .alert-row,
   .employee-row,
-  .sale-search-row {
+  .sale-search-row,
+  .return-sale-option {
     align-items: stretch;
     flex-direction: column;
   }

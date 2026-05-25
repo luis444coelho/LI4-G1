@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button, Callout, Panel, SelectField, TextField } from '../components/ui'
-import { apiDownload, apiRequest, type FaturaResponse, type MeioPagamentoResponse, type PageResponse, type ProdutoResponse, type VendaResponse } from '../lib/api'
+import { apiDownload, apiRequest, type DevolucaoResponse, type FaturaResponse, type MeioPagamentoResponse, type PageResponse, type ProdutoResponse, type VendaResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 const money = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
@@ -15,6 +15,13 @@ function downloadBlob(blob: Blob, filename: string) {
   anchor.click()
   anchor.remove()
   URL.revokeObjectURL(url)
+}
+
+function dateInput(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 async function fetchInvoices(lojaId: string, cliente = '') {
@@ -376,6 +383,10 @@ export function FuncionarioSalePage() {
 }
 
 export function FuncionarioReturnPage() {
+  const { session } = useAuth()
+  const [recentSales, setRecentSales] = useState<VendaResponse[]>([])
+  const [returns, setReturns] = useState<DevolucaoResponse[]>([])
+  const [saleSearch, setSaleSearch] = useState('')
   const [saleId, setSaleId] = useState('')
   const [sale, setSale] = useState<VendaResponse | null>(null)
   const [productId, setProductId] = useState('')
@@ -383,13 +394,71 @@ export function FuncionarioReturnPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  async function loadReturnData() {
+    if (!session?.lojaId) return
+    setError(null)
+    try {
+      const today = new Date()
+      const start = new Date(today)
+      start.setDate(start.getDate() - 30)
+      const [salesPage, returnRows] = await Promise.all([
+        apiRequest<PageResponse<VendaResponse>>(`/vendas?lojaId=${session.lojaId}&inicio=${dateInput(start)}&fim=${dateInput(today)}&size=50`),
+        apiRequest<DevolucaoResponse[]>(`/vendas/devolucoes?lojaId=${session.lojaId}`),
+      ])
+      const finalizedSales = salesPage.content.filter((row) => !row.anulada && row.meioPagamento)
+      setRecentSales(finalizedSales)
+      setReturns(returnRows)
+      if (!sale && finalizedSales.length > 0) {
+        selectSale(finalizedSales[0])
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível carregar vendas/devoluções.')
+    }
+  }
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadReturnData()
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.lojaId])
+
+  const filteredSales = useMemo(() => {
+    const term = saleSearch.trim().toLowerCase()
+    if (!term) return recentSales
+    return recentSales.filter((row) => {
+      const products = row.linhas.map((line) => line.produto).join(' ').toLowerCase()
+      return row.id.toLowerCase().includes(term)
+        || new Date(row.dataHora).toLocaleString('pt-PT').toLowerCase().includes(term)
+        || products.includes(term)
+        || String(row.total).includes(term)
+    })
+  }, [recentSales, saleSearch])
+
+  const selectedLine = sale?.linhas.find((line) => line.produtoId === productId && !line.anulada) ?? null
+  const creditValue = selectedLine ? selectedLine.precoUnitario * quantity : 0
+
+  function selectSale(row: VendaResponse) {
+    setSale(row)
+    setSaleId(row.id)
+    setProductId(row.linhas.find((line) => !line.anulada)?.produtoId ?? '')
+    setQuantity(1)
+    setMessage(null)
+  }
+
   async function findSale() {
     setError(null)
     setMessage(null)
+    const existing = recentSales.find((row) => row.id === saleId)
+    if (existing) {
+      selectSale(existing)
+      return
+    }
     try {
       const response = await apiRequest<VendaResponse>(`/vendas/${saleId}`)
-      setSale(response)
-      setProductId(response.linhas.find((line) => !line.anulada)?.produtoId ?? '')
+      selectSale(response)
+      setRecentSales((items) => items.some((item) => item.id === response.id) ? items : [response, ...items])
     } catch (caught) {
       setSale(null)
       setProductId('')
@@ -407,33 +476,78 @@ export function FuncionarioReturnPage() {
         body: JSON.stringify({ produtoId: productId, quantidade: quantity }),
       })
       setSale(response)
-      setMessage('Devolução registada e stock reposto.')
+      await loadReturnData()
+      setMessage(`Devolução registada. Valor creditado: ${money.format(creditValue)}. Stock atualizado.`)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Não foi possível registar a devolução.')
     }
   }
 
   return (
-    <div className="narrow-page">
-      <div className="mf-stack">
-        <Panel title="Pesquisar venda original">
-          <TextField placeholder="ID da venda" value={saleId} onChange={(event) => setSaleId(event.target.value)} />
-          <Button className="mt-compact" onClick={findSale} disabled={!saleId}>Pesquisar</Button>
-          {sale ? <div className="sale-reference"><strong>{sale.id}</strong><span className="muted">Total: {money.format(sale.total)} · {sale.meioPagamento}</span></div> : null}
-        </Panel>
+    <div className="return-layout">
+      <Panel title="Vendas recentes">
+        <TextField placeholder="Pesquisar por produto, data, total ou ID..." value={saleSearch} onChange={(event) => setSaleSearch(event.target.value)} />
+        <div className="return-sales-list">
+          {filteredSales.length === 0 ? <p className="mf-empty-state">Sem vendas finalizadas para devolução.</p> : null}
+          {filteredSales.map((row) => (
+            <button
+              key={row.id}
+              type="button"
+              className={`return-sale-option ${sale?.id === row.id ? 'is-selected' : ''}`}
+              onClick={() => selectSale(row)}
+            >
+              <span>
+                <strong>{new Date(row.dataHora).toLocaleString('pt-PT')}</strong>
+                <small>{row.linhas.filter((line) => !line.anulada).map((line) => `${line.produto} (${line.quantidade})`).join(', ')}</small>
+              </span>
+              <span>{money.format(row.total)}</span>
+            </button>
+          ))}
+        </div>
+        <div className="mf-fields-grid two mt-compact">
+          <TextField label="ID da venda" value={saleId} onChange={(event) => setSaleId(event.target.value)} />
+          <div className="mf-field">
+            <span className="mf-field-label">&nbsp;</span>
+            <Button variant="secondary" onClick={findSale} disabled={!saleId}>Obter por ID</Button>
+          </div>
+        </div>
+      </Panel>
 
+      <div className="mf-stack">
         <Panel title="Artigo a devolver">
+          {sale ? <div className="sale-reference"><strong>{new Date(sale.dataHora).toLocaleString('pt-PT')}</strong><span className="muted">Total: {money.format(sale.total)} · {sale.meioPagamento} · {sale.id}</span></div> : <p className="mf-empty-state">Selecione uma venda finalizada.</p>}
           <SelectField
             label="Produto"
             value={productId}
-            options={[{ value: '', label: 'Selecionar produto' }, ...(sale?.linhas ?? []).filter((line) => !line.anulada).map((line) => ({ value: line.produtoId, label: line.produto }))]}
+            options={[{ value: '', label: 'Selecionar produto' }, ...(sale?.linhas ?? []).filter((line) => !line.anulada).map((line) => ({ value: line.produtoId, label: `${line.produto} - vendido ${line.quantidade} - ${money.format(line.precoUnitario)}` }))]}
             onChange={(event) => setProductId(event.target.value)}
           />
-          <TextField label="Quantidade" type="number" min={1} value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className="small-field" />
-          <Callout tone="warning" className="mt-compact">Stock será reposto e operação registada no log de auditoria.</Callout>
+          <div className="mf-fields-grid two mt-compact">
+            <TextField label="Quantidade" type="number" min={1} max={selectedLine?.quantidade ?? undefined} value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} />
+            <TextField label="Valor creditado" value={money.format(creditValue)} disabled />
+          </div>
+          <Callout tone="warning" className="mt-compact">A confirmação credita o valor, repõe stock e regista a devolução no histórico.</Callout>
           {error ? <Callout tone="warning">{error}</Callout> : null}
           {message ? <Callout tone="info">{message}</Callout> : null}
-          <Button className="full-width mt-large" onClick={returnProduct} disabled={!sale || !productId}>Confirmar devolução</Button>
+          <Button className="full-width mt-large" onClick={returnProduct} disabled={!sale || !productId || quantity <= 0}>Confirmar devolução</Button>
+        </Panel>
+
+        <Panel title="Histórico de devoluções">
+          <table className="mf-table compact">
+            <thead><tr><th>DOC.</th><th>PRODUTO</th><th>QTD.</th><th>CRÉDITO</th><th>DATA</th></tr></thead>
+            <tbody>
+              {returns.length === 0 ? <tr><td colSpan={5} className="muted">Sem devoluções registadas.</td></tr> : null}
+              {returns.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.numeroDocumento}</td>
+                  <td>{row.produto}</td>
+                  <td>{row.quantidade}</td>
+                  <td>{money.format(row.valorCreditado)}</td>
+                  <td className="muted">{new Date(row.dataHora).toLocaleString('pt-PT')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Panel>
       </div>
     </div>

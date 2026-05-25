@@ -189,6 +189,17 @@ export interface VendaResponse {
   linhas: LinhaVendaResponse[]
 }
 
+export interface DevolucaoResponse {
+  id: string
+  vendaId: string
+  produtoId: string
+  produto: string
+  quantidade: number
+  valorCreditado: number
+  dataHora: string
+  numeroDocumento: string
+}
+
 export interface FaturaResponse {
   id: string
   vendaId: string

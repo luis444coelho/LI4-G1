@@ -17,12 +17,16 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import pt.miniFormiga.auditoria.AuditoriaService;
 import pt.miniFormiga.domain.TipoOperacao;
+import pt.miniFormiga.domain.Devolucao;
 import pt.miniFormiga.exception.BusinessException;
+import pt.miniFormiga.repository.DevolucaoRepository;
 import pt.miniFormiga.repository.FaturaRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
 import pt.miniFormiga.subsistemas.pdv.ISubPDV;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static pt.miniFormiga.subsistemas.pdv.PdvDtos.*;
@@ -33,15 +37,18 @@ import static pt.miniFormiga.subsistemas.pdv.PdvDtos.*;
 public class VendasController {
     private final ISubPDV pdv;
     private final FaturaRepository faturaRepository;
+    private final DevolucaoRepository devolucaoRepository;
     private final UtilizadorRepository utilizadorRepository;
     private final AuditoriaService auditoria;
 
     public VendasController(ISubPDV pdv,
                             FaturaRepository faturaRepository,
+                            DevolucaoRepository devolucaoRepository,
                             UtilizadorRepository utilizadorRepository,
                             AuditoriaService auditoria) {
         this.pdv = pdv;
         this.faturaRepository = faturaRepository;
+        this.devolucaoRepository = devolucaoRepository;
         this.utilizadorRepository = utilizadorRepository;
         this.auditoria = auditoria;
     }
@@ -100,7 +107,7 @@ public class VendasController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','RELATORIOS_READ')")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','PDV_WRITE','RELATORIOS_READ')")
     @Operation(summary = "Listar vendas")
     @ApiResponse(responseCode = "200", description = "Vendas listadas")
     public Page<VendaDTO> listar(@RequestParam UUID lojaId,
@@ -185,6 +192,38 @@ public class VendasController {
             return facade.processarDevolucao(id, request);
         }
         throw new IllegalStateException("SubPDV nao suporta devolucoes nesta implementacao");
+    }
+
+    @GetMapping("/devolucoes")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','PDV_WRITE','RELATORIOS_READ')")
+    @Operation(summary = "Listar devolucoes da loja")
+    @ApiResponse(responseCode = "200", description = "Devolucoes listadas")
+    public java.util.List<DevolucaoDTO> listarDevolucoes(@RequestParam UUID lojaId) {
+        return devolucaoRepository.findByVendaLojaIdOrderByDataHoraDesc(lojaId).stream()
+                .map(DevolucaoDTO::from)
+                .toList();
+    }
+
+    public record DevolucaoDTO(UUID id,
+                               UUID vendaId,
+                               UUID produtoId,
+                               String produto,
+                               int quantidade,
+                               BigDecimal valorCreditado,
+                               LocalDateTime dataHora,
+                               String numeroDocumento) {
+        static DevolucaoDTO from(Devolucao devolucao) {
+            return new DevolucaoDTO(
+                    devolucao.getId(),
+                    devolucao.getVenda().getId(),
+                    devolucao.getProduto().getId(),
+                    devolucao.getProduto().getNome(),
+                    devolucao.getQuantidade(),
+                    devolucao.getValorCreditado(),
+                    devolucao.getDataHora(),
+                    devolucao.getNumeroDocumento()
+            );
+        }
     }
 
     private static NumeroFatura parseNumeroFatura(String numeroFatura) {
