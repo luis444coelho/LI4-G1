@@ -55,6 +55,7 @@ function App() {
           <Route path="/gerente/relatorios" element={<ProtectedShell roleKey="gerente" title="Relatórios" component={<GerenteReportsPage />} />} />
           <Route path="/gerente/ajuste-inventario" element={<ProtectedShell roleKey="gerente" title="Ajuste inventário" component={<GerenteAdjustmentPage />} />} />
           <Route path="/gerente/encomendas" element={<ProtectedShell roleKey="gerente" title="Encomendas" component={<GestorOrdersPage fixedStore />} />} />
+          <Route path="/gerente/entrada-mercadoria" element={<ProtectedShell roleKey="gerente" title="Entrada mercadoria" component={<ArmazemGoodsReceiptPage />} />} />
           <Route path="/gerente/funcionarios" element={<ProtectedShell roleKey="gerente" title="Funcionários" component={<GerenteEmployeesPage />} />} />
 
           <Route path="/funcionario/venda" element={<ProtectedShell roleKey="funcionario" title="Registar venda" component={<FuncionarioSalePage />} />} />

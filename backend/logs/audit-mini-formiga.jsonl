@@ -66,3 +66,16 @@
 {"dataHora":"2026-05-25T19:38:59.818592140Z","tipoOperacao":"LOGIN","utilizadorId":"9188907e-f1a9-437d-8669-6356063b72eb","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
 {"dataHora":"2026-05-25T19:39:21.819310334Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gestor.formiga"}
 {"dataHora":"2026-05-25T19:39:23.881974486Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T19:41:22.417043563Z","tipoOperacao":"UTILIZADOR_CRIADO","utilizadorId":"2291eff9-461a-4830-935a-12a66ede0896","entidade":"UTILIZADOR_CRIADO","entidadeId":null,"descricao":"Utilizador criado"}
+{"dataHora":"2026-05-25T19:41:30.271853802Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
+{"dataHora":"2026-05-25T19:41:35.005598002Z","tipoOperacao":"LOGIN_FALHADO","utilizadorId":"SISTEMA","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Tentativa de login com username inexistente"}
+{"dataHora":"2026-05-25T19:41:36.010671288Z","tipoOperacao":"LOGIN_FALHADO","utilizadorId":"SISTEMA","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Tentativa de login com username inexistente"}
+{"dataHora":"2026-05-25T19:41:36.682235521Z","tipoOperacao":"LOGIN_FALHADO","utilizadorId":"SISTEMA","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Tentativa de login com username inexistente"}
+{"dataHora":"2026-05-25T19:41:37.149755593Z","tipoOperacao":"LOGIN_FALHADO","utilizadorId":"SISTEMA","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Tentativa de login com username inexistente"}
+{"dataHora":"2026-05-25T19:41:40.277476171Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T19:42:08.539656299Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de gerente.braga"}
+{"dataHora":"2026-05-25T19:42:11.821981755Z","tipoOperacao":"LOGIN","utilizadorId":"2291eff9-461a-4830-935a-12a66ede0896","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T19:42:16.898868330Z","tipoOperacao":"LOGOUT","utilizadorId":"SISTEMA","entidade":"AUTH_LOGOUT","entidadeId":null,"descricao":"Logout de Luís"}
+{"dataHora":"2026-05-25T19:42:44.056861590Z","tipoOperacao":"LOGIN","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"AUTH_LOGIN","entidadeId":null,"descricao":"Login efetuado"}
+{"dataHora":"2026-05-25T19:42:57.950333671Z","tipoOperacao":"ENTRADA_MERCADORIA_REGISTADA","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"ENTRADA_MERCADORIA","entidadeId":null,"descricao":"Entrada de mercadoria registada"}
+{"dataHora":"2026-05-25T19:43:42.298631369Z","tipoOperacao":"AJUSTE_STOCK","utilizadorId":"6a13389a-3816-42b3-90cf-cf6dd47508b3","entidade":"STOCK","entidadeId":null,"descricao":"Ajuste de stock registado"}
