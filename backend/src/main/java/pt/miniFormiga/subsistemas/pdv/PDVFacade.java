@@ -174,7 +174,9 @@ public class PDVFacade implements ISubPDV {
         venda.finalizar(tipo);
         auditoria.registar(TipoOperacao.VENDA_FINALIZADA, venda.getUtilizador().getId(), "VENDA", "Venda finalizada");
         registarVendaForaHorarioSeNecessario(venda);
-        return vendaRepository.save(venda);
+        Venda guardada = vendaRepository.save(venda);
+        sincronizarVendaSemBloquearOperacao(guardada);
+        return guardada;
     }
 
     @Override
@@ -348,6 +350,19 @@ public class PDVFacade implements ISubPDV {
     private void garantirCaixaAberta(UUID lojaId) {
         if (fechoCaixaRepository.existsByLojaIdAndDataAndConfirmadoTrue(lojaId, LocalDate.now())) {
             throw new BusinessException("CAIXA_FECHADA", "Caixa fechada para hoje");
+        }
+    }
+
+    private void sincronizarVendaSemBloquearOperacao(Venda venda) {
+        try {
+            venda.getLoja().iniciarSincronizacao();
+            sincronizacao.iniciarSincronizacao(venda.getLoja().getId());
+        } catch (RuntimeException ignored) {
+            try {
+                sincronizacao.agendarSincronizacao(venda.getLoja().getId());
+            } catch (RuntimeException ignoredAgain) {
+                // A venda nao deve falhar por indisponibilidade temporaria da sincronizacao.
+            }
         }
     }
 

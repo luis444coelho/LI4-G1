@@ -1,5 +1,5 @@
 import type { CSSProperties, FormEvent } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 
 import { getRole, roleList, type RoleId } from '../data/mockData'
@@ -64,18 +64,22 @@ export function ProfileSelectionPage() {
 export function AuthenticationPage() {
   const { roleId } = useParams()
   const navigate = useNavigate()
-  const { login, session } = useAuth()
+  const { login } = useAuth()
   const role = useMemo(() => getRole(roleId), [roleId])
   const [username, setUsername] = useState(role ? demoUsers[role.id] : '')
   const [password, setPassword] = useState('MiniFormiga2026!')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    if (!role) return
+    setUsername(demoUsers[role.id])
+    setPassword('MiniFormiga2026!')
+    setError(null)
+  }, [role])
+
   if (!role) {
     return <Navigate to="/" replace />
-  }
-  if (session) {
-    return <Navigate to={roleDefaultPath(session.roleId)} replace />
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

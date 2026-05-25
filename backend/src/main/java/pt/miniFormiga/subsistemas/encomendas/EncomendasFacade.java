@@ -224,24 +224,24 @@ public class EncomendasFacade implements ISubEncomendas {
     @Override
     @Transactional(readOnly = true)
     public List<SugestaoEncomendaResponse> sugerirEncomendas(UUID lojaId, UUID fornecedorId) {
-        return stock.getAlertasAtivos(lojaId).stream()
-                .flatMap(alerta -> condicoesParaSugestao(alerta.getProduto().getId(), fornecedorId).stream()
+        stock.getAlertasAtivos(lojaId);
+        return stock.consultarStock(lojaId).stream()
+                .filter(ISubStock.StockDTO::precisaReposicao)
+                .flatMap(item -> condicoesParaSugestao(item.produtoId(), fornecedorId).stream()
                         .map(condicao -> {
-                            Integer nivelMinimoConfigurado = alerta.getProdutoLoja() == null
-                                    ? alerta.getProduto().getNivelMinimo()
-                                    : alerta.getProdutoLoja().getNivelMinimo();
+                            Integer nivelMinimoConfigurado = item.nivelMinimo();
                             int nivelMinimo = nivelMinimoConfigurado == null
                                     ? 0
                                     : nivelMinimoConfigurado;
                             int quantidadeSugerida = Math.max(condicao.getQuantidadeMinima(),
-                                    Math.max(1, nivelMinimo - alerta.getQuantidadeNoMomento() + condicao.getQuantidadeMinima()));
+                                    Math.max(1, nivelMinimo - item.quantidade() + condicao.getQuantidadeMinima()));
                             return new SugestaoEncomendaResponse(
                                     condicao.getFornecedor().getId(),
                                     condicao.getFornecedor().getNome(),
                                     condicao.getProduto().getId(),
                                     condicao.getProduto().getNome(),
                                     lojaId,
-                                    alerta.getQuantidadeNoMomento(),
+                                    item.quantidade(),
                                     nivelMinimoConfigurado,
                                     quantidadeSugerida,
                                     condicao.getPrecoUnitario()

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, MetricCard, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
 import { ReportsContent } from '../components/pageSections'
-import { apiRequest, type ConflitoSincronizacaoResponse, type DashboardResponse, type EncomendaResponse, type FornecedorResponse, type LojaResponse, type PageResponse, type PerfilResponse, type RelatorioStockResponse, type SincronizacaoResponse, type SugestaoEncomendaResponse, type UtilizadorResponse } from '../lib/api'
+import { LOCAL_API_BASE_URL, apiRequest, type ConflitoSincronizacaoResponse, type DashboardResponse, type EncomendaResponse, type FornecedorResponse, type LojaResponse, type PageResponse, type PerfilResponse, type RelatorioStockResponse, type SincronizacaoResponse, type SugestaoEncomendaResponse, type UtilizadorResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 const currencyFormatter = new Intl.NumberFormat('pt-PT', {
@@ -295,22 +295,40 @@ export function GestorSuppliersPage() {
   )
 }
 
-export function GestorOrdersPage() {
+export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean }) {
   const { session } = useAuth()
   const [orders, setOrders] = useState<EncomendaResponse[]>([])
   const [suggestions, setSuggestions] = useState<SugestaoEncomendaResponse[]>([])
   const [stores, setStores] = useState<LojaResponse[]>([])
+  const [suppliers, setSuppliers] = useState<FornecedorResponse[]>([])
   const [storeId, setStoreId] = useState(session?.lojaId ?? '')
   const [supplierId, setSupplierId] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const supplierOptions = useMemo(() => {
+    return suppliers
+      .filter((supplier) => supplier.ativo)
+      .map((supplier) => ({ value: supplier.id, label: supplier.nome }))
+  }, [suppliers])
+  const storeOptions = stores.map((store) => ({ value: store.id, label: store.nome }))
+  const selectedStoreName = stores.find((store) => store.id === storeId)?.nome ?? 'loja atribuída'
+  const selectedSupplierName = supplierOptions.find((supplier) => supplier.value === supplierId)?.label ?? ''
+  const selectedSuggestions = suggestions.filter((item) => item.fornecedorId === supplierId)
 
   useEffect(() => {
-    apiRequest<LojaResponse[]>('/utilizadores/lojas').then((response) => {
-      setStores(response)
-      setStoreId((current) => current || response[0]?.id || session?.lojaId || '')
+    Promise.all([
+      apiRequest<LojaResponse[]>('/utilizadores/lojas'),
+      apiRequest<PageResponse<FornecedorResponse>>('/fornecedores?size=100'),
+    ]).then(([storeRows, supplierPage]) => {
+      setStores(storeRows)
+      setSuppliers(supplierPage.content)
+      setStoreId((current) => {
+        if (fixedStore) return session?.lojaId || current
+        return current || storeRows[0]?.id || session?.lojaId || ''
+      })
+      setSupplierId((current) => current || supplierPage.content.find((supplier) => supplier.ativo)?.id || '')
     }).catch(() => undefined)
-  }, [session?.lojaId])
+  }, [fixedStore, session?.lojaId])
 
   useEffect(() => {
     if (!storeId) return
@@ -327,7 +345,7 @@ export function GestorOrdersPage() {
   async function submitSuggestedOrder() {
     setError(null)
     setMessage(null)
-    const selectedLines = suggestions.filter((item) => item.fornecedorId === supplierId)
+    const selectedLines = selectedSuggestions
     if (!storeId || !supplierId || selectedLines.length === 0) {
       setError('Não existem sugestões válidas para submeter.')
       return
@@ -360,8 +378,42 @@ export function GestorOrdersPage() {
 
       <Panel title="Nova encomenda consolidada">
         <div className="mf-fields-grid two">
-          <SelectField label="Fornecedor" value={supplierId} options={suggestions.map((item) => item.fornecedorId)} onChange={(event) => setSupplierId(event.target.value)} />
-          <SelectField label="Loja destino" value={storeId} options={stores.map((store) => store.id)} onChange={(event) => setStoreId(event.target.value)} />
+          <SelectField label="Fornecedor" value={supplierId} options={supplierOptions} onChange={(event) => setSupplierId(event.target.value)} />
+          {fixedStore ? (
+            <TextField label="Loja destino" value={selectedStoreName} disabled />
+          ) : (
+            <SelectField label="Loja destino" value={storeId} options={storeOptions} onChange={(event) => setStoreId(event.target.value)} />
+          )}
+        </div>
+
+        <div className="mt-compact">
+          <table className="mf-table">
+            <thead>
+              <tr>
+                <th>PRODUTO</th>
+                <th>FORNECEDOR</th>
+                <th>STOCK</th>
+                <th>QTD.</th>
+                <th>PREÇO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedSuggestions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="muted">Sem produtos sugeridos para {selectedSupplierName || 'o fornecedor selecionado'}.</td>
+                </tr>
+              ) : null}
+              {selectedSuggestions.map((item) => (
+                <tr key={`${item.fornecedorId}-${item.produtoId}`}>
+                  <td>{item.produto}</td>
+                  <td>{item.fornecedor}</td>
+                  <td>{item.quantidadeAtual}</td>
+                  <td>{item.quantidadeSugerida}</td>
+                  <td>{money(item.precoUnitario)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <Callout tone="info" className="mt-compact">
@@ -371,7 +423,7 @@ export function GestorOrdersPage() {
         {message ? <Callout tone="info" className="mt-compact">{message}</Callout> : null}
 
         <div className="mf-actions-row">
-          <Button onClick={submitSuggestedOrder} disabled={!supplierId || suggestions.length === 0}>Submeter encomenda</Button>
+          <Button onClick={submitSuggestedOrder} disabled={!supplierId || selectedSuggestions.length === 0}>Submeter encomenda</Button>
         </div>
       </Panel>
 
@@ -382,15 +434,17 @@ export function GestorOrdersPage() {
             <tr>
               <th>N.º</th>
               <th>FORNECEDOR</th>
+              <th>PRODUTOS</th>
               <th>DATA</th>
               <th>ESTADO</th>
             </tr>
           </thead>
           <tbody>
-            {orders.map((row) => (
+            {orders.map((row, index) => (
               <tr key={row.id}>
-                <td className="muted">{row.id.slice(0, 8)}</td>
+                <td className="muted">{`ENC-${String(orders.length - index).padStart(3, '0')}`}</td>
                 <td>{row.fornecedor}</td>
+                <td>{row.linhas.map((line) => line.produto).join(', ') || 'Sem produtos'}</td>
                 <td className="muted">{new Date(row.dataSubmissao).toLocaleString('pt-PT')}</td>
                 <td>
                   <StatusBadge tone={row.estado === 'RECEBIDA' ? 'success' : 'warning'}>{row.estado}</StatusBadge>
@@ -415,9 +469,12 @@ export function GestorUsersPage() {
     email: '',
     perfilId: '',
     lojaId: '',
+    lojaNome: '',
   })
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const storeOptions = stores.map((store) => ({ value: store.id, label: store.nome }))
+  const creatingStoreManager = draft.perfilId === 'GERENTE'
 
   useEffect(() => {
     Promise.all([
@@ -454,11 +511,17 @@ export function GestorUsersPage() {
           nome: draft.nome,
           email: draft.email,
           perfil: draft.perfilId,
-          lojaId: draft.lojaId,
+          lojaId: creatingStoreManager ? null : draft.lojaId,
+          lojaNome: creatingStoreManager ? draft.lojaNome : null,
         }),
       })
       setRows((items) => [created, ...items])
-      setDraft((state) => ({ ...state, username: '', nome: '', email: '', password: 'MiniFormiga2026!' }))
+      if (creatingStoreManager && created.lojaId && created.loja) {
+        setStores((items) => items.some((store) => store.id === created.lojaId)
+          ? items
+          : [...items, { id: created.lojaId, nome: created.loja, morada: '', nif: '', ativa: true }])
+      }
+      setDraft((state) => ({ ...state, username: '', nome: '', email: '', lojaNome: '', password: 'MiniFormiga2026!' }))
       setMessage('Utilizador criado com sucesso.')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Não foi possível criar utilizador.')
@@ -473,12 +536,16 @@ export function GestorUsersPage() {
           <TextField label="Nome" value={draft.nome} onChange={(event) => setDraft((state) => ({ ...state, nome: event.target.value }))} />
           <TextField label="Email" value={draft.email} onChange={(event) => setDraft((state) => ({ ...state, email: event.target.value }))} />
           <SelectField label="Perfil" value={draft.perfilId} options={profiles.map((profile) => ({ value: profile.nome, label: profile.nome }))} onChange={(event) => setDraft((state) => ({ ...state, perfilId: event.target.value }))} />
-          <SelectField label="Loja" value={draft.lojaId} options={stores.map((store) => store.id)} onChange={(event) => setDraft((state) => ({ ...state, lojaId: event.target.value }))} />
+          {creatingStoreManager ? (
+            <TextField label="Nome da nova loja" value={draft.lojaNome} onChange={(event) => setDraft((state) => ({ ...state, lojaNome: event.target.value }))} />
+          ) : (
+            <SelectField label="Loja" value={draft.lojaId} options={storeOptions} onChange={(event) => setDraft((state) => ({ ...state, lojaId: event.target.value }))} />
+          )}
           <TextField label="Password inicial" value={draft.password} onChange={(event) => setDraft((state) => ({ ...state, password: event.target.value }))} />
         </div>
         {error ? <Callout tone="warning" className="mt-compact">{error}</Callout> : null}
         {message ? <Callout tone="info" className="mt-compact">{message}</Callout> : null}
-        <Button className="mt-compact" onClick={createUser} disabled={!draft.username || !draft.password || !draft.nome || !draft.perfilId || !draft.lojaId}>Criar utilizador</Button>
+        <Button className="mt-compact" onClick={createUser} disabled={!draft.username || !draft.password || !draft.nome || !draft.perfilId || (creatingStoreManager ? !draft.lojaNome : !draft.lojaId)}>Criar utilizador</Button>
       </Panel>
 
       <div className="mf-toolbar-space">
@@ -526,15 +593,17 @@ export function GestorSyncPage() {
   const [current, setCurrent] = useState<SincronizacaoResponse | null>(null)
   const [conflictRows, setConflictRows] = useState<ConflitoSincronizacaoResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    apiRequest<LojaResponse[]>('/utilizadores/lojas')
+    apiRequest<LojaResponse[]>('/utilizadores/lojas', { apiBaseUrl: LOCAL_API_BASE_URL })
       .then((rows) => {
         setStores(rows)
         setSelectedStoreId((currentStoreId) => currentStoreId || rows[0]?.id || '')
       })
-      .catch(() => setError('Não foi possível carregar lojas.'))
+      .catch(() => setError('Não foi possível carregar lojas locais para sincronização.'))
   }, [])
 
   const loadSyncData = useCallback(async () => {
@@ -568,6 +637,28 @@ export function GestorSyncPage() {
 
   const completed = history.filter((item) => item.estado === 'CONCLUIDA').length
   const conflicts = conflictRows.reduce((sum, item) => sum + item.conflitosResolvidos, 0)
+  const storeNameById = useMemo(() => new Map(stores.map((store) => [store.id, store.nome])), [stores])
+
+  async function startManualSync() {
+    if (!selectedStoreId) return
+    setSyncing(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const response = await apiRequest<SincronizacaoResponse>('/sincronizacao/iniciar', {
+        method: 'POST',
+        apiBaseUrl: LOCAL_API_BASE_URL,
+        body: JSON.stringify({ lojaId: selectedStoreId }),
+      })
+      setCurrent(response)
+      setMessage(`Sincronização manual iniciada: ${response.estado}.`)
+      await loadSyncData()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível iniciar a sincronização manual.')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   return (
     <div className="mf-stack">
@@ -581,12 +672,18 @@ export function GestorSyncPage() {
         title="Sincronização"
       >
         <SelectField
-          label="Loja"
+          label="Loja local"
           value={selectedStoreId}
           options={stores.map((store) => ({ value: store.id, label: store.nome }))}
           onChange={(event) => setSelectedStoreId(event.target.value)}
         />
+        <div className="mf-actions-row mt-compact">
+          <Button onClick={startManualSync} disabled={!selectedStoreId || syncing}>
+            {syncing ? 'A sincronizar...' : 'Sincronizar agora'}
+          </Button>
+        </div>
         {error ? <Callout tone="warning">{error}</Callout> : null}
+        {message ? <Callout tone="info">{message}</Callout> : null}
         {!error ? <p className="mf-empty-state">Última sincronização recebida: {current?.inicio ? new Date(current.inicio).toLocaleString('pt-PT') : 'sem registo'}</p> : null}
       </Panel>
 
@@ -605,7 +702,7 @@ export function GestorSyncPage() {
           <tbody>
             {history.map((row) => (
               <tr key={row.id}>
-                <td>{row.lojaId}</td>
+                <td>{storeNameById.get(row.lojaId) ?? 'Loja'}</td>
                 <td className="muted">{new Date(row.inicio).toLocaleString('pt-PT')}</td>
                 <td className="muted">{row.quantidadeRegistos}</td>
                 <td>
@@ -631,7 +728,7 @@ export function GestorSyncPage() {
           <tbody>
             {conflictRows.map((row) => (
               <tr key={`${row.sincronizacaoId}-${row.dataHora}`}>
-                <td>{row.lojaId}</td>
+                <td>{storeNameById.get(row.lojaId) ?? 'Loja'}</td>
                 <td className="muted">{new Date(row.dataHora).toLocaleString('pt-PT')}</td>
                 <td>
                   <StatusBadge tone={row.estado === 'CONCLUIDA' ? 'success' : 'warning'}>{row.estado}</StatusBadge>

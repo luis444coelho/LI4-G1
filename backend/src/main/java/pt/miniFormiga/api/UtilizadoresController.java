@@ -127,16 +127,21 @@ public class UtilizadoresController {
         if (!temAutoridade(authentication, "GLOBAL_ADMIN")) {
             Utilizador atual = utilizadorAtual(authentication);
             validarLojaGerivelPorGerente(atual, request.lojaId());
+            if (request.lojaNome() != null && !request.lojaNome().isBlank()) {
+                throw new AccessDeniedException("Apenas o gestor da cadeia pode criar lojas");
+            }
             validarPerfilGerivelPorGerente(request.perfilEfetivo());
         }
         validarPerfilObrigatorio(request.perfilEfetivo());
+        validarLojaCriacao(request);
         return UtilizadorResponse.from(utilizadores.criarUtilizador(new CriarUtilizadorCommand(
                 request.username(),
                 request.password(),
                 request.nome(),
                 request.email(),
                 request.perfilEfetivo(),
-                request.lojaId()
+                request.lojaId(),
+                request.lojaNome()
         )));
     }
 
@@ -214,6 +219,15 @@ public class UtilizadoresController {
     private void validarPerfilObrigatorio(String perfil) {
         if (perfil == null || perfil.isBlank()) {
             throw new IllegalArgumentException("Perfil e obrigatorio");
+        }
+    }
+
+    private void validarLojaCriacao(CriarUtilizadorRequest request) {
+        boolean criaLojaNova = "GERENTE".equals(request.perfilEfetivo())
+                && request.lojaNome() != null
+                && !request.lojaNome().isBlank();
+        if (!criaLojaNova && request.lojaId() == null) {
+            throw new IllegalArgumentException("Loja e obrigatoria");
         }
     }
 }

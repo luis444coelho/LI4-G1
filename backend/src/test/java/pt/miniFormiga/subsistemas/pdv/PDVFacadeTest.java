@@ -164,6 +164,21 @@ class PDVFacadeTest {
         verify(stock).consultarStock(loja.getId());
         verify(stock).atualizarStock(produto.getId(), loja.getId(), -2);
         verify(auditoria).registar(TipoOperacao.VENDA_FINALIZADA, operador.getId(), "VENDA", "Venda finalizada");
+        verify(sincronizacao).iniciarSincronizacao(loja.getId());
+    }
+
+    @Test
+    void finalizarVendaAgendaSincronizacaoSeTransmissaoImediataFalhar() {
+        Venda venda = vendaComLinhaAberta();
+        when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
+        when(vendaRepository.save(venda)).thenReturn(venda);
+        doThrow(new BusinessException("SINCRONIZACAO_INDISPONIVEL", "Servidor central indisponivel"))
+                .when(sincronizacao).iniciarSincronizacao(loja.getId());
+
+        Venda finalizada = facade.finalizarVenda(venda.getId(), "NUMERARIO");
+
+        assertEquals(MeioPagamentoTipo.NUMERARIO, finalizada.getMeioPagamento());
+        verify(sincronizacao).agendarSincronizacao(loja.getId());
     }
 
     @Test
