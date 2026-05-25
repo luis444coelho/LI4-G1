@@ -130,6 +130,18 @@ class EncomendasFacadeTest {
     }
 
     @Test
+    void obterProximaGuiaRemessaUsaSequenciaPorLojaEAno() {
+        int ano = LocalDate.now().getYear();
+        when(lojaRepository.existsById(loja.getId())).thenReturn(true);
+        when(guiaRemessaRepository.findNumerosPorLojaEPrefixo(loja.getId(), "GR/" + ano + "/%"))
+                .thenReturn(List.of("GR/" + ano + "/00003", "GR/" + ano + "/00002"));
+
+        ProximaGuiaRemessaResponse response = facade.obterProximaGuiaRemessa(loja.getId());
+
+        assertEquals("GR/" + ano + "/00004", response.numero());
+    }
+
+    @Test
     void criarEncomendaDefineEstadoPendenteEDataProcessamentoDoFornecedor() {
         EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));

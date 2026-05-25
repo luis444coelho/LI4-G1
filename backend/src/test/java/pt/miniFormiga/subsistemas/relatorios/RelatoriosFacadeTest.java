@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import pt.miniFormiga.domain.AlertaStock;
 import pt.miniFormiga.domain.Categoria;
+import pt.miniFormiga.domain.EstadoSincronizacaoCodigo;
 import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MeioPagamento;
@@ -13,6 +14,7 @@ import pt.miniFormiga.domain.NivelMinimo;
 import pt.miniFormiga.domain.Perfil;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.Stock;
+import pt.miniFormiga.domain.Sincronizacao;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
@@ -21,12 +23,17 @@ import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
 import pt.miniFormiga.subsistemas.stock.StockStore;
+import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoPayload;
+import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.VendaRelatorioSync;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -145,6 +152,79 @@ class RelatoriosFacadeTest {
         assertTrue(csv.startsWith("data,descricao,valor,iva,loja"));
         assertTrue(csv.contains("Venda " + venda.getId()));
         assertTrue(csv.contains("Loja Braga"));
+    }
+
+    @Test
+    void exportacaoPdfVendasIncluiLinhasDoRelatorioFiltrado() {
+        Venda venda = vendaFinalizada(1, LocalDateTime.of(2026, 5, 10, 12, 0));
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of(venda));
+
+        ExportacaoRelatorio exportacao = facade.exportar(new ExportarRelatorioRequest(
+                "vendas", "pdf", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+
+        String pdf = new String(exportacao.conteudo(), StandardCharsets.UTF_8);
+        assertEquals("mini-formiga-vendas.pdf", exportacao.nomeFicheiro());
+        assertEquals("application/pdf", exportacao.mediaType());
+        assertTrue(pdf.startsWith("%PDF-1.4"));
+        assertTrue(pdf.contains("Mini-Formiga - Relatorio de vendas"));
+        assertTrue(pdf.contains("Agua"));
+        assertTrue(pdf.contains("Loja Braga"));
+    }
+
+    @Test
+    void relatoriosCentraisUsamLinhasSincronizadasComIvaECusto() throws Exception {
+        VendaRelatorioSync linha = new VendaRelatorioSync(
+                UUID.randomUUID(),
+                LocalDateTime.of(2026, 5, 10, 12, 0),
+                loja.getId(),
+                loja.getNome(),
+                produto.getId(),
+                produto.getNome(),
+                produto.getCategoria().getId(),
+                produto.getCategoria().getNome(),
+                2,
+                new BigDecimal("4.00"),
+                new BigDecimal("0.92"),
+                new BigDecimal("4.92"),
+                new BigDecimal("1.50"),
+                new BigDecimal("2.50")
+        );
+        SincronizacaoPayload payload = new SincronizacaoPayload(
+                loja.getId(),
+                LocalDateTime.of(2026, 5, 10, 13, 0),
+                null,
+                Map.of(),
+                null,
+                List.of(linha),
+                List.of()
+        );
+        Sincronizacao sync = new Sincronizacao(loja, EstadoSincronizacaoCodigo.CONCLUIDA);
+        sync.concluir(EstadoSincronizacaoCodigo.CONCLUIDA,
+                new ObjectMapper().findAndRegisterModules().writeValueAsString(payload),
+                1,
+                "[]",
+                0);
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of());
+        when(sincronizacaoRepository.findFirstByEstadoInOrderByDataHoraFimDesc(any()))
+                .thenReturn(Optional.of(sync));
+
+        RelatorioVendasResponse vendas = facade.relatorioVendas(
+                new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        RelatorioRentabilidadeResponse rentabilidade = facade.relatorioRentabilidade(
+                new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        ExportacaoRelatorio pdf = facade.exportar(new ExportarRelatorioRequest(
+                "vendas", "pdf", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        String conteudoPdf = new String(pdf.conteudo(), StandardCharsets.UTF_8);
+
+        assertEquals(new BigDecimal("0.92"), vendas.totalIva());
+        assertEquals(new BigDecimal("4.92"), vendas.totalComIva());
+        assertEquals(new BigDecimal("1.50"), rentabilidade.custoTotal());
+        assertEquals(new BigDecimal("2.50"), rentabilidade.margemTotal());
+        assertEquals(1, vendas.numeroVendas());
+        assertTrue(conteudoPdf.contains("Agua"));
+        assertTrue(!conteudoPdf.contains("Sem vendas no periodo selecionado."));
     }
 
     @Test

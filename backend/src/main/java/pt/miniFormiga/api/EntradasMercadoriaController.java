@@ -49,4 +49,12 @@ public class EntradasMercadoriaController {
     public Page<EntradaMercadoriaResponse> listar(@RequestParam UUID lojaId, Pageable pageable) {
         return encomendas.listarEntradasMercadoria(lojaId, pageable);
     }
+
+    @GetMapping("/proxima-guia")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','ENCOMENDAS_WRITE','STOCK_WRITE')")
+    @Operation(summary = "Obter proximo numero de guia de remessa")
+    @ApiResponse(responseCode = "200", description = "Numero calculado")
+    public ProximaGuiaRemessaResponse proximaGuia(@RequestParam UUID lojaId) {
+        return encomendas.obterProximaGuiaRemessa(lojaId);
+    }
 }

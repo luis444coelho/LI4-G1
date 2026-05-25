@@ -295,8 +295,20 @@ export interface FornecedorResponse {
   horarioFimArmazem: string
 }
 
+export interface CondicaoComercialResponse {
+  id: string
+  fornecedorId: string
+  produtoId: string
+  produto: string
+  precoUnitario: number
+  prazoEntregaDias: number
+  quantidadeMinima: number
+  dataVigencia: string
+}
+
 export interface EncomendaResponse {
   id: string
+  numeroDocumento: string
   lojaId: string
   fornecedorId: string
   fornecedor: string
@@ -305,6 +317,10 @@ export interface EncomendaResponse {
   dataProcessamento: string
   totalEstimado: number
   linhas: Array<{ id: string; produtoId: string; produto: string; quantidade: number; precoUnitario: number; totalLinha: number }>
+}
+
+export interface ProximaGuiaRemessaResponse {
+  numero: string
 }
 
 export interface SugestaoEncomendaResponse {

@@ -17,6 +17,7 @@ import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
 import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoPayload;
+import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.VendaRelatorioSync;
 import pt.miniFormiga.subsistemas.stock.StockItem;
 import pt.miniFormiga.subsistemas.stock.StockStore;
 
@@ -107,12 +108,16 @@ public class RelatoriosFacade implements ISubRelatorios {
     }
 
     private DashboardResponse dashboardDoPayload(Sincronizacao sincronizacao) {
+        SincronizacaoPayload payload = payload(sincronizacao);
+        return payload == null ? null : payload.dashboard();
+    }
+
+    private SincronizacaoPayload payload(Sincronizacao sincronizacao) {
         if (sincronizacao.getPayloadJson() == null || sincronizacao.getPayloadJson().isBlank()) {
             return null;
         }
         try {
-            SincronizacaoPayload payload = objectMapper.readValue(sincronizacao.getPayloadJson(), SincronizacaoPayload.class);
-            return payload.dashboard();
+            return objectMapper.readValue(sincronizacao.getPayloadJson(), SincronizacaoPayload.class);
         } catch (JsonProcessingException e) {
             return null;
         }
@@ -122,6 +127,12 @@ public class RelatoriosFacade implements ISubRelatorios {
     public RelatorioVendasResponse relatorioVendas(RelatorioFiltro filtro) {
         RelatorioFiltro normalizado = normalizar(filtro);
         List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado.categoriaId());
+        if (linhas.isEmpty()) {
+            RelatorioVendasResponse sincronizado = relatorioVendasSincronizado(normalizado);
+            if (sincronizado != null) {
+                return sincronizado;
+            }
+        }
         Resumo resumo = resumir(linhas);
 
         return new RelatorioVendasResponse(
@@ -171,6 +182,12 @@ public class RelatoriosFacade implements ISubRelatorios {
     public RelatorioRentabilidadeResponse relatorioRentabilidade(RelatorioFiltro filtro) {
         RelatorioFiltro normalizado = normalizar(filtro);
         List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado.categoriaId());
+        if (linhas.isEmpty()) {
+            RelatorioRentabilidadeResponse sincronizado = relatorioRentabilidadeSincronizado(normalizado);
+            if (sincronizado != null) {
+                return sincronizado;
+            }
+        }
         Resumo resumo = resumir(linhas);
 
         return new RelatorioRentabilidadeResponse(
@@ -184,6 +201,119 @@ public class RelatoriosFacade implements ISubRelatorios {
                 rentabilidadePorProduto(linhas),
                 rentabilidadePorCategoria(linhas)
         );
+    }
+
+    private RelatorioVendasResponse relatorioVendasSincronizado(RelatorioFiltro filtro) {
+        List<VendaRelatorioSync> linhasSync = vendasSincronizadas(filtro);
+        if (!linhasSync.isEmpty()) {
+            List<LinhaVendaRelatorioResponse> linhas = linhasSync.stream()
+                    .map(this::linhaResponse)
+                    .toList();
+            ResumoSync resumo = resumirSync(linhasSync);
+            return new RelatorioVendasResponse(
+                    periodo(filtro),
+                    filtro.lojaId(),
+                    filtro.categoriaId(),
+                    dinheiro(resumo.semIva),
+                    dinheiro(resumo.iva),
+                    dinheiro(resumo.comIva),
+                    dinheiro(resumo.margem),
+                    resumo.numeroVendas(),
+                    vendasPorLojaSync(linhasSync),
+                    vendasPorDiaSync(linhasSync),
+                    linhas
+            );
+        }
+        DashboardResponse dashboard = dashboardSincronizado(filtro);
+        if (dashboard == null || !periodoCompativel(filtro, dashboard.periodo())) {
+            return null;
+        }
+        return new RelatorioVendasResponse(
+                periodo(filtro),
+                filtro.lojaId(),
+                filtro.categoriaId(),
+                dinheiro(dashboard.totalVendas().subtract(dashboard.totalIva())),
+                dashboard.totalIva(),
+                dashboard.totalVendas(),
+                dashboard.margem(),
+                dashboard.numeroVendas(),
+                dashboard.vendasPorLoja(),
+                List.of(),
+                List.of()
+        );
+    }
+
+    private RelatorioRentabilidadeResponse relatorioRentabilidadeSincronizado(RelatorioFiltro filtro) {
+        List<VendaRelatorioSync> linhasSync = vendasSincronizadas(filtro);
+        if (!linhasSync.isEmpty()) {
+            ResumoSync resumo = resumirSync(linhasSync);
+            return new RelatorioRentabilidadeResponse(
+                    periodo(filtro),
+                    filtro.lojaId(),
+                    filtro.categoriaId(),
+                    dinheiro(resumo.semIva),
+                    dinheiro(resumo.custo),
+                    dinheiro(resumo.margem),
+                    percentagem(resumo.margem, resumo.semIva),
+                    rentabilidadePorProdutoSync(linhasSync),
+                    rentabilidadePorCategoriaSync(linhasSync)
+            );
+        }
+        DashboardResponse dashboard = dashboardSincronizado(filtro);
+        if (dashboard == null || !periodoCompativel(filtro, dashboard.periodo())) {
+            return null;
+        }
+        BigDecimal receitaSemIva = dinheiro(dashboard.totalVendas().subtract(dashboard.totalIva()));
+        BigDecimal custo = dinheiro(receitaSemIva.subtract(dashboard.margem()));
+        return new RelatorioRentabilidadeResponse(
+                periodo(filtro),
+                filtro.lojaId(),
+                filtro.categoriaId(),
+                receitaSemIva,
+                custo,
+                dashboard.margem(),
+                percentagem(dashboard.margem(), receitaSemIva),
+                List.of(),
+                dashboard.vendasPorLoja().stream()
+                        .map(loja -> new RentabilidadeCategoriaResponse(
+                                loja.loja(),
+                                (int) loja.numeroVendas(),
+                                dinheiro(loja.total().subtract(loja.iva())),
+                                dinheiro(loja.total().subtract(loja.iva()).subtract(loja.margem())),
+                                loja.margem(),
+                                percentagem(loja.margem(), dinheiro(loja.total().subtract(loja.iva())))
+                        ))
+                        .toList()
+        );
+    }
+
+    private boolean periodoCompativel(RelatorioFiltro filtro, PeriodoResponse periodoSincronizado) {
+        if (periodoSincronizado == null || periodoSincronizado.inicio() == null || periodoSincronizado.fim() == null) {
+            return false;
+        }
+        return !periodoSincronizado.fim().isBefore(filtro.inicio())
+                && !periodoSincronizado.inicio().isAfter(filtro.fim());
+    }
+
+    private List<VendaRelatorioSync> vendasSincronizadas(RelatorioFiltro filtro) {
+        List<EstadoSincronizacaoCodigo> estados = List.of(
+                EstadoSincronizacaoCodigo.CONCLUIDA,
+                EstadoSincronizacaoCodigo.COM_CONFLITOS
+        );
+        return (filtro.lojaId() == null
+                ? sincronizacaoRepository.findFirstByEstadoInOrderByDataHoraFimDesc(estados)
+                : sincronizacaoRepository.findFirstByLojaIdAndEstadoInOrderByDataHoraFimDesc(filtro.lojaId(), estados))
+                .map(this::payload)
+                .map(SincronizacaoPayload::vendasRelatorio)
+                .orElse(List.of())
+                .stream()
+                .filter(linha -> linha != null
+                        && !linha.dataHora().toLocalDate().isBefore(filtro.inicio())
+                        && !linha.dataHora().toLocalDate().isAfter(filtro.fim())
+                        && (filtro.lojaId() == null || filtro.lojaId().equals(linha.lojaId()))
+                        && (filtro.categoriaId() == null || filtro.categoriaId().equals(linha.categoriaId())))
+                .sorted(Comparator.comparing(VendaRelatorioSync::dataHora).thenComparing(VendaRelatorioSync::produto))
+                .toList();
     }
 
     @Override
@@ -285,6 +415,12 @@ public class RelatoriosFacade implements ISubRelatorios {
         return resumo;
     }
 
+    private ResumoSync resumirSync(List<VendaRelatorioSync> linhas) {
+        ResumoSync resumo = new ResumoSync();
+        linhas.forEach(resumo::adicionar);
+        return resumo;
+    }
+
     private List<VendasPorLojaResponse> vendasPorLoja(List<LinhaRelatorio> linhas) {
         Map<UUID, Resumo> porLoja = new LinkedHashMap<>();
         Map<UUID, String> nomes = new LinkedHashMap<>();
@@ -327,6 +463,47 @@ public class RelatoriosFacade implements ISubRelatorios {
                 .toList();
     }
 
+    private List<VendasPorLojaResponse> vendasPorLojaSync(List<VendaRelatorioSync> linhas) {
+        Map<UUID, ResumoSync> porLoja = new LinkedHashMap<>();
+        Map<UUID, String> nomes = new LinkedHashMap<>();
+        for (VendaRelatorioSync linha : linhas) {
+            porLoja.computeIfAbsent(linha.lojaId(), id -> new ResumoSync()).adicionar(linha);
+            nomes.putIfAbsent(linha.lojaId(), linha.loja());
+        }
+        return porLoja.entrySet().stream()
+                .map(entry -> {
+                    ResumoSync resumo = entry.getValue();
+                    return new VendasPorLojaResponse(
+                            entry.getKey(),
+                            nomes.get(entry.getKey()),
+                            dinheiro(resumo.comIva),
+                            dinheiro(resumo.iva),
+                            dinheiro(resumo.margem),
+                            resumo.numeroVendas()
+                    );
+                })
+                .toList();
+    }
+
+    private List<VendasPorDiaResponse> vendasPorDiaSync(List<VendaRelatorioSync> linhas) {
+        Map<LocalDate, ResumoSync> porDia = new LinkedHashMap<>();
+        for (VendaRelatorioSync linha : linhas) {
+            porDia.computeIfAbsent(linha.dataHora().toLocalDate(), data -> new ResumoSync()).adicionar(linha);
+        }
+        return porDia.entrySet().stream()
+                .map(entry -> {
+                    ResumoSync resumo = entry.getValue();
+                    return new VendasPorDiaResponse(
+                            entry.getKey(),
+                            dinheiro(resumo.comIva),
+                            dinheiro(resumo.iva),
+                            dinheiro(resumo.margem),
+                            resumo.numeroVendas()
+                    );
+                })
+                .toList();
+    }
+
     private LinhaVendaRelatorioResponse linhaResponse(LinhaRelatorio linha) {
         return new LinhaVendaRelatorioResponse(
                 linha.vendaId(),
@@ -336,6 +513,23 @@ public class RelatoriosFacade implements ISubRelatorios {
                 linha.produto().getId(),
                 linha.produto().getNome(),
                 linha.produto().getCategoria().getNome(),
+                linha.quantidade(),
+                dinheiro(linha.valorSemIva()),
+                dinheiro(linha.iva()),
+                dinheiro(linha.valorComIva()),
+                dinheiro(linha.margem())
+        );
+    }
+
+    private LinhaVendaRelatorioResponse linhaResponse(VendaRelatorioSync linha) {
+        return new LinhaVendaRelatorioResponse(
+                linha.vendaId(),
+                linha.dataHora(),
+                linha.lojaId(),
+                linha.loja(),
+                linha.produtoId(),
+                linha.produto(),
+                linha.categoria(),
                 linha.quantidade(),
                 dinheiro(linha.valorSemIva()),
                 dinheiro(linha.iva()),
@@ -412,6 +606,53 @@ public class RelatoriosFacade implements ISubRelatorios {
                 .toList();
     }
 
+    private List<RentabilidadeProdutoResponse> rentabilidadePorProdutoSync(List<VendaRelatorioSync> linhas) {
+        Map<UUID, ResumoSync> porProduto = new LinkedHashMap<>();
+        Map<UUID, VendaRelatorioSync> produtos = new LinkedHashMap<>();
+        for (VendaRelatorioSync linha : linhas) {
+            porProduto.computeIfAbsent(linha.produtoId(), id -> new ResumoSync()).adicionar(linha);
+            produtos.putIfAbsent(linha.produtoId(), linha);
+        }
+        return porProduto.entrySet().stream()
+                .map(entry -> {
+                    VendaRelatorioSync produto = produtos.get(entry.getKey());
+                    ResumoSync resumo = entry.getValue();
+                    return new RentabilidadeProdutoResponse(
+                            entry.getKey(),
+                            produto.produto(),
+                            produto.categoria(),
+                            resumo.quantidade,
+                            dinheiro(resumo.semIva),
+                            dinheiro(resumo.custo),
+                            dinheiro(resumo.margem),
+                            percentagem(resumo.margem, resumo.semIva)
+                    );
+                })
+                .sorted(Comparator.comparing(RentabilidadeProdutoResponse::margem).reversed())
+                .toList();
+    }
+
+    private List<RentabilidadeCategoriaResponse> rentabilidadePorCategoriaSync(List<VendaRelatorioSync> linhas) {
+        Map<String, ResumoSync> porCategoria = new LinkedHashMap<>();
+        for (VendaRelatorioSync linha : linhas) {
+            porCategoria.computeIfAbsent(linha.categoria(), categoria -> new ResumoSync()).adicionar(linha);
+        }
+        return porCategoria.entrySet().stream()
+                .map(entry -> {
+                    ResumoSync resumo = entry.getValue();
+                    return new RentabilidadeCategoriaResponse(
+                            entry.getKey(),
+                            resumo.quantidade,
+                            dinheiro(resumo.semIva),
+                            dinheiro(resumo.custo),
+                            dinheiro(resumo.margem),
+                            percentagem(resumo.margem, resumo.semIva)
+                    );
+                })
+                .sorted(Comparator.comparing(RentabilidadeCategoriaResponse::margem).reversed())
+                .toList();
+    }
+
     private byte[] csv(String tipo, RelatorioFiltro filtro) {
         StringBuilder csv = new StringBuilder();
         switch (tipo) {
@@ -425,19 +666,14 @@ public class RelatoriosFacade implements ISubRelatorios {
     }
 
     private byte[] pdf(String tipo, RelatorioFiltro filtro) {
-        String texto = switch (tipo) {
-            case "DASHBOARD" -> resumoDashboard(obterDashboard(filtro));
-            case "VENDAS" -> resumoVendas(relatorioVendas(filtro));
-            case "STOCK" -> resumoStock(relatorioStock(filtro));
-            case "RENTABILIDADE" -> resumoRentabilidade(relatorioRentabilidade(filtro));
+        List<String> linhas = switch (tipo) {
+            case "DASHBOARD" -> linhasPdfDashboard(obterDashboard(filtro));
+            case "VENDAS" -> linhasPdfVendas(relatorioVendas(filtro));
+            case "STOCK" -> linhasPdfStock(relatorioStock(filtro));
+            case "RENTABILIDADE" -> linhasPdfRentabilidade(relatorioRentabilidade(filtro));
             default -> throw new BusinessException("RELATORIO_TIPO_INVALIDO", "Tipo de relatorio invalido");
         };
-        String conteudo = "%PDF-1.4\n"
-                + "% Mini-Formiga\n"
-                + "Relatorio " + tipo + "\n"
-                + texto
-                + "\n%%EOF\n";
-        return conteudo.getBytes(StandardCharsets.UTF_8);
+        return pdfTexto(linhas);
     }
 
     private void csvDashboard(StringBuilder csv, DashboardResponse response) {
@@ -509,6 +745,134 @@ public class RelatoriosFacade implements ISubRelatorios {
                 + "\nCusto: " + response.custoTotal()
                 + "\nMargem: " + response.margemTotal()
                 + "\nMargem %: " + response.margemPercentagem();
+    }
+
+    private List<String> linhasPdfDashboard(DashboardResponse response) {
+        List<String> linhas = new ArrayList<>();
+        linhas.add("Mini-Formiga - Dashboard");
+        linhas.add("Periodo: " + response.periodo().inicio() + " a " + response.periodo().fim());
+        linhas.add("Total vendas: " + response.totalVendas());
+        linhas.add("IVA: " + response.totalIva());
+        linhas.add("Margem: " + response.margem());
+        linhas.add("Vendas: " + response.numeroVendas());
+        linhas.add("Alertas ativos: " + response.alertasAtivos());
+        response.vendasPorLoja().stream()
+                .limit(30)
+                .forEach(loja -> linhas.add(loja.loja() + " | vendas " + loja.numeroVendas() + " | total " + loja.total()));
+        return linhas;
+    }
+
+    private List<String> linhasPdfVendas(RelatorioVendasResponse response) {
+        List<String> linhas = new ArrayList<>();
+        linhas.add("Mini-Formiga - Relatorio de vendas");
+        linhas.add("Periodo: " + response.periodo().inicio() + " a " + response.periodo().fim());
+        linhas.add("Loja: " + (response.lojaId() == null ? "Todas" : response.lojaId()));
+        linhas.add("Categoria: " + (response.categoriaId() == null ? "Todas" : response.categoriaId()));
+        linhas.add("Total: " + response.totalComIva() + " | IVA: " + response.totalIva() + " | Vendas: " + response.numeroVendas());
+        linhas.add("Data | Loja | Produto | Qtd | Total | Margem");
+        if (response.linhas().isEmpty() && response.vendasPorLoja().isEmpty()) {
+            linhas.add("Sem vendas no periodo selecionado.");
+        }
+        if (response.linhas().isEmpty() && !response.vendasPorLoja().isEmpty()) {
+            response.vendasPorLoja().stream()
+                    .limit(45)
+                    .forEach(loja -> linhas.add(loja.loja()
+                            + " | vendas " + loja.numeroVendas()
+                            + " | total " + loja.total()
+                            + " | iva " + loja.iva()
+                            + " | margem " + loja.margem()));
+        }
+        response.linhas().stream()
+                .limit(45)
+                .forEach(linha -> linhas.add(linha.dataHora().toLocalDate()
+                        + " | " + linha.loja()
+                        + " | " + linha.produto()
+                        + " | " + linha.quantidade()
+                        + " | " + linha.valorComIva()
+                        + " | " + linha.margem()));
+        return linhas;
+    }
+
+    private List<String> linhasPdfStock(RelatorioStockResponse response) {
+        List<String> linhas = new ArrayList<>();
+        linhas.add("Mini-Formiga - Relatorio de stock");
+        linhas.add("Loja: " + (response.lojaId() == null ? "Todas" : response.lojaId()));
+        linhas.add("Categoria: " + (response.categoriaId() == null ? "Todas" : response.categoriaId()));
+        linhas.add("Produtos: " + response.totalProdutos() + " | Unidades: " + response.totalUnidades() + " | Valor: " + response.valorStockPrecoCusto());
+        linhas.add("Produto | Categoria | Loja | Unidades | Valor | Estado");
+        if (response.itens().isEmpty()) {
+            linhas.add("Sem stock para apresentar.");
+        }
+        response.itens().stream()
+                .limit(45)
+                .forEach(item -> linhas.add(item.produto()
+                        + " | " + item.categoria()
+                        + " | " + item.loja()
+                        + " | " + item.quantidade()
+                        + " | " + item.valorPrecoCusto()
+                        + " | " + (item.precisaReposicao() ? "Reposicao" : "OK")));
+        return linhas;
+    }
+
+    private List<String> linhasPdfRentabilidade(RelatorioRentabilidadeResponse response) {
+        List<String> linhas = new ArrayList<>();
+        linhas.add("Mini-Formiga - Relatorio de rentabilidade");
+        linhas.add("Periodo: " + response.periodo().inicio() + " a " + response.periodo().fim());
+        linhas.add("Loja: " + (response.lojaId() == null ? "Todas" : response.lojaId()));
+        linhas.add("Categoria: " + (response.categoriaId() == null ? "Todas" : response.categoriaId()));
+        linhas.add("Receita: " + response.receitaSemIva() + " | Custo: " + response.custoTotal() + " | Margem: " + response.margemTotal());
+        linhas.add("Produto | Categoria | Qtd | Receita | Custo | Margem");
+        if (response.produtos().isEmpty()) {
+            linhas.add("Sem rentabilidade para apresentar.");
+        }
+        response.produtos().stream()
+                .limit(45)
+                .forEach(produto -> linhas.add(produto.produto()
+                        + " | " + produto.categoria()
+                        + " | " + produto.quantidadeVendida()
+                        + " | " + produto.receitaSemIva()
+                        + " | " + produto.custo()
+                        + " | " + produto.margem()));
+        return linhas;
+    }
+
+    private byte[] pdfTexto(List<String> linhas) {
+        StringBuilder stream = new StringBuilder();
+        stream.append("BT\n/F1 10 Tf\n50 790 Td\n14 TL\n");
+        linhas.stream()
+                .limit(55)
+                .forEach(linha -> stream.append('(').append(escaparPdf(linha)).append(") Tj\nT*\n"));
+        stream.append("ET\n");
+
+        byte[] streamBytes = stream.toString().getBytes(StandardCharsets.UTF_8);
+        List<String> objetos = List.of(
+                "<< /Type /Catalog /Pages 2 0 R >>",
+                "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+                "<< /Length " + streamBytes.length + " >>\nstream\n" + stream + "endstream"
+        );
+
+        StringBuilder pdf = new StringBuilder("%PDF-1.4\n");
+        List<Integer> offsets = new ArrayList<>();
+        for (int i = 0; i < objetos.size(); i++) {
+            offsets.add(pdf.toString().getBytes(StandardCharsets.UTF_8).length);
+            pdf.append(i + 1).append(" 0 obj\n").append(objetos.get(i)).append("\nendobj\n");
+        }
+        int xref = pdf.toString().getBytes(StandardCharsets.UTF_8).length;
+        pdf.append("xref\n0 ").append(objetos.size() + 1).append("\n");
+        pdf.append("0000000000 65535 f \n");
+        offsets.forEach(offset -> pdf.append(String.format("%010d 00000 n \n", offset)));
+        pdf.append("trailer\n<< /Size ").append(objetos.size() + 1).append(" /Root 1 0 R >>\n");
+        pdf.append("startxref\n").append(xref).append("\n%%EOF\n");
+        return pdf.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private String escaparPdf(String valor) {
+        return valor == null ? "" : valor
+                .replace("\\", "\\\\")
+                .replace("(", "\\(")
+                .replace(")", "\\)");
     }
 
     private String normalizarTipo(String tipo) {
@@ -587,6 +951,30 @@ public class RelatoriosFacade implements ISubRelatorios {
         private final Set<UUID> vendas = new LinkedHashSet<>();
 
         private void adicionar(LinhaRelatorio linha) {
+            semIva = semIva.add(linha.valorSemIva());
+            iva = iva.add(linha.iva());
+            comIva = comIva.add(linha.valorComIva());
+            custo = custo.add(linha.custo());
+            margem = margem.add(linha.margem());
+            quantidade += linha.quantidade();
+            vendas.add(linha.vendaId());
+        }
+
+        private long numeroVendas() {
+            return vendas.size();
+        }
+    }
+
+    private static final class ResumoSync {
+        private BigDecimal semIva = BigDecimal.ZERO;
+        private BigDecimal iva = BigDecimal.ZERO;
+        private BigDecimal comIva = BigDecimal.ZERO;
+        private BigDecimal custo = BigDecimal.ZERO;
+        private BigDecimal margem = BigDecimal.ZERO;
+        private int quantidade;
+        private final Set<UUID> vendas = new LinkedHashSet<>();
+
+        private void adicionar(VendaRelatorioSync linha) {
             semIva = semIva.add(linha.valorSemIva());
             iva = iva.add(linha.iva());
             comIva = comIva.add(linha.valorComIva());

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pt.miniFormiga.domain.EntidadeBase;
 import pt.miniFormiga.domain.EstadoSincronizacaoCodigo;
 import pt.miniFormiga.domain.FechoCaixa;
+import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Sincronizacao;
 import pt.miniFormiga.domain.Venda;
@@ -47,6 +48,7 @@ import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.Conflit
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.RegistoSincronizacao;
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoPayload;
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoResponse;
+import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.VendaRelatorioSync;
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.ResultadoTransmissao;
 
 @Service
@@ -196,7 +198,7 @@ public class SincronizacaoFacade implements ISubSincronizacao {
                 .filter(pendente).map(entidade -> registo("ENTRADA_MERCADORIA", entidade)).toList());
 
         DashboardResponse dashboard = dashboardParaSincronizacao(lojaId);
-        return new SincronizacaoPayload(lojaId, LocalDateTime.now(), desde, registos, dashboard, logsAuditoria());
+        return new SincronizacaoPayload(lojaId, LocalDateTime.now(), desde, registos, dashboard, vendasRelatorio(lojaId), logsAuditoria());
     }
 
     private DashboardResponse dashboardParaSincronizacao(UUID lojaId) {
@@ -253,6 +255,45 @@ public class SincronizacaoFacade implements ISubSincronizacao {
 
     private BigDecimal dinheiro(BigDecimal valor) {
         return valor == null ? ZERO : valor.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private List<VendaRelatorioSync> vendasRelatorio(UUID lojaId) {
+        return vendaRepository.findByLojaIdAndDataHoraBetween(lojaId,
+                        LocalDate.of(1970, 1, 1).atStartOfDay(),
+                        LocalDate.now().plusDays(1).atStartOfDay(),
+                        Pageable.unpaged())
+                .getContent()
+                .stream()
+                .filter(venda -> !venda.isAnulada() && venda.getMeioPagamento() != null)
+                .flatMap(venda -> venda.getLinhas().stream()
+                        .filter(linha -> !linha.isAnulada())
+                        .map(linha -> vendaRelatorio(venda, linha)))
+                .toList();
+    }
+
+    private VendaRelatorioSync vendaRelatorio(Venda venda, LinhaVenda linha) {
+        BigDecimal valorSemIva = dinheiro(linha.getTotalLinha());
+        BigDecimal iva = dinheiro(valorSemIva
+                .multiply(linha.getTaxaIvaPercentagem())
+                .divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP));
+        BigDecimal custo = dinheiro(linha.getProduto().getPrecoCusto()
+                .multiply(BigDecimal.valueOf(linha.getQuantidade())));
+        return new VendaRelatorioSync(
+                venda.getId(),
+                venda.getDataHora(),
+                venda.getLoja().getId(),
+                venda.getLoja().getNome(),
+                linha.getProduto().getId(),
+                linha.getProduto().getNome(),
+                linha.getProduto().getCategoria().getId(),
+                linha.getProduto().getCategoria().getNome(),
+                linha.getQuantidade(),
+                valorSemIva,
+                iva,
+                dinheiro(valorSemIva.add(iva)),
+                custo,
+                dinheiro(valorSemIva.subtract(custo))
+        );
     }
 
     private RegistoSincronizacao registo(String tipo, EntidadeBase entidade) {

@@ -531,6 +531,25 @@ select {
   min-height: 222px;
 }
 
+.mf-panel.order-main-panel {
+  padding: 20px;
+  border-color: #35507d;
+  background: #202737;
+}
+
+.mf-panel.order-main-panel .mf-panel-title {
+  font-size: 18px;
+}
+
+.mf-panel.order-history-panel {
+  border-color: #293447;
+  background: #151b27;
+}
+
+.mf-panel.order-history-panel .mf-panel-title {
+  color: #aab6cc;
+}
+
 .mf-panel-header {
   display: flex;
   align-items: center;

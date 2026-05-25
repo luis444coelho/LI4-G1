@@ -90,7 +90,11 @@ export function AuthenticationPage() {
       const nextSession = await login(username, password, role.id)
       navigate(roleDefaultPath(nextSession.roleId), { replace: true })
     } catch (caught) {
-      const message = caught instanceof ApiError ? caught.message : 'Não foi possível autenticar.'
+      const message = caught instanceof ApiError
+        ? caught.message
+        : role.id === 'gestor'
+          ? 'Não foi possível contactar o backend central na porta 8081.'
+          : 'Não foi possível contactar o backend local na porta 8080.'
       setError(message)
     } finally {
       setLoading(false)

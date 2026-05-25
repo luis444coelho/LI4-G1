@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, MetricCard, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
 import { ReportsContent } from '../components/pageSections'
-import { LOCAL_API_BASE_URL, apiRequest, type ConflitoSincronizacaoResponse, type DashboardResponse, type EncomendaResponse, type FornecedorResponse, type LojaResponse, type PageResponse, type PerfilResponse, type RelatorioStockResponse, type SincronizacaoResponse, type SugestaoEncomendaResponse, type UtilizadorResponse } from '../lib/api'
+import { LOCAL_API_BASE_URL, apiRequest, type CondicaoComercialResponse, type ConflitoSincronizacaoResponse, type DashboardResponse, type EncomendaResponse, type FornecedorResponse, type LojaResponse, type PageResponse, type PerfilResponse, type RelatorioStockResponse, type SincronizacaoResponse, type SugestaoEncomendaResponse, type UtilizadorResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 const currencyFormatter = new Intl.NumberFormat('pt-PT', {
@@ -15,6 +15,17 @@ const numberFormatter = new Intl.NumberFormat('pt-PT')
 
 function money(value: number) {
   return currencyFormatter.format(value)
+}
+
+type DraftOrderLine = {
+  produtoId: string
+  produto: string
+  fornecedorId: string
+  fornecedor: string
+  quantidade: number
+  precoUnitario: number
+  quantidadeAtual?: number
+  origem: 'auto' | 'manual'
 }
 
 export function GestorDashboardPage() {
@@ -299,10 +310,14 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
   const { session } = useAuth()
   const [orders, setOrders] = useState<EncomendaResponse[]>([])
   const [suggestions, setSuggestions] = useState<SugestaoEncomendaResponse[]>([])
+  const [draftLines, setDraftLines] = useState<DraftOrderLine[]>([])
+  const [conditions, setConditions] = useState<CondicaoComercialResponse[]>([])
   const [stores, setStores] = useState<LojaResponse[]>([])
   const [suppliers, setSuppliers] = useState<FornecedorResponse[]>([])
   const [storeId, setStoreId] = useState(session?.lojaId ?? '')
   const [supplierId, setSupplierId] = useState('')
+  const [manualProductId, setManualProductId] = useState('')
+  const [manualQuantity, setManualQuantity] = useState(1)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const supplierOptions = useMemo(() => {
@@ -314,6 +329,10 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
   const selectedStoreName = stores.find((store) => store.id === storeId)?.nome ?? 'loja atribuída'
   const selectedSupplierName = supplierOptions.find((supplier) => supplier.value === supplierId)?.label ?? ''
   const selectedSuggestions = suggestions.filter((item) => item.fornecedorId === supplierId)
+  const selectedDraftLines = draftLines.filter((line) => line.fornecedorId === supplierId)
+  const activeSuggestionIds = new Set(selectedDraftLines.filter((line) => line.origem === 'auto').map((line) => line.produtoId))
+  const removedSuggestions = selectedSuggestions.filter((item) => !activeSuggestionIds.has(item.produtoId))
+  const productOptions = conditions.map((condition) => ({ value: condition.produtoId, label: condition.produto }))
 
   useEffect(() => {
     Promise.all([
@@ -338,16 +357,43 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
     ]).then(([ordersPage, suggestionRows]) => {
       setOrders(ordersPage.content)
       setSuggestions(suggestionRows)
+      setDraftLines(suggestionRows.map((item) => ({
+        produtoId: item.produtoId,
+        produto: item.produto,
+        fornecedorId: item.fornecedorId,
+        fornecedor: item.fornecedor,
+        quantidade: item.quantidadeSugerida,
+        precoUnitario: item.precoUnitario,
+        quantidadeAtual: item.quantidadeAtual,
+        origem: 'auto',
+      })))
       setSupplierId((current) => current || suggestionRows[0]?.fornecedorId || '')
     }).catch(() => undefined)
   }, [storeId])
 
+  useEffect(() => {
+    if (!supplierId) {
+      setConditions([])
+      setManualProductId('')
+      return
+    }
+    apiRequest<CondicaoComercialResponse[]>(`/fornecedores/${supplierId}/condicoes`)
+      .then((rows) => {
+        setConditions(rows)
+        setManualProductId((current) => rows.some((row) => row.produtoId === current) ? current : rows[0]?.produtoId || '')
+      })
+      .catch(() => {
+        setConditions([])
+        setManualProductId('')
+      })
+  }, [supplierId])
+
   async function submitSuggestedOrder() {
     setError(null)
     setMessage(null)
-    const selectedLines = selectedSuggestions
+    const selectedLines = selectedDraftLines
     if (!storeId || !supplierId || selectedLines.length === 0) {
-      setError('Não existem sugestões válidas para submeter.')
+      setError('Adicione pelo menos um produto à encomenda.')
       return
     }
     try {
@@ -358,16 +404,57 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
           fornecedorId: supplierId,
           linhas: selectedLines.map((item) => ({
             produtoId: item.produtoId,
-            quantidade: item.quantidadeSugerida,
+            quantidade: item.quantidade,
             precoUnitario: item.precoUnitario,
           })),
         }),
       })
       setOrders((items) => [created, ...items])
-      setMessage('Encomenda criada a partir das sugestões de stock.')
+      setDraftLines((items) => items.filter((item) => item.fornecedorId !== supplierId))
+      setMessage('Encomenda criada.')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Não foi possível criar encomenda.')
     }
+  }
+
+  function addManualLine() {
+    const condition = conditions.find((item) => item.produtoId === manualProductId)
+    const supplier = suppliers.find((item) => item.id === supplierId)
+    if (!condition || !supplier || manualQuantity <= 0) return
+    setDraftLines((items) => {
+      const existing = items.find((item) => item.fornecedorId === supplierId && item.produtoId === condition.produtoId)
+      if (existing) {
+        return items.map((item) => item === existing
+          ? { ...item, quantidade: item.quantidade + manualQuantity }
+          : item)
+      }
+      return [...items, {
+        produtoId: condition.produtoId,
+        produto: condition.produto,
+        fornecedorId: supplier.id,
+        fornecedor: supplier.nome,
+        quantidade: manualQuantity,
+        precoUnitario: condition.precoUnitario,
+        origem: 'manual',
+      }]
+    })
+  }
+
+  function removeDraftLine(line: DraftOrderLine) {
+    setDraftLines((items) => items.filter((item) => !(item.fornecedorId === line.fornecedorId && item.produtoId === line.produtoId)))
+  }
+
+  function restoreSuggestion(item: SugestaoEncomendaResponse) {
+    setDraftLines((items) => [...items, {
+      produtoId: item.produtoId,
+      produto: item.produto,
+      fornecedorId: item.fornecedorId,
+      fornecedor: item.fornecedor,
+      quantidade: item.quantidadeSugerida,
+      precoUnitario: item.precoUnitario,
+      quantidadeAtual: item.quantidadeAtual,
+      origem: 'auto',
+    }])
   }
 
   return (
@@ -376,7 +463,7 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
         {suggestions.length} produtos abaixo do mínimo — sugestão automática de encomenda disponível.
       </Callout>
 
-      <Panel title="Nova encomenda consolidada">
+      <Panel title="Nova encomenda" className="order-main-panel">
         <div className="mf-fields-grid two">
           <SelectField label="Fornecedor" value={supplierId} options={supplierOptions} onChange={(event) => setSupplierId(event.target.value)} />
           {fixedStore ? (
@@ -385,36 +472,61 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
             <SelectField label="Loja destino" value={storeId} options={storeOptions} onChange={(event) => setStoreId(event.target.value)} />
           )}
         </div>
+      </Panel>
 
-        <div className="mt-compact">
-          <table className="mf-table">
-            <thead>
-              <tr>
-                <th>PRODUTO</th>
-                <th>FORNECEDOR</th>
-                <th>STOCK</th>
-                <th>QTD.</th>
-                <th>PREÇO</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedSuggestions.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="muted">Sem produtos sugeridos para {selectedSupplierName || 'o fornecedor selecionado'}.</td>
-                </tr>
-              ) : null}
-              {selectedSuggestions.map((item) => (
-                <tr key={`${item.fornecedorId}-${item.produtoId}`}>
-                  <td>{item.produto}</td>
-                  <td>{item.fornecedor}</td>
-                  <td>{item.quantidadeAtual}</td>
-                  <td>{item.quantidadeSugerida}</td>
-                  <td>{money(item.precoUnitario)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <Panel title="Adicionar produto">
+        <div className="mf-fields-grid three">
+          <SelectField label="Produto" value={manualProductId} options={productOptions} onChange={(event) => setManualProductId(event.target.value)} />
+          <TextField label="Quantidade" type="number" min={1} value={manualQuantity} onChange={(event) => setManualQuantity(Math.max(1, Number(event.target.value) || 1))} />
+          <div className="mf-field">
+            <span className="mf-field-label">&nbsp;</span>
+            <Button className="small" onClick={addManualLine} disabled={!manualProductId || manualQuantity <= 0}>Adicionar</Button>
+          </div>
         </div>
+      </Panel>
+
+      <Panel title="Encomenda atual">
+        <table className="mf-table">
+          <thead>
+            <tr>
+              <th>PRODUTO</th>
+              <th>FORNECEDOR</th>
+              <th>STOCK</th>
+              <th>QTD.</th>
+              <th>PREÇO</th>
+              <th>ORIGEM</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedDraftLines.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="muted">Sem produtos na encomenda para {selectedSupplierName || 'o fornecedor selecionado'}.</td>
+              </tr>
+            ) : null}
+            {selectedDraftLines.map((item) => (
+              <tr key={`${item.fornecedorId}-${item.produtoId}`}>
+                <td>{item.produto}</td>
+                <td>{item.fornecedor}</td>
+                <td>{item.quantidadeAtual ?? '-'}</td>
+                <td><TextField type="number" min={1} value={item.quantidade} onChange={(event) => setDraftLines((lines) => lines.map((line) => line === item ? { ...line, quantidade: Math.max(1, Number(event.target.value) || 1) } : line))} className="receipt-input" /></td>
+                <td>{money(item.precoUnitario)}</td>
+                <td className="muted">{item.origem === 'auto' ? 'sugestão automática' : 'manual'}</td>
+                <td><Button className="small" onClick={() => removeDraftLine(item)}>Remover</Button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {removedSuggestions.length > 0 ? (
+          <div className="mf-actions-row mt-compact">
+            {removedSuggestions.map((item) => (
+              <Button className="small" key={`${item.fornecedorId}-${item.produtoId}`} onClick={() => restoreSuggestion(item)}>
+                Adicionar sugestão automática novamente: {item.produto}
+              </Button>
+            ))}
+          </div>
+        ) : null}
 
         <Callout tone="info" className="mt-compact">
           Encomenda submetida após as 18h00 → processada a 21/04 (segunda-feira) às 08h00 (RD-06)
@@ -423,11 +535,11 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
         {message ? <Callout tone="info" className="mt-compact">{message}</Callout> : null}
 
         <div className="mf-actions-row">
-          <Button onClick={submitSuggestedOrder} disabled={!supplierId || selectedSuggestions.length === 0}>Submeter encomenda</Button>
+          <Button onClick={submitSuggestedOrder} disabled={!supplierId || selectedDraftLines.length === 0}>Submeter encomenda</Button>
         </div>
       </Panel>
 
-      <Panel title="Histórico">
+      <Panel title="Histórico" className="order-history-panel">
         {orders.length === 0 ? <p className="mf-empty-state">Sem encomendas registadas.</p> : null}
         <table className="mf-table">
           <thead>
@@ -440,9 +552,9 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
             </tr>
           </thead>
           <tbody>
-            {orders.map((row, index) => (
+            {orders.map((row) => (
               <tr key={row.id}>
-                <td className="muted">{`ENC-${String(orders.length - index).padStart(3, '0')}`}</td>
+                <td className="muted">{row.numeroDocumento}</td>
                 <td>{row.fornecedor}</td>
                 <td>{row.linhas.map((line) => line.produto).join(', ') || 'Sem produtos'}</td>
                 <td className="muted">{new Date(row.dataSubmissao).toLocaleString('pt-PT')}</td>
