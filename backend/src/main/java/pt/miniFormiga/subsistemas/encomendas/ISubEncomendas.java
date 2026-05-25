@@ -29,6 +29,8 @@ public interface ISubEncomendas {
 
     EncomendaResponse criarEncomenda(CriarEncomendaRequest request);
 
+    List<EncomendaResponse> criarEncomendaConsolidada(CriarEncomendaConsolidadaRequest request);
+
     EncomendaResponse atualizarEstado(UUID id, AtualizarEstadoEncomendaRequest request);
 
     List<SugestaoEncomendaResponse> sugerirEncomendas(UUID lojaId, UUID fornecedorId);

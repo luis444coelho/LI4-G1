@@ -23,9 +23,12 @@ import pt.miniFormiga.subsistemas.stock.StockStore;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -34,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.*;
 
@@ -68,9 +73,13 @@ public class RelatoriosFacade implements ISubRelatorios {
     @Override
     public DashboardResponse obterDashboard(RelatorioFiltro filtro) {
         boolean permiteSnapshotSincronizado = filtro == null
-                || (filtro.inicio() == null && filtro.fim() == null && filtro.categoriaId() == null);
+                || (filtro.inicio() == null
+                && filtro.fim() == null
+                && filtro.categoriaId() == null
+                && filtro.produtoId() == null
+                && filtro.turno() == null);
         RelatorioFiltro normalizado = normalizar(filtro);
-        List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado.categoriaId());
+        List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado);
         if (linhas.isEmpty() && permiteSnapshotSincronizado) {
             DashboardResponse sincronizado = dashboardSincronizado(normalizado);
             if (sincronizado != null) {
@@ -126,7 +135,7 @@ public class RelatoriosFacade implements ISubRelatorios {
     @Override
     public RelatorioVendasResponse relatorioVendas(RelatorioFiltro filtro) {
         RelatorioFiltro normalizado = normalizar(filtro);
-        List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado.categoriaId());
+        List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado);
         if (linhas.isEmpty()) {
             RelatorioVendasResponse sincronizado = relatorioVendasSincronizado(normalizado);
             if (sincronizado != null) {
@@ -139,6 +148,8 @@ public class RelatoriosFacade implements ISubRelatorios {
                 periodo(normalizado),
                 normalizado.lojaId(),
                 normalizado.categoriaId(),
+                normalizado.produtoId(),
+                normalizado.turno(),
                 dinheiro(resumo.semIva),
                 dinheiro(resumo.iva),
                 dinheiro(resumo.comIva),
@@ -155,6 +166,7 @@ public class RelatoriosFacade implements ISubRelatorios {
         RelatorioFiltro normalizado = normalizar(filtro);
         List<StockItemResponse> itens = buscarStocks(normalizado).stream()
                 .filter(item -> pertenceCategoria(item.produto(), normalizado.categoriaId()))
+                .filter(item -> pertenceProduto(item.produto(), normalizado.produtoId()))
                 .sorted(Comparator
                         .comparing((StockItem item) -> item.produto().getNome()))
                 .map(this::stockResponse)
@@ -181,7 +193,7 @@ public class RelatoriosFacade implements ISubRelatorios {
     @Override
     public RelatorioRentabilidadeResponse relatorioRentabilidade(RelatorioFiltro filtro) {
         RelatorioFiltro normalizado = normalizar(filtro);
-        List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado.categoriaId());
+        List<LinhaRelatorio> linhas = linhasDeVendas(buscarVendas(normalizado), normalizado);
         if (linhas.isEmpty()) {
             RelatorioRentabilidadeResponse sincronizado = relatorioRentabilidadeSincronizado(normalizado);
             if (sincronizado != null) {
@@ -194,6 +206,8 @@ public class RelatoriosFacade implements ISubRelatorios {
                 periodo(normalizado),
                 normalizado.lojaId(),
                 normalizado.categoriaId(),
+                normalizado.produtoId(),
+                normalizado.turno(),
                 dinheiro(resumo.semIva),
                 dinheiro(resumo.custo),
                 dinheiro(resumo.margem),
@@ -214,6 +228,8 @@ public class RelatoriosFacade implements ISubRelatorios {
                     periodo(filtro),
                     filtro.lojaId(),
                     filtro.categoriaId(),
+                    filtro.produtoId(),
+                    filtro.turno(),
                     dinheiro(resumo.semIva),
                     dinheiro(resumo.iva),
                     dinheiro(resumo.comIva),
@@ -224,6 +240,9 @@ public class RelatoriosFacade implements ISubRelatorios {
                     linhas
             );
         }
+        if (filtro.categoriaId() != null || filtro.produtoId() != null || filtro.turno() != null) {
+            return null;
+        }
         DashboardResponse dashboard = dashboardSincronizado(filtro);
         if (dashboard == null || !periodoCompativel(filtro, dashboard.periodo())) {
             return null;
@@ -232,6 +251,8 @@ public class RelatoriosFacade implements ISubRelatorios {
                 periodo(filtro),
                 filtro.lojaId(),
                 filtro.categoriaId(),
+                filtro.produtoId(),
+                filtro.turno(),
                 dinheiro(dashboard.totalVendas().subtract(dashboard.totalIva())),
                 dashboard.totalIva(),
                 dashboard.totalVendas(),
@@ -251,6 +272,8 @@ public class RelatoriosFacade implements ISubRelatorios {
                     periodo(filtro),
                     filtro.lojaId(),
                     filtro.categoriaId(),
+                    filtro.produtoId(),
+                    filtro.turno(),
                     dinheiro(resumo.semIva),
                     dinheiro(resumo.custo),
                     dinheiro(resumo.margem),
@@ -258,6 +281,9 @@ public class RelatoriosFacade implements ISubRelatorios {
                     rentabilidadePorProdutoSync(linhasSync),
                     rentabilidadePorCategoriaSync(linhasSync)
             );
+        }
+        if (filtro.categoriaId() != null || filtro.produtoId() != null || filtro.turno() != null) {
+            return null;
         }
         DashboardResponse dashboard = dashboardSincronizado(filtro);
         if (dashboard == null || !periodoCompativel(filtro, dashboard.periodo())) {
@@ -269,6 +295,8 @@ public class RelatoriosFacade implements ISubRelatorios {
                 periodo(filtro),
                 filtro.lojaId(),
                 filtro.categoriaId(),
+                filtro.produtoId(),
+                filtro.turno(),
                 receitaSemIva,
                 custo,
                 dashboard.margem(),
@@ -311,7 +339,9 @@ public class RelatoriosFacade implements ISubRelatorios {
                         && !linha.dataHora().toLocalDate().isBefore(filtro.inicio())
                         && !linha.dataHora().toLocalDate().isAfter(filtro.fim())
                         && (filtro.lojaId() == null || filtro.lojaId().equals(linha.lojaId()))
-                        && (filtro.categoriaId() == null || filtro.categoriaId().equals(linha.categoriaId())))
+                        && (filtro.categoriaId() == null || filtro.categoriaId().equals(linha.categoriaId()))
+                        && (filtro.produtoId() == null || filtro.produtoId().equals(linha.produtoId()))
+                        && pertenceTurno(linha.dataHora(), filtro.turno()))
                 .sorted(Comparator.comparing(VendaRelatorioSync::dataHora).thenComparing(VendaRelatorioSync::produto))
                 .toList();
     }
@@ -320,14 +350,27 @@ public class RelatoriosFacade implements ISubRelatorios {
     public ExportacaoRelatorio exportar(ExportarRelatorioRequest request) {
         String tipo = normalizarTipo(request.tipo());
         String formato = normalizarFormato(request.formato());
-        RelatorioFiltro filtro = normalizar(new RelatorioFiltro(request.lojaId(), request.inicio(), request.fim(), request.categoriaId()));
+        RelatorioFiltro filtro = normalizar(new RelatorioFiltro(
+                request.lojaId(),
+                request.inicio(),
+                request.fim(),
+                request.categoriaId(),
+                request.produtoId(),
+                request.turno()
+        ));
         byte[] conteudo = switch (formato) {
             case "CSV" -> csv(tipo, filtro);
             case "PDF" -> pdf(tipo, filtro);
+            case "XLSX" -> xlsx(tipo, filtro);
             default -> throw new BusinessException("RELATORIO_FORMATO_INVALIDO", "Formato de exportacao invalido");
         };
         String extensao = formato.toLowerCase();
-        String mediaType = "CSV".equals(formato) ? "text/csv;charset=UTF-8" : "application/pdf";
+        String mediaType = switch (formato) {
+            case "CSV" -> "text/csv;charset=UTF-8";
+            case "PDF" -> "application/pdf";
+            case "XLSX" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            default -> "application/octet-stream";
+        };
         return new ExportacaoRelatorio("mini-formiga-" + tipo.toLowerCase() + "." + extensao, mediaType, conteudo);
     }
 
@@ -339,7 +382,14 @@ public class RelatoriosFacade implements ISubRelatorios {
         if (fim.isBefore(inicio)) {
             throw new BusinessException("PERIODO_INVALIDO", "Data final nao pode ser anterior a data inicial");
         }
-        return new RelatorioFiltro(seguro.lojaId(), inicio, fim, seguro.categoriaId());
+        return new RelatorioFiltro(
+                seguro.lojaId(),
+                inicio,
+                fim,
+                seguro.categoriaId(),
+                seguro.produtoId(),
+                normalizarTurno(seguro.turno())
+        );
     }
 
     private List<Venda> buscarVendas(RelatorioFiltro filtro) {
@@ -360,14 +410,18 @@ public class RelatoriosFacade implements ISubRelatorios {
         List<AlertaStock> alertas = alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc();
         return alertas.stream()
                 .filter(alerta -> pertenceCategoria(alerta.getProduto(), filtro.categoriaId()))
+                .filter(alerta -> pertenceProduto(alerta.getProduto(), filtro.produtoId()))
                 .toList();
     }
 
-    private List<LinhaRelatorio> linhasDeVendas(List<Venda> vendas, UUID categoriaId) {
+    private List<LinhaRelatorio> linhasDeVendas(List<Venda> vendas, RelatorioFiltro filtro) {
         List<LinhaRelatorio> linhas = new ArrayList<>();
         for (Venda venda : vendas) {
             for (LinhaVenda linha : venda.getLinhas()) {
-                if (linha.isAnulada() || !pertenceCategoria(linha.getProduto(), categoriaId)) {
+                if (linha.isAnulada()
+                        || !pertenceCategoria(linha.getProduto(), filtro.categoriaId())
+                        || !pertenceProduto(linha.getProduto(), filtro.produtoId())
+                        || !pertenceTurno(venda.getDataHora(), filtro.turno())) {
                     continue;
                 }
                 linhas.add(linhaRelatorio(venda, linha));
@@ -403,6 +457,37 @@ public class RelatoriosFacade implements ISubRelatorios {
 
     private boolean pertenceCategoria(Produto produto, UUID categoriaId) {
         return categoriaId == null || produto.getCategoria().getId().equals(categoriaId);
+    }
+
+    private boolean pertenceProduto(Produto produto, UUID produtoId) {
+        return produtoId == null || produto.getId().equals(produtoId);
+    }
+
+    private String normalizarTurno(String turno) {
+        if (turno == null || turno.isBlank()) {
+            return null;
+        }
+        String valor = turno.trim().toUpperCase()
+                .replace('Ã', 'A')
+                .replace('Á', 'A')
+                .replace('Â', 'A');
+        if (!List.of("MANHA", "TARDE", "NOITE").contains(valor)) {
+            throw new BusinessException("RELATORIO_TURNO_INVALIDO", "Turno de relatorio invalido");
+        }
+        return valor;
+    }
+
+    private boolean pertenceTurno(LocalDateTime dataHora, String turno) {
+        if (turno == null || turno.isBlank()) {
+            return true;
+        }
+        LocalTime hora = dataHora.toLocalTime();
+        return switch (turno) {
+            case "MANHA" -> !hora.isBefore(LocalTime.of(7, 30)) && hora.isBefore(LocalTime.of(14, 0));
+            case "TARDE" -> !hora.isBefore(LocalTime.of(14, 0)) && !hora.isAfter(LocalTime.of(20, 0));
+            case "NOITE" -> hora.isBefore(LocalTime.of(7, 30)) || hora.isAfter(LocalTime.of(20, 0));
+            default -> true;
+        };
     }
 
     private PeriodoResponse periodo(RelatorioFiltro filtro) {
@@ -676,6 +761,75 @@ public class RelatoriosFacade implements ISubRelatorios {
         return pdfTexto(linhas);
     }
 
+    private byte[] xlsx(String tipo, RelatorioFiltro filtro) {
+        List<List<Object>> linhas = switch (tipo) {
+            case "DASHBOARD" -> linhasXlsxDashboard(obterDashboard(filtro));
+            case "VENDAS" -> linhasXlsxVendas(relatorioVendas(filtro));
+            case "STOCK" -> linhasXlsxStock(relatorioStock(filtro));
+            case "RENTABILIDADE" -> linhasXlsxRentabilidade(relatorioRentabilidade(filtro));
+            default -> throw new BusinessException("RELATORIO_TIPO_INVALIDO", "Tipo de relatorio invalido");
+        };
+        return xlsxSimples(tipo.toLowerCase(), linhas);
+    }
+
+    private List<List<Object>> linhasXlsxDashboard(DashboardResponse response) {
+        List<List<Object>> linhas = new ArrayList<>();
+        linhas.add(List.of("indicador", "valor"));
+        linhas.add(List.of("total_vendas", response.totalVendas()));
+        linhas.add(List.of("total_iva", response.totalIva()));
+        linhas.add(List.of("margem", response.margem()));
+        linhas.add(List.of("numero_vendas", response.numeroVendas()));
+        linhas.add(List.of("total_lojas", response.totalLojas()));
+        linhas.add(List.of("alertas_ativos", response.alertasAtivos()));
+        return linhas;
+    }
+
+    private List<List<Object>> linhasXlsxVendas(RelatorioVendasResponse response) {
+        List<List<Object>> linhas = new ArrayList<>();
+        linhas.add(List.of("data", "descricao", "valor", "iva", "loja"));
+        for (LinhaVendaRelatorioResponse linha : response.linhas()) {
+            linhas.add(List.of(
+                    linha.dataHora(),
+                    "Venda " + linha.vendaId() + " - " + linha.produto(),
+                    linha.valorComIva(),
+                    linha.iva(),
+                    linha.loja()
+            ));
+        }
+        return linhas;
+    }
+
+    private List<List<Object>> linhasXlsxStock(RelatorioStockResponse response) {
+        List<List<Object>> linhas = new ArrayList<>();
+        linhas.add(List.of("produto", "categoria", "loja", "quantidade", "nivel_minimo", "precisa_reposicao", "valor_stock"));
+        for (StockItemResponse item : response.itens()) {
+            linhas.add(List.of(
+                    item.produto(),
+                    item.categoria(),
+                    item.loja() == null ? "" : item.loja(),
+                    item.quantidade(),
+                    item.nivelMinimo() == null ? "" : item.nivelMinimo(),
+                    item.precisaReposicao(),
+                    item.valorPrecoCusto()
+            ));
+        }
+        return linhas;
+    }
+
+    private List<List<Object>> linhasXlsxRentabilidade(RelatorioRentabilidadeResponse response) {
+        List<List<Object>> linhas = new ArrayList<>();
+        linhas.add(List.of("tipo", "nome", "receita", "custo", "margem", "margem_percentagem"));
+        for (RentabilidadeProdutoResponse produto : response.produtos()) {
+            linhas.add(List.of("PRODUTO", produto.produto(), produto.receitaSemIva(), produto.custo(),
+                    produto.margem(), produto.margemPercentagem()));
+        }
+        for (RentabilidadeCategoriaResponse categoria : response.categorias()) {
+            linhas.add(List.of("CATEGORIA", categoria.categoria(), categoria.receitaSemIva(), categoria.custo(),
+                    categoria.margem(), categoria.margemPercentagem()));
+        }
+        return linhas;
+    }
+
     private void csvDashboard(StringBuilder csv, DashboardResponse response) {
         csv.append("indicador,valor\n");
         linhaCsv(csv, "total_vendas", response.totalVendas());
@@ -768,6 +922,8 @@ public class RelatoriosFacade implements ISubRelatorios {
         linhas.add("Periodo: " + response.periodo().inicio() + " a " + response.periodo().fim());
         linhas.add("Loja: " + (response.lojaId() == null ? "Todas" : response.lojaId()));
         linhas.add("Categoria: " + (response.categoriaId() == null ? "Todas" : response.categoriaId()));
+        linhas.add("Produto: " + (response.produtoId() == null ? "Todos" : response.produtoId()));
+        linhas.add("Turno: " + (response.turno() == null ? "Todos" : response.turno()));
         linhas.add("Total: " + response.totalComIva() + " | IVA: " + response.totalIva() + " | Vendas: " + response.numeroVendas());
         linhas.add("Data | Loja | Produto | Qtd | Total | Margem");
         if (response.linhas().isEmpty() && response.vendasPorLoja().isEmpty()) {
@@ -820,6 +976,8 @@ public class RelatoriosFacade implements ISubRelatorios {
         linhas.add("Periodo: " + response.periodo().inicio() + " a " + response.periodo().fim());
         linhas.add("Loja: " + (response.lojaId() == null ? "Todas" : response.lojaId()));
         linhas.add("Categoria: " + (response.categoriaId() == null ? "Todas" : response.categoriaId()));
+        linhas.add("Produto: " + (response.produtoId() == null ? "Todos" : response.produtoId()));
+        linhas.add("Turno: " + (response.turno() == null ? "Todos" : response.turno()));
         linhas.add("Receita: " + response.receitaSemIva() + " | Custo: " + response.custoTotal() + " | Margem: " + response.margemTotal());
         linhas.add("Produto | Categoria | Qtd | Receita | Custo | Margem");
         if (response.produtos().isEmpty()) {
@@ -834,6 +992,97 @@ public class RelatoriosFacade implements ISubRelatorios {
                         + " | " + produto.custo()
                         + " | " + produto.margem()));
         return linhas;
+    }
+
+    private byte[] xlsxSimples(String nomeFolha, List<List<Object>> linhas) {
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream();
+             ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+            entradaZip(zip, "[Content_Types].xml", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+                      <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+                    </Types>
+                    """);
+            entradaZip(zip, "_rels/.rels", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+                    </Relationships>
+                    """);
+            entradaZip(zip, "xl/workbook.xml", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                      <sheets>
+                        <sheet name="%s" sheetId="1" r:id="rId1"/>
+                      </sheets>
+                    </workbook>
+                    """.formatted(escaparXml(nomeFolha)));
+            entradaZip(zip, "xl/_rels/workbook.xml.rels", """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+                    </Relationships>
+                    """);
+            entradaZip(zip, "xl/worksheets/sheet1.xml", folhaXlsx(linhas));
+            zip.finish();
+            return output.toByteArray();
+        } catch (IOException e) {
+            throw new BusinessException("RELATORIO_XLSX_INVALIDO", "Nao foi possivel gerar XLSX");
+        }
+    }
+
+    private void entradaZip(ZipOutputStream zip, String nome, String conteudo) throws IOException {
+        zip.putNextEntry(new ZipEntry(nome));
+        zip.write(conteudo.getBytes(StandardCharsets.UTF_8));
+        zip.closeEntry();
+    }
+
+    private String folhaXlsx(List<List<Object>> linhas) {
+        StringBuilder xml = new StringBuilder("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+                  <sheetData>
+                """);
+        for (int rowIndex = 0; rowIndex < linhas.size(); rowIndex++) {
+            int excelRow = rowIndex + 1;
+            xml.append("<row r=\"").append(excelRow).append("\">");
+            List<Object> linha = linhas.get(rowIndex);
+            for (int colIndex = 0; colIndex < linha.size(); colIndex++) {
+                xml.append("<c r=\"")
+                        .append(colunaExcel(colIndex))
+                        .append(excelRow)
+                        .append("\" t=\"inlineStr\"><is><t>")
+                        .append(escaparXml(linha.get(colIndex)))
+                        .append("</t></is></c>");
+            }
+            xml.append("</row>");
+        }
+        xml.append("""
+                  </sheetData>
+                </worksheet>
+                """);
+        return xml.toString();
+    }
+
+    private String colunaExcel(int indice) {
+        StringBuilder coluna = new StringBuilder();
+        int valor = indice;
+        do {
+            coluna.insert(0, (char) ('A' + (valor % 26)));
+            valor = valor / 26 - 1;
+        } while (valor >= 0);
+        return coluna.toString();
+    }
+
+    private String escaparXml(Object valor) {
+        return valor == null ? "" : valor.toString()
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 
     private byte[] pdfTexto(List<String> linhas) {
@@ -885,7 +1134,7 @@ public class RelatoriosFacade implements ISubRelatorios {
 
     private String normalizarFormato(String formato) {
         String valor = formato == null ? "" : formato.trim().toUpperCase();
-        if (!List.of("CSV", "PDF").contains(valor)) {
+        if (!List.of("CSV", "PDF", "XLSX").contains(valor)) {
             throw new BusinessException("RELATORIO_FORMATO_INVALIDO", "Formato de exportacao invalido");
         }
         return valor;

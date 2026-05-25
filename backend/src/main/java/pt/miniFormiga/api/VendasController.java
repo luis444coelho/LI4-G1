@@ -8,6 +8,9 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -127,6 +130,24 @@ public class VendasController {
         FaturaDTO fatura = pdv.obterFatura(id);
         auditoria.registar(TipoOperacao.FATURA_CONSULTADA, utilizadorId(principal), "FATURA", id, "Fatura consultada");
         return fatura;
+    }
+
+    @GetMapping("/faturas/{id}/documento")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','PDV_WRITE','RELATORIOS_READ')")
+    @Operation(summary = "Emitir documento fiscal da fatura")
+    @ApiResponse(responseCode = "200", description = "Documento fiscal emitido")
+    public ResponseEntity<byte[]> documentoFiscal(@PathVariable UUID id,
+                                                  @RequestParam(defaultValue = "FATURA") String tipo,
+                                                  @AuthenticationPrincipal UserDetails principal) {
+        byte[] conteudo = pdv.gerarDocumentoFiscal(id, tipo);
+        String tipoNormalizado = tipo == null ? "FATURA" : tipo.trim().toUpperCase();
+        auditoria.registar(TipoOperacao.FATURA_CONSULTADA, utilizadorId(principal), "FATURA", id,
+                tipoNormalizado + " emitido para consulta");
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"mini-formiga-" + tipoNormalizado.toLowerCase() + "-" + id + ".pdf\"")
+                .body(conteudo);
     }
 
     @GetMapping("/faturas/numero")

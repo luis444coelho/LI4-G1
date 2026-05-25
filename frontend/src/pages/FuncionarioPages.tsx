@@ -1,10 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button, Callout, Panel, SelectField, TextField } from '../components/ui'
-import { apiRequest, type FaturaResponse, type MeioPagamentoResponse, type PageResponse, type ProdutoResponse, type VendaResponse } from '../lib/api'
+import { apiDownload, apiRequest, type FaturaResponse, type MeioPagamentoResponse, type PageResponse, type ProdutoResponse, type VendaResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 const money = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
 
 export function FuncionarioSalePage() {
   const { session } = useAuth()
@@ -17,6 +28,7 @@ export function FuncionarioSalePage() {
   const [paymentType, setPaymentType] = useState('')
   const [nifCliente, setNifCliente] = useState('')
   const [nomeCliente, setNomeCliente] = useState('')
+  const [lastInvoice, setLastInvoice] = useState<FaturaResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -68,6 +80,7 @@ export function FuncionarioSalePage() {
     setLoading(true)
     setError(null)
     setMessage(null)
+    setLastInvoice(null)
     try {
       const product = selectedProduct
       if (!product) throw new Error('Produto não encontrado.')
@@ -114,7 +127,8 @@ export function FuncionarioSalePage() {
       setNifCliente('')
       setNomeCliente('')
       setPaymentType('')
-      setMessage(`Venda finalizada com sucesso. Fatura ${fatura.numeroFatura} emitida.`)
+      setLastInvoice(fatura)
+      setMessage(`Venda finalizada com sucesso. Fatura ${fatura.numeroFatura} e recibo disponíveis.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao finalizar venda.')
     } finally {
@@ -126,8 +140,20 @@ export function FuncionarioSalePage() {
     if (!sale) return
     await apiRequest<void>(`/vendas/${sale.id}/anular`, { method: 'POST' })
     setSale(null)
+    setLastInvoice(null)
     setPaymentType('')
     setMessage('Venda anulada.')
+  }
+
+  async function downloadFiscalDocument(type: 'FATURA' | 'RECIBO') {
+    if (!lastInvoice) return
+    setError(null)
+    try {
+      const response = await apiDownload(`/vendas/faturas/${lastInvoice.id}/documento?tipo=${type}`)
+      downloadBlob(response.blob, response.filename)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : `Não foi possível emitir ${type.toLowerCase()}.`)
+    }
   }
 
   return (
@@ -173,6 +199,12 @@ export function FuncionarioSalePage() {
         ) : null}
         {error ? <Callout tone="warning">{error}</Callout> : null}
         {message ? <Callout tone="info">{message}</Callout> : null}
+        {lastInvoice ? (
+          <div className="mf-actions-row fiscal-actions">
+            <Button variant="secondary" onClick={() => void downloadFiscalDocument('FATURA')}>Emitir fatura</Button>
+            <Button variant="secondary" onClick={() => void downloadFiscalDocument('RECIBO')}>Emitir recibo</Button>
+          </div>
+        ) : null}
 
         <Panel className="sale-table-panel">
           {!sale?.linhas.length ? <p className="mf-empty-state">Sem artigos na venda.</p> : null}

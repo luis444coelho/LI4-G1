@@ -73,9 +73,12 @@ export function AuthenticationPage() {
 
   useEffect(() => {
     if (!role) return
-    setUsername(demoUsers[role.id])
-    setPassword('MiniFormiga2026!')
-    setError(null)
+    const timeoutId = window.setTimeout(() => {
+      setUsername(demoUsers[role.id])
+      setPassword('MiniFormiga2026!')
+      setError(null)
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
   }, [role])
 
   if (!role) {

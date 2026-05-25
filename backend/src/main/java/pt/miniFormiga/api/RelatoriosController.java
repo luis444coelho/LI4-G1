@@ -40,8 +40,10 @@ public class RelatoriosController {
     public DashboardResponse dashboard(@RequestParam(required = false) UUID lojaId,
                                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
                                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
-                                       @RequestParam(required = false) UUID categoriaId) {
-        return relatorios.obterDashboard(new RelatorioFiltro(lojaId, inicio, fim, categoriaId));
+                                       @RequestParam(required = false) UUID categoriaId,
+                                       @RequestParam(required = false) UUID produtoId,
+                                       @RequestParam(required = false) String turno) {
+        return relatorios.obterDashboard(new RelatorioFiltro(lojaId, inicio, fim, categoriaId, produtoId, turno));
     }
 
     @GetMapping("/relatorios/vendas")
@@ -51,8 +53,10 @@ public class RelatoriosController {
     public RelatorioVendasResponse vendas(@RequestParam(required = false) UUID lojaId,
                                           @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
                                           @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
-                                          @RequestParam(required = false) UUID categoriaId) {
-        return relatorios.relatorioVendas(new RelatorioFiltro(lojaId, inicio, fim, categoriaId));
+                                          @RequestParam(required = false) UUID categoriaId,
+                                          @RequestParam(required = false) UUID produtoId,
+                                          @RequestParam(required = false) String turno) {
+        return relatorios.relatorioVendas(new RelatorioFiltro(lojaId, inicio, fim, categoriaId, produtoId, turno));
     }
 
     @GetMapping("/relatorios/stock")
@@ -62,8 +66,9 @@ public class RelatoriosController {
     public RelatorioStockResponse stock(@RequestParam(required = false) UUID lojaId,
                                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
                                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
-                                        @RequestParam(required = false) UUID categoriaId) {
-        return relatorios.relatorioStock(new RelatorioFiltro(lojaId, inicio, fim, categoriaId));
+                                        @RequestParam(required = false) UUID categoriaId,
+                                        @RequestParam(required = false) UUID produtoId) {
+        return relatorios.relatorioStock(new RelatorioFiltro(lojaId, inicio, fim, categoriaId, produtoId, null));
     }
 
     @GetMapping("/relatorios/rentabilidade")
@@ -73,8 +78,10 @@ public class RelatoriosController {
     public RelatorioRentabilidadeResponse rentabilidade(@RequestParam(required = false) UUID lojaId,
                                                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
                                                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
-                                                        @RequestParam(required = false) UUID categoriaId) {
-        return relatorios.relatorioRentabilidade(new RelatorioFiltro(lojaId, inicio, fim, categoriaId));
+                                                        @RequestParam(required = false) UUID categoriaId,
+                                                        @RequestParam(required = false) UUID produtoId,
+                                                        @RequestParam(required = false) String turno) {
+        return relatorios.relatorioRentabilidade(new RelatorioFiltro(lojaId, inicio, fim, categoriaId, produtoId, turno));
     }
 
     @PostMapping("/relatorios/exportar")

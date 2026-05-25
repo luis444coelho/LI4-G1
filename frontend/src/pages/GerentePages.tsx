@@ -13,6 +13,7 @@ export function GerenteStockPage() {
 
 export function GerenteCashPage() {
   const { session } = useAuth()
+  const lojaId = session?.lojaId
   const [closings, setClosings] = useState<FechoCaixaResponse[]>([])
   const [current, setCurrent] = useState<FechoCaixaResponse | null>(null)
   const [todaySales, setTodaySales] = useState<VendaResponse[]>([])
@@ -20,25 +21,30 @@ export function GerenteCashPage() {
   const [error, setError] = useState<string | null>(null)
 
   const loadCashData = useCallback(async () => {
-    if (!session?.lojaId) return
+    if (!lojaId) return
     const today = formatLocalDate(new Date())
     const [closingPage, salesPage] = await Promise.all([
-      apiRequest<PageResponse<FechoCaixaResponse>>(`/fechos-caixa?lojaId=${session?.lojaId}&size=5`),
-      apiRequest<PageResponse<VendaResponse>>(`/vendas?lojaId=${session?.lojaId}&inicio=${today}&fim=${today}&porFechar=true&size=100`),
+      apiRequest<PageResponse<FechoCaixaResponse>>(`/fechos-caixa?lojaId=${lojaId}&size=5`),
+      apiRequest<PageResponse<VendaResponse>>(`/vendas?lojaId=${lojaId}&inicio=${today}&fim=${today}&porFechar=true&size=100`),
     ])
     setClosings(closingPage.content)
     const pendingClosing = closingPage.content.find((closing) => closing.data === today && !closing.confirmado) ?? null
     setCurrent(pendingClosing)
     setClosingNote((note) => (pendingClosing && note.trim() ? note : pendingClosing?.observacoesDiscrepancia ?? ''))
     setTodaySales(salesPage.content.filter((sale) => sale.meioPagamento && !sale.anulada))
-  }, [session?.lojaId])
+  }, [lojaId])
 
   useEffect(() => {
-    loadCashData().catch(() => setError('Não foi possível carregar fechos de caixa.'))
+    const timeoutId = window.setTimeout(() => {
+      loadCashData().catch(() => setError('Não foi possível carregar fechos de caixa.'))
+    }, 0)
     const interval = window.setInterval(() => {
       loadCashData().catch(() => setError('Não foi possível atualizar fechos de caixa.'))
     }, 5000)
-    return () => window.clearInterval(interval)
+    return () => {
+      window.clearTimeout(timeoutId)
+      window.clearInterval(interval)
+    }
   }, [loadCashData])
 
   async function createClosing() {
@@ -46,7 +52,7 @@ export function GerenteCashPage() {
     try {
       const created = await apiRequest<FechoCaixaResponse>('/fechos-caixa', {
         method: 'POST',
-        body: JSON.stringify({ lojaId: session?.lojaId, utilizadorId: session?.utilizadorId }),
+        body: JSON.stringify({ lojaId, utilizadorId: session?.utilizadorId }),
       })
       setCurrent(created)
       setClosingNote(created.observacoesDiscrepancia ?? '')

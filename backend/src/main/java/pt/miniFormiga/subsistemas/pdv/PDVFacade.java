@@ -240,6 +240,19 @@ public class PDVFacade implements ISubPDV {
         return FaturaDTO.from(faturaRepository.findById(faturaId).orElseThrow(() -> new RecursoNaoEncontradoException("Fatura", faturaId)));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] gerarDocumentoFiscal(UUID faturaId, String tipoDocumento) {
+        Fatura fatura = faturaRepository.findById(faturaId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Fatura", faturaId));
+        String tipo = tipoDocumento == null ? "FATURA" : tipoDocumento.trim().toUpperCase();
+        return switch (tipo) {
+            case "FATURA" -> fatura.gerarPDF();
+            case "RECIBO" -> fatura.gerarReciboPDF();
+            default -> throw new BusinessException("DOCUMENTO_FISCAL_INVALIDO", "Tipo de documento fiscal invalido");
+        };
+    }
+
     public VendaDTO processarDevolucao(UUID vendaId, ProcessarDevolucaoRequest request) {
         Venda original = obterVendaEntidade(vendaId);
         if (original.isAnulada() || original.getMeioPagamento() == null) {

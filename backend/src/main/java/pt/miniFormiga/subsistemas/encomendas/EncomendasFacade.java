@@ -32,6 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -211,6 +212,23 @@ public class EncomendasFacade implements ISubEncomendas {
         Encomenda guardada = encomendaRepository.save(encomenda);
         auditoria.registar(TipoOperacao.ENCOMENDA_CRIADA, null, "ENCOMENDA", "Encomenda criada");
         return toEncomendaResponse(guardada);
+    }
+
+    @Override
+    public List<EncomendaResponse> criarEncomendaConsolidada(CriarEncomendaConsolidadaRequest request) {
+        LinkedHashSet<UUID> lojasUnicas = new LinkedHashSet<>(request.lojaIds());
+        if (lojasUnicas.size() < 2) {
+            throw new BusinessException("ENCOMENDA_CONSOLIDADA_LOJAS_INSUFICIENTES",
+                    "Encomenda consolidada deve abranger pelo menos duas lojas distintas");
+        }
+        return lojasUnicas.stream()
+                .map(lojaId -> criarEncomenda(new CriarEncomendaRequest(
+                        lojaId,
+                        request.fornecedorId(),
+                        request.linhas(),
+                        request.dataHoraSubmissao()
+                )))
+                .toList();
     }
 
     @Override

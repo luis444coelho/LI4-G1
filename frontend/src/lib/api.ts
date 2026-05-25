@@ -71,6 +71,8 @@ export interface RelatorioVendasResponse {
   periodo: PeriodoResponse
   lojaId?: string
   categoriaId?: string
+  produtoId?: string
+  turno?: string
   totalSemIva: number
   totalIva: number
   totalComIva: number
@@ -127,6 +129,8 @@ export interface RelatorioRentabilidadeResponse {
   periodo: PeriodoResponse
   lojaId?: string
   categoriaId?: string
+  produtoId?: string
+  turno?: string
   receitaSemIva: number
   custoTotal: number
   margemTotal: number

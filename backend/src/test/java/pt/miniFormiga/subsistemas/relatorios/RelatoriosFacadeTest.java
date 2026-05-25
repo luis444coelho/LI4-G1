@@ -173,6 +173,48 @@ class RelatoriosFacadeTest {
     }
 
     @Test
+    void relatorioVendasFiltraPorProdutoETurno() {
+        Produto sumo = new Produto("5600000000028", "Sumo", new BigDecimal("3.00"), new BigDecimal("1.20"),
+                new TaxaIVA("Taxa Normal", new BigDecimal("23")), new Categoria("Bebidas", "Bebidas frias"));
+        Venda vendaAguaManha = vendaFinalizada(produto, 1, LocalDateTime.of(2026, 5, 10, 9, 0));
+        Venda vendaAguaTarde = vendaFinalizada(produto, 1, LocalDateTime.of(2026, 5, 10, 16, 0));
+        Venda vendaSumoManha = vendaFinalizada(sumo, 1, LocalDateTime.of(2026, 5, 10, 10, 0));
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of(vendaAguaManha, vendaAguaTarde, vendaSumoManha));
+
+        RelatorioVendasResponse response = facade.relatorioVendas(new RelatorioFiltro(
+                null,
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 5, 31),
+                null,
+                produto.getId(),
+                "MANHA"
+        ));
+
+        assertEquals(produto.getId(), response.produtoId());
+        assertEquals("MANHA", response.turno());
+        assertEquals(new BigDecimal("2.46"), response.totalComIva());
+        assertEquals(1, response.numeroVendas());
+        assertEquals(1, response.linhas().size());
+        assertEquals(produto.getId(), response.linhas().get(0).produtoId());
+    }
+
+    @Test
+    void exportacaoXlsxGeraFicheiroExcelComMediaTypeCorreto() {
+        Venda venda = vendaFinalizada(1, LocalDateTime.of(2026, 5, 10, 12, 0));
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of(venda));
+
+        ExportacaoRelatorio exportacao = facade.exportar(new ExportarRelatorioRequest(
+                "vendas", "xlsx", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+
+        assertEquals("mini-formiga-vendas.xlsx", exportacao.nomeFicheiro());
+        assertEquals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", exportacao.mediaType());
+        assertEquals('P', (char) exportacao.conteudo()[0]);
+        assertEquals('K', (char) exportacao.conteudo()[1]);
+    }
+
+    @Test
     void relatoriosCentraisUsamLinhasSincronizadasComIvaECusto() throws Exception {
         VendaRelatorioSync linha = new VendaRelatorioSync(
                 UUID.randomUUID(),
@@ -242,8 +284,12 @@ class RelatoriosFacadeTest {
     }
 
     private Venda vendaFinalizada(int quantidade, LocalDateTime dataHora) {
+        return vendaFinalizada(produto, quantidade, dataHora);
+    }
+
+    private Venda vendaFinalizada(Produto produtoVenda, int quantidade, LocalDateTime dataHora) {
         Venda venda = new Venda(loja, operador);
-        new LinhaVenda(venda, produto, quantidade);
+        new LinhaVenda(venda, produtoVenda, quantidade);
         venda.finalizar(new MeioPagamento("NUMERARIO", "Numerario"));
         venda.calcularTotais();
         ReflectionTestUtils.setField(venda, "dataHora", dataHora);

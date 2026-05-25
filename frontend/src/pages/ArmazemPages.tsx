@@ -11,6 +11,8 @@ export function ArmazemStockPage() {
 
 export function ArmazemGoodsReceiptPage() {
   const { session } = useAuth()
+  const lojaId = session?.lojaId
+  const utilizadorId = session?.utilizadorId
   const [orders, setOrders] = useState<EncomendaResponse[]>([])
   const [orderId, setOrderId] = useState('')
   const [guide, setGuide] = useState('')
@@ -19,27 +21,33 @@ export function ArmazemGoodsReceiptPage() {
   const [error, setError] = useState<string | null>(null)
 
   const loadReceiptData = useCallback(async (preserveSelection = true) => {
-    if (!session?.lojaId) return
+    if (!lojaId) return
     try {
       const [page, nextGuide] = await Promise.all([
-        apiRequest<PageResponse<EncomendaResponse>>(`/encomendas?lojaId=${session.lojaId}&size=20`),
-        apiRequest<ProximaGuiaRemessaResponse>(`/entradas-mercadoria/proxima-guia?lojaId=${session.lojaId}`),
+        apiRequest<PageResponse<EncomendaResponse>>(`/encomendas?lojaId=${lojaId}&size=20`),
+        apiRequest<ProximaGuiaRemessaResponse>(`/entradas-mercadoria/proxima-guia?lojaId=${lojaId}`),
       ])
-        setOrders(page.content)
+      setOrders(page.content)
       setOrderId((current) => preserveSelection ? current || page.content[0]?.id || '' : page.content.find((item) => item.estado !== 'RECEBIDA')?.id ?? '')
       setGuide(nextGuide.numero)
     } catch {
       setError('Não foi possível carregar encomendas.')
     }
-  }, [session?.lojaId])
+  }, [lojaId])
 
   useEffect(() => {
-    void loadReceiptData()
+    const timeoutId = window.setTimeout(() => {
+      void loadReceiptData()
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
   }, [loadReceiptData])
 
   useEffect(() => {
     if (orderId && orders.some((item) => item.id === orderId)) return
-    setOrderId(orders[0]?.id ?? '')
+    const timeoutId = window.setTimeout(() => {
+      setOrderId(orders[0]?.id ?? '')
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
   }, [orderId, orders])
 
   const order = orders.find((item) => item.id === orderId)
@@ -62,8 +70,8 @@ export function ArmazemGoodsReceiptPage() {
         method: 'POST',
         body: JSON.stringify({
           encomendaId: order.id,
-          lojaId: session?.lojaId,
-          responsavelId: session?.utilizadorId,
+          lojaId,
+          responsavelId: utilizadorId,
           guiaNumero: guide,
           dataEmissao: new Date().toISOString().slice(0, 10),
           linhas: order.linhas.map((line) => ({
