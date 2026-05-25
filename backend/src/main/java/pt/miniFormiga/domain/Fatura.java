@@ -10,8 +10,11 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import org.springframework.data.domain.Persistable;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -101,17 +104,16 @@ public class Fatura extends EntidadeBase implements Persistable<UUID> {
         } else {
             atualizarTotaisDocumento();
         }
-        String conteudo = "%PDF-1.4\n"
-                + "% Mini-Formiga\n"
-                + "Fatura " + serie + "/" + numero + "\n"
-                + "Tipo: " + tipo + "\n"
-                + "NIF: " + (nifCliente == null ? "" : nifCliente) + "\n"
-                + "Cliente: " + (nomeCliente == null ? "" : nomeCliente) + "\n"
-                + "Total sem IVA: " + totalSemIVA + "\n"
-                + "Total IVA: " + totalIVA + "\n"
-                + "Total com IVA: " + totalComIVA + "\n"
-                + "%%EOF\n";
-        return conteudo.getBytes(StandardCharsets.UTF_8);
+        return gerarDocumentoPdf(List.of(
+                "Mini-Formiga",
+                "Fatura " + serie + "/" + numero,
+                "Tipo: " + tipo,
+                "NIF: " + texto(nifCliente),
+                "Cliente: " + texto(nomeCliente),
+                "Total sem IVA: " + totalSemIVA,
+                "Total IVA: " + totalIVA,
+                "Total com IVA: " + totalComIVA
+        ));
     }
 
     public byte[] gerarReciboPDF() {
@@ -120,15 +122,62 @@ public class Fatura extends EntidadeBase implements Persistable<UUID> {
         } else {
             atualizarTotaisDocumento();
         }
-        String conteudo = "%PDF-1.4\n"
-                + "% Mini-Formiga\n"
-                + "Recibo " + serie + "/" + numero + "\n"
-                + "Fatura associada: " + getNumeroFatura() + "\n"
-                + "Meio pagamento: " + (venda.getMeioPagamento() == null ? "" : venda.getMeioPagamento().name()) + "\n"
-                + "Total recebido: " + totalComIVA + "\n"
-                + "Data: " + dataEmissao + "\n"
-                + "%%EOF\n";
-        return conteudo.getBytes(StandardCharsets.UTF_8);
+        return gerarDocumentoPdf(List.of(
+                "Mini-Formiga",
+                "Recibo " + serie + "/" + numero,
+                "Fatura associada: " + getNumeroFatura(),
+                "Meio pagamento: " + (venda.getMeioPagamento() == null ? "" : venda.getMeioPagamento().name()),
+                "Total recebido: " + totalComIVA,
+                "Data: " + dataEmissao
+        ));
+    }
+
+    private byte[] gerarDocumentoPdf(List<String> linhas) {
+        StringBuilder stream = new StringBuilder("BT\n/F1 12 Tf\n50 790 Td\n");
+        for (String linha : linhas) {
+            stream.append("(").append(escaparPdf(linha)).append(") Tj\n0 -18 Td\n");
+        }
+        stream.append("ET\n");
+
+        byte[] streamBytes = stream.toString().getBytes(StandardCharsets.UTF_8);
+        List<String> objetos = new ArrayList<>();
+        objetos.add("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+        objetos.add("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+        objetos.add("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n");
+        objetos.add("4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n");
+        objetos.add("5 0 obj\n<< /Length " + streamBytes.length + " >>\nstream\n" + stream + "endstream\nendobj\n");
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        escreverAscii(output, "%PDF-1.4\n");
+        List<Integer> offsets = new ArrayList<>();
+        offsets.add(0);
+        for (String objeto : objetos) {
+            offsets.add(output.size());
+            escreverAscii(output, objeto);
+        }
+        int xrefOffset = output.size();
+        escreverAscii(output, "xref\n0 " + offsets.size() + "\n");
+        escreverAscii(output, "0000000000 65535 f \n");
+        for (int i = 1; i < offsets.size(); i++) {
+            escreverAscii(output, String.format("%010d 00000 n \n", offsets.get(i)));
+        }
+        escreverAscii(output, "trailer\n<< /Size " + offsets.size() + " /Root 1 0 R >>\nstartxref\n" + xrefOffset + "\n%%EOF\n");
+        return output.toByteArray();
+    }
+
+    private static void escreverAscii(ByteArrayOutputStream output, String texto) {
+        output.writeBytes(texto.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String escaparPdf(String valor) {
+        return texto(valor)
+                .replace("\\", "\\\\")
+                .replace("(", "\\(")
+                .replace(")", "\\)");
+    }
+
+    private static String texto(String valor) {
+        return valor == null ? "" : valor;
     }
 
     public Venda getVenda() {

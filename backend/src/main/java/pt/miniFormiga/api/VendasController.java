@@ -122,6 +122,18 @@ public class VendasController {
         return FaturaDTO.from(pdv.emitirFatura(id, request.nifCliente(), request.nomeCliente()));
     }
 
+    @GetMapping("/faturas")
+    @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','PDV_WRITE','RELATORIOS_READ')")
+    @Operation(summary = "Listar faturas da loja")
+    @ApiResponse(responseCode = "200", description = "Faturas listadas")
+    public Page<FaturaDTO> listarFaturas(@RequestParam UUID lojaId,
+                                         @RequestParam(required = false) String cliente,
+                                         Pageable pageable) {
+        String termo = cliente == null || cliente.isBlank() ? null : cliente.trim();
+        return faturaRepository.pesquisarPorLojaECliente(lojaId, termo, pageable)
+                .map(FaturaDTO::from);
+    }
+
     @GetMapping("/faturas/{id}")
     @PreAuthorize("hasAnyAuthority('GLOBAL_ADMIN','PDV_WRITE','RELATORIOS_READ')")
     @Operation(summary = "Obter fatura")

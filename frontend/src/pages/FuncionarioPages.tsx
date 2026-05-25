@@ -17,6 +17,14 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+async function fetchInvoices(lojaId: string, cliente = '') {
+  const params = new URLSearchParams({ lojaId, size: '50' })
+  const termo = cliente.trim()
+  if (termo) params.set('cliente', termo)
+  const page = await apiRequest<PageResponse<FaturaResponse>>(`/vendas/faturas?${params.toString()}`)
+  return page.content
+}
+
 export function FuncionarioSalePage() {
   const { session } = useAuth()
   const [sale, setSale] = useState<VendaResponse | null>(null)
@@ -29,6 +37,10 @@ export function FuncionarioSalePage() {
   const [nifCliente, setNifCliente] = useState('')
   const [nomeCliente, setNomeCliente] = useState('')
   const [lastInvoice, setLastInvoice] = useState<FaturaResponse | null>(null)
+  const [invoiceQuery, setInvoiceQuery] = useState('')
+  const [invoiceSearch, setInvoiceSearch] = useState('')
+  const [invoices, setInvoices] = useState<FaturaResponse[]>([])
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +62,25 @@ export function FuncionarioSalePage() {
       ignore = true
     }
   }, [session?.lojaId])
+
+  useEffect(() => {
+    if (!session?.lojaId) return
+    const lojaId = session.lojaId
+    const timeoutId = window.setTimeout(() => {
+      void fetchInvoices(lojaId).then((rows) => {
+        setInvoices(rows)
+        setSelectedInvoiceId((current) => rows.some((invoice) => invoice.id === current) ? current : rows[0]?.id || '')
+      }).catch(() => undefined)
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [session?.lojaId])
+
+  async function loadInvoices(cliente = '') {
+    if (!session?.lojaId) return
+    const rows = await fetchInvoices(session.lojaId, cliente)
+    setInvoices(rows)
+    setSelectedInvoiceId((current) => rows.some((invoice) => invoice.id === current) ? current : rows[0]?.id || '')
+  }
 
   const matchingProducts = useMemo(() => {
     const term = query.trim().toLowerCase()
@@ -128,6 +159,9 @@ export function FuncionarioSalePage() {
       setNomeCliente('')
       setPaymentType('')
       setLastInvoice(fatura)
+      setInvoiceQuery(fatura.numeroFatura)
+      setSelectedInvoiceId(fatura.id)
+      setInvoices((items) => [fatura, ...items.filter((item) => item.id !== fatura.id)])
       setMessage(`Venda finalizada com sucesso. Fatura ${fatura.numeroFatura} e recibo disponíveis.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao finalizar venda.')
@@ -155,6 +189,48 @@ export function FuncionarioSalePage() {
       setError(caught instanceof Error ? caught.message : `Não foi possível emitir ${type.toLowerCase()}.`)
     }
   }
+
+  async function lookupInvoice() {
+    const queryValue = invoiceQuery.trim()
+    if (!queryValue) return
+    setError(null)
+    setMessage(null)
+    try {
+      const invoice = queryValue.includes('/')
+        ? await apiRequest<FaturaResponse>(`/vendas/faturas/numero?numeroFatura=${encodeURIComponent(queryValue)}`)
+        : await apiRequest<FaturaResponse>(`/vendas/faturas/${queryValue}`)
+      setLastInvoice(invoice)
+      setInvoiceQuery(invoice.numeroFatura)
+      setSelectedInvoiceId(invoice.id)
+      setInvoices((items) => items.some((item) => item.id === invoice.id) ? items : [invoice, ...items])
+      setMessage(`Fatura ${invoice.numeroFatura} obtida.`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível obter a fatura.')
+    }
+  }
+
+  function selectInvoice(invoiceId: string) {
+    setSelectedInvoiceId(invoiceId)
+    const invoice = invoices.find((item) => item.id === invoiceId)
+    if (!invoice) return
+    setLastInvoice(invoice)
+    setInvoiceQuery(invoice.numeroFatura)
+    setMessage(null)
+    setError(null)
+  }
+
+  const invoiceOptions = useMemo(() => {
+    if (invoices.length === 0) {
+      return [{ value: '', label: 'Sem faturas encontradas' }]
+    }
+    return invoices.map((invoice) => {
+      const cliente = invoice.nomeCliente || invoice.nifCliente || 'Consumidor final'
+      return {
+        value: invoice.id,
+        label: `${cliente} - ${invoice.numeroFatura} - ${money.format(invoice.totalComIva)}`,
+      }
+    })
+  }, [invoices])
 
   return (
     <div className="sale-layout">
@@ -200,10 +276,17 @@ export function FuncionarioSalePage() {
         {error ? <Callout tone="warning">{error}</Callout> : null}
         {message ? <Callout tone="info">{message}</Callout> : null}
         {lastInvoice ? (
-          <div className="mf-actions-row fiscal-actions">
-            <Button variant="secondary" onClick={() => void downloadFiscalDocument('FATURA')}>Emitir fatura</Button>
-            <Button variant="secondary" onClick={() => void downloadFiscalDocument('RECIBO')}>Emitir recibo</Button>
-          </div>
+          <Panel title="Documento fiscal" className="fiscal-panel">
+            <div className="invoice-preview">
+              <strong>{lastInvoice.numeroFatura}</strong>
+              <span>{lastInvoice.tipo} · {money.format(lastInvoice.totalComIva)}</span>
+              <span>{lastInvoice.nomeCliente || lastInvoice.nifCliente ? [lastInvoice.nomeCliente, lastInvoice.nifCliente].filter(Boolean).join(' · ') : 'Consumidor final'}</span>
+            </div>
+            <div className="mf-actions-row fiscal-actions">
+              <Button variant="secondary" onClick={() => void downloadFiscalDocument('FATURA')}>Descarregar fatura</Button>
+              <Button variant="secondary" onClick={() => void downloadFiscalDocument('RECIBO')}>Descarregar recibo</Button>
+            </div>
+          </Panel>
         ) : null}
 
         <Panel className="sale-table-panel">
@@ -272,6 +355,20 @@ export function FuncionarioSalePage() {
             {loading ? 'A finalizar...' : 'Finalizar venda'}
           </Button>
           <Button variant="secondary" className="full-width mt-compact" onClick={cancelSale} disabled={!sale || loading}>Cancelar</Button>
+        </Panel>
+
+        <Panel title="Consultar documento">
+          <TextField label="Cliente/NIF" value={invoiceSearch} onChange={(event) => setInvoiceSearch(event.target.value)} />
+          <Button variant="secondary" className="full-width mt-compact" onClick={() => void loadInvoices(invoiceSearch)} disabled={loading}>Pesquisar faturas</Button>
+          <SelectField label="Faturas" value={selectedInvoiceId} options={invoiceOptions} onChange={(event) => selectInvoice(event.target.value)} />
+          <TextField label="N.º fatura ou ID" value={invoiceQuery} onChange={(event) => setInvoiceQuery(event.target.value)} />
+          <Button variant="secondary" className="full-width mt-compact" onClick={() => void lookupInvoice()} disabled={!invoiceQuery.trim() || loading}>Obter por número/ID</Button>
+          {lastInvoice ? (
+            <div className="mf-actions-row fiscal-actions">
+              <Button variant="secondary" onClick={() => void downloadFiscalDocument('FATURA')}>Fatura</Button>
+              <Button variant="secondary" onClick={() => void downloadFiscalDocument('RECIBO')}>Recibo</Button>
+            </div>
+          ) : null}
         </Panel>
       </div>
     </div>
