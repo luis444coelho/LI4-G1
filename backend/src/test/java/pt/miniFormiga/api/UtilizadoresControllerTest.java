@@ -92,7 +92,8 @@ class UtilizadoresControllerTest {
                 "operador.porto@mini.pt",
                 "FUNCIONARIO",
                 null,
-                outraLoja.getId()
+                outraLoja.getId(),
+                null
         );
 
         assertThrows(AccessDeniedException.class, () -> controller.criar(request, authentication));
@@ -120,7 +121,8 @@ class UtilizadoresControllerTest {
                 "novo.gerente@mini.pt",
                 "GERENTE",
                 null,
-                lojaPropria.getId()
+                lojaPropria.getId(),
+                null
         );
 
         assertThrows(AccessDeniedException.class, () -> controller.criar(request, authentication));

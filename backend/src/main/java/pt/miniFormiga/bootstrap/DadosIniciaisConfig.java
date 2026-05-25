@@ -55,13 +55,16 @@ public class DadosIniciaisConfig {
             Produto sandes = criarProdutoSeNecessario(produtoRepository, "5600000000028", "Sandes Mista", "Sandes pronta", new BigDecimal("2.50"), new BigDecimal("1.20"), snacks, reduzida, 50);
             Produto champo = criarProdutoSeNecessario(produtoRepository, "5600000000035", "Champo 200ml", "Champo de higiene pessoal", new BigDecimal("3.50"), new BigDecimal("1.80"), higiene, normal, 50);
             Produto acucar = criarProdutoSeNecessario(produtoRepository, "5600000000042", "Acucar 1kg", "Acucar branco 1kg", new BigDecimal("1.80"), new BigDecimal("0.90"), mercearia, reduzida, 50);
-            criarProdutoLojaSeNecessario(produtoLojaRepository, agua, loja, 50, 10);
+            criarProdutoLojaSeNecessario(produtoLojaRepository, agua, loja, 5, 10);
             criarProdutoLojaSeNecessario(produtoLojaRepository, sandes, loja, 50, 10);
             criarProdutoLojaSeNecessario(produtoLojaRepository, champo, loja, 50, 10);
             criarProdutoLojaSeNecessario(produtoLojaRepository, acucar, loja, 50, 10);
 
             Fornecedor fornecedor = criarFornecedorSeNecessario(fornecedorRepository);
             criarCondicaoSeNecessaria(condicaoComercialRepository, fornecedor, agua);
+            criarCondicaoSeNecessaria(condicaoComercialRepository, fornecedor, sandes);
+            criarCondicaoSeNecessaria(condicaoComercialRepository, fornecedor, champo);
+            criarCondicaoSeNecessaria(condicaoComercialRepository, fornecedor, acucar);
         };
     }
 
@@ -72,16 +75,17 @@ public class DadosIniciaisConfig {
                                              String email,
                                              PerfilUtilizador perfil,
                                              Loja loja) {
-        if (!repository.existsByUsername(username)) {
-            repository.save(new Utilizador(
+        repository.findByUsername(username).ifPresentOrElse(utilizador -> {
+            utilizador.alterarPassword(passwordEncoder.encode("MiniFormiga2026!"));
+            utilizador.ativar();
+        }, () -> repository.save(new Utilizador(
                     username,
                     passwordEncoder.encode("MiniFormiga2026!"),
                     nome,
                     email,
                     perfil,
                     loja
-            ));
-        }
+            )));
     }
 
     private Categoria criarCategoriaSeNecessaria(CategoriaRepository repository, String nome, String descricao) {
@@ -127,8 +131,12 @@ public class DadosIniciaisConfig {
                                               Loja loja,
                                               int quantidade,
                                               int nivelMinimo) {
-        repository.findByProdutoIdAndLojaId(produto.getId(), loja.getId())
+        ProdutoLoja produtoLoja = repository.findByProdutoIdAndLojaId(produto.getId(), loja.getId())
                 .orElseGet(() -> repository.save(new ProdutoLoja(produto, loja, quantidade, nivelMinimo)));
+        produtoLoja.definirNivelMinimo(nivelMinimo);
+        if ("5600000000011".equals(produto.getCodigo()) && produtoLoja.getQuantidadeStock() >= nivelMinimo) {
+            produtoLoja.definirStockInicial(quantidade);
+        }
     }
 
     private void criarCondicaoSeNecessaria(CondicaoComercialRepository repository, Fornecedor fornecedor, Produto produto) {

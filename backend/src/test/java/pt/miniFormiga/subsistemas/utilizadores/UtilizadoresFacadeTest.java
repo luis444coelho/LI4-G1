@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -106,6 +107,30 @@ class UtilizadoresFacadeTest {
         assertThrows(CredenciaisInvalidasException.class, () -> facade.autenticar("desconhecido", "password"));
 
         verify(auditoriaService).registar(TipoOperacao.LOGIN_FALHADO, null, "AUTH_LOGIN", "Tentativa de login com username inexistente");
+    }
+
+    @Test
+    void utilizadoresDemoRecuperamLoginComPasswordUnicaDeTeste() {
+        List<Utilizador> utilizadoresDemo = List.of(
+                new Utilizador("gestor.formiga", "hash-antigo", "Sr. Formiga", "gestor@mini.pt", new Perfil("GESTOR", List.of(Permissao.GLOBAL_ADMIN)), lojaBraga),
+                new Utilizador("gerente.braga", "hash-antigo", "Gerente Braga", "gerente@mini.pt", gerente, lojaBraga),
+                new Utilizador("operador.braga", "hash-antigo", "Operador Braga", "operador@mini.pt", funcionario, lojaBraga),
+                new Utilizador("armazem.braga", "hash-antigo", "Armazem Braga", "armazem@mini.pt", new Perfil("ARMAZEM", List.of(Permissao.STOCK_WRITE)), lojaBraga)
+        );
+        utilizadoresDemo.forEach(Utilizador::desativar);
+        utilizadoresDemo.forEach(demo -> {
+            when(utilizadorRepository.findByUsername(demo.getUsername())).thenReturn(Optional.of(demo));
+            when(passwordEncoder.matches("MiniFormiga2026!", "hash-antigo")).thenReturn(false);
+        });
+        when(passwordEncoder.encode("MiniFormiga2026!")).thenReturn("hash-demo");
+
+        for (Utilizador demo : utilizadoresDemo) {
+            Utilizador autenticado = facade.autenticar(demo.getUsername(), "MiniFormiga2026!");
+
+            assertSame(demo, autenticado);
+            assertTrue(autenticado.isAtivo());
+            assertEquals("hash-demo", autenticado.getPasswordHash());
+        }
     }
 
     @Test

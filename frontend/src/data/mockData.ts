@@ -93,6 +93,7 @@ export const roles: Record<RoleId, RoleConfig> = {
       { label: 'Fecho de caixa', path: '/gerente/fecho-caixa', icon: 'cash' },
       { label: 'Relatórios', path: '/gerente/relatorios', icon: 'reports' },
       { label: 'Ajuste inventário', path: '/gerente/ajuste-inventario', icon: 'adjustment' },
+      { label: 'Encomendas', path: '/gerente/encomendas', icon: 'orders' },
       { label: 'Funcionários', path: '/gerente/funcionarios', icon: 'staff' },
     ],
   },

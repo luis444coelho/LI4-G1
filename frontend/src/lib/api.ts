@@ -1,5 +1,5 @@
-export const LOCAL_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
-export const CENTRAL_API_BASE_URL = import.meta.env.VITE_CENTRAL_API_BASE_URL ?? LOCAL_API_BASE_URL
+export const LOCAL_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
+export const CENTRAL_API_BASE_URL = import.meta.env.VITE_CENTRAL_API_BASE_URL ?? 'http://localhost:8081/api/v1'
 export const AUTH_STORAGE_KEY = 'mini-formiga.auth'
 
 interface StoredSession {
@@ -428,7 +428,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
       ? String(payload.message)
       : typeof payload === 'string' && payload.trim()
         ? payload
-      : 'Pedido rejeitado pelo servidor'
+      : `Pedido rejeitado pelo servidor (${response.status})`
     const code = payload && typeof payload === 'object' && 'code' in payload
       ? String(payload.code)
       : undefined

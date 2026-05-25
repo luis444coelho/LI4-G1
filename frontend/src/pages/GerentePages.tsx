@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
 import { ReportsContent, StockContent } from '../components/pageSections'
@@ -19,21 +19,27 @@ export function GerenteCashPage() {
   const [closingNote, setClosingNote] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadCashData = useCallback(async () => {
+    if (!session?.lojaId) return
     const today = formatLocalDate(new Date())
-    Promise.all([
+    const [closingPage, salesPage] = await Promise.all([
       apiRequest<PageResponse<FechoCaixaResponse>>(`/fechos-caixa?lojaId=${session?.lojaId}&size=5`),
       apiRequest<PageResponse<VendaResponse>>(`/vendas?lojaId=${session?.lojaId}&inicio=${today}&fim=${today}&porFechar=true&size=100`),
     ])
-      .then(([closingPage, salesPage]) => {
-        setClosings(closingPage.content)
-        const pendingClosing = closingPage.content.find((closing) => closing.data === today && !closing.confirmado) ?? null
-        setCurrent(pendingClosing)
-        setClosingNote(pendingClosing?.observacoesDiscrepancia ?? '')
-        setTodaySales(salesPage.content.filter((sale) => sale.meioPagamento && !sale.anulada))
-      })
-      .catch(() => setError('Não foi possível carregar fechos de caixa.'))
+    setClosings(closingPage.content)
+    const pendingClosing = closingPage.content.find((closing) => closing.data === today && !closing.confirmado) ?? null
+    setCurrent(pendingClosing)
+    setClosingNote((note) => (pendingClosing && note.trim() ? note : pendingClosing?.observacoesDiscrepancia ?? ''))
+    setTodaySales(salesPage.content.filter((sale) => sale.meioPagamento && !sale.anulada))
   }, [session?.lojaId])
+
+  useEffect(() => {
+    loadCashData().catch(() => setError('Não foi possível carregar fechos de caixa.'))
+    const interval = window.setInterval(() => {
+      loadCashData().catch(() => setError('Não foi possível atualizar fechos de caixa.'))
+    }, 5000)
+    return () => window.clearInterval(interval)
+  }, [loadCashData])
 
   async function createClosing() {
     setError(null)
@@ -44,6 +50,7 @@ export function GerenteCashPage() {
       })
       setCurrent(created)
       setClosingNote(created.observacoesDiscrepancia ?? '')
+      await loadCashData()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Não foi possível criar o fecho de caixa.')
     }
@@ -61,6 +68,7 @@ export function GerenteCashPage() {
       setClosingNote('')
       setTodaySales([])
       setClosings((items) => [confirmed, ...items.filter((item) => item.id !== confirmed.id)])
+      await loadCashData()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Não foi possível confirmar o fecho de caixa.')
     }
@@ -185,6 +193,14 @@ export function GerenteAdjustmentPage() {
   const [quantidade, setQuantidade] = useState(-1)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const productOptions = stock.map((item) => ({
+    value: item.produtoId,
+    label: `${item.produto} (${item.quantidade} un.)`,
+  }))
+  const motiveOptions = motives.map((item) => ({
+    value: item.codigo,
+    label: item.descricao || item.codigo,
+  }))
 
   useEffect(() => {
     Promise.all([
@@ -202,21 +218,31 @@ export function GerenteAdjustmentPage() {
 
   async function submitAdjustment() {
     setError(null)
-    const adjustment = await apiRequest<AjusteInventarioResponse>('/stock/ajustes', {
-      method: 'POST',
-      body: JSON.stringify({ produtoId, lojaId: session?.lojaId, quantidade, motivo, utilizadorId: session?.utilizadorId }),
-    })
-    setHistory((items) => [adjustment, ...items])
-    setMessage('Ajuste registado com sucesso.')
+    setMessage(null)
+    try {
+      const adjustment = await apiRequest<AjusteInventarioResponse>('/stock/ajustes', {
+        method: 'POST',
+        body: JSON.stringify({ produtoId, lojaId: session?.lojaId, quantidade, motivo, utilizadorId: session?.utilizadorId }),
+      })
+      setHistory((items) => [adjustment, ...items])
+      setStock((items) => items.map((item) => (
+        item.produtoId === produtoId
+          ? { ...item, quantidade: item.quantidade + quantidade }
+          : item
+      )))
+      setMessage('Ajuste registado com sucesso.')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível registar o ajuste.')
+    }
   }
 
   return (
     <div className="mf-stack">
       <Panel title="Registar ajuste manual" className="narrow-form">
-        <SelectField label="Produto" value={produtoId} options={stock.map((item) => item.produtoId)} onChange={(event) => setProdutoId(event.target.value)} />
+        <SelectField label="Produto" value={produtoId} options={productOptions} onChange={(event) => setProdutoId(event.target.value)} />
         <div className="mf-fields-grid two">
           <TextField label="Quantidade (+ ou −)" type="number" value={quantidade} onChange={(event) => setQuantidade(Number(event.target.value))} />
-          <SelectField label="Motivo" value={motivo} options={motives.map((item) => item.codigo)} onChange={(event) => setMotivo(event.target.value)} />
+          <SelectField label="Motivo" value={motivo} options={motiveOptions} onChange={(event) => setMotivo(event.target.value)} />
         </div>
         <Callout tone="info" className="mt-compact">Operação registada no log de auditoria com identificação e hora (RNF-05)</Callout>
         {error ? <Callout tone="warning">{error}</Callout> : null}

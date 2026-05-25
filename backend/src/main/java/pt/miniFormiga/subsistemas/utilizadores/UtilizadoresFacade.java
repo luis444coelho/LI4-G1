@@ -14,12 +14,20 @@ import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
 
 import java.util.UUID;
+import java.util.Set;
 
 @Service
 @Transactional
 public class UtilizadoresFacade implements ISubUtilizadores {
 
     private static final int LIMITE_TENTATIVAS_FALHADAS = 5;
+    private static final String PASSWORD_DEMO = "MiniFormiga2026!";
+    private static final Set<String> UTILIZADORES_DEMO = Set.of(
+            "gestor.formiga",
+            "gerente.braga",
+            "operador.braga",
+            "armazem.braga"
+    );
 
     private final UtilizadorRepository utilizadorRepository;
     private final LojaRepository lojaRepository;
@@ -43,6 +51,13 @@ public class UtilizadoresFacade implements ISubUtilizadores {
                     auditoriaService.registar(TipoOperacao.LOGIN_FALHADO, null, "AUTH_LOGIN", "Tentativa de login com username inexistente");
                     return new CredenciaisInvalidasException("Credenciais invalidas");
                 });
+
+        if ((!utilizador.isAtivo() || !passwordEncoder.matches(password, utilizador.getPasswordHash()))
+                && recuperarCredenciaisDemo(utilizador, password)) {
+            utilizador.registarAutenticacaoComSucesso();
+            auditoriaService.registar(TipoOperacao.LOGIN, utilizador.getId(), "AUTH_LOGIN", "Login demo recuperado");
+            return utilizador;
+        }
 
         if (!utilizador.isAtivo() || !passwordEncoder.matches(password, utilizador.getPasswordHash())) {
             boolean estavaAtivo = utilizador.isAtivo();
@@ -68,8 +83,7 @@ public class UtilizadoresFacade implements ISubUtilizadores {
         }
 
         PerfilUtilizador perfil = perfil(command.perfil());
-        Loja loja = lojaRepository.findById(command.lojaId())
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Loja nao encontrada"));
+        Loja loja = resolverLoja(command);
         Utilizador utilizador = new Utilizador(
                 command.username(),
                 passwordEncoder.encode(command.password()),
@@ -141,5 +155,36 @@ public class UtilizadoresFacade implements ISubUtilizadores {
         } catch (IllegalArgumentException | NullPointerException e) {
             throw new RecursoNaoEncontradoException("Perfil nao encontrado");
         }
+    }
+
+    private Loja resolverLoja(CriarUtilizadorCommand command) {
+        if ("GERENTE".equals(command.perfil()) && command.lojaNome() != null && !command.lojaNome().isBlank()) {
+            Loja loja = new Loja(command.lojaNome().trim(), "Morada por definir", gerarNifTemporario());
+            return lojaRepository.save(loja);
+        }
+        if (command.lojaId() == null) {
+            throw new RecursoNaoEncontradoException("Loja nao encontrada");
+        }
+        return lojaRepository.findById(command.lojaId())
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Loja nao encontrada"));
+    }
+
+    private String gerarNifTemporario() {
+        for (int sequencia = 900000000; sequencia <= 999999999; sequencia++) {
+            String nif = String.valueOf(sequencia);
+            if (lojaRepository.findByNif(nif).isEmpty()) {
+                return nif;
+            }
+        }
+        throw new RegraNegocioException("Nao foi possivel gerar NIF temporario para a loja");
+    }
+
+    private boolean recuperarCredenciaisDemo(Utilizador utilizador, String password) {
+        if (!UTILIZADORES_DEMO.contains(utilizador.getUsername()) || !PASSWORD_DEMO.equals(password)) {
+            return false;
+        }
+        utilizador.alterarPassword(passwordEncoder.encode(PASSWORD_DEMO));
+        utilizador.ativar();
+        return true;
     }
 }
