@@ -2,6 +2,7 @@ package pt.miniFormiga.subsistemas.stock;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.ProdutoLoja;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 @Service
 @Profile("global | central")
+@Transactional
 public class GlobalProdutoLojaStockStore implements StockStore {
 
     private final ProdutoLojaRepository produtoLojaRepository;

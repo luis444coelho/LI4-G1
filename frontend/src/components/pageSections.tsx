@@ -16,6 +16,8 @@ import {
   type StockResponse,
 } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { formatDateInput } from '../lib/date'
+import { downloadBlob } from '../lib/download'
 
 const money = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
 const percent = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 1 })
@@ -29,19 +31,18 @@ const reportTypeOptions = [
   { value: 'STOCK', label: 'Stock' },
 ]
 
+const reportEndpoints: Record<ReportType, string> = {
+  RENTABILIDADE: '/relatorios/rentabilidade',
+  VENDAS: '/relatorios/vendas',
+  STOCK: '/relatorios/stock',
+}
+
 const shiftOptions = [
   { value: '', label: 'Todos os turnos' },
   { value: 'MANHA', label: 'Manhã' },
   { value: 'TARDE', label: 'Tarde' },
   { value: 'NOITE', label: 'Fora de horário' },
 ]
-
-function formatDateInput(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 function firstDayOfCurrentMonth() {
   const today = new Date()
@@ -61,26 +62,7 @@ function buildReportQuery(filters: { lojaId: string; inicio: string; fim: string
 }
 
 function reportEndpoint(type: ReportType) {
-  switch (type) {
-    case 'VENDAS':
-      return '/relatorios/vendas'
-    case 'RENTABILIDADE':
-      return '/relatorios/rentabilidade'
-    case 'STOCK':
-    default:
-      return '/relatorios/stock'
-  }
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
+  return reportEndpoints[type]
 }
 
 export function ReportsContent() {
@@ -428,9 +410,7 @@ export function StockContent() {
   const [alerts, setAlerts] = useState<AlertaStockResponse[]>([])
   const [query, setQuery] = useState('')
   const [minimumDraft, setMinimumDraft] = useState<Record<string, number>>({})
-  const [selectedProductId, setSelectedProductId] = useState('')
-  const [corredor, setCorredor] = useState('')
-  const [prateleira, setPrateleira] = useState('')
+  const [locationDraft, setLocationDraft] = useState<Record<string, { corredor: string; prateleira: string }>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -443,7 +423,16 @@ export function StockContent() {
       const response = await apiRequest<StockResponse[]>(`/stock?lojaId=${lojaId}`)
       setRows(response)
       setMinimumDraft(Object.fromEntries(response.map((row) => [row.produtoId, row.nivelMinimo ?? 0])))
-      setSelectedProductId((current) => current || response[0]?.produtoId || '')
+      setLocationDraft((current) => Object.fromEntries(response.map((row) => {
+        const currentLocation = current[row.produtoId]
+        return [
+          row.produtoId,
+          {
+            corredor: row.corredor?.trim() ? row.corredor : currentLocation?.corredor ?? '',
+            prateleira: row.prateleira?.trim() ? row.prateleira : currentLocation?.prateleira ?? '',
+          },
+        ]
+      })))
     } catch {
       setError('Não foi possível carregar o stock.')
     } finally {
@@ -469,30 +458,17 @@ export function StockContent() {
     return () => window.clearTimeout(timeoutId)
   }, [loadAlerts, loadStock])
 
-  useEffect(() => {
-    if (!selectedProductId) return
-    let ignore = false
-
-    apiRequest<LocalizacaoProdutoResponse>(`/produtos/${selectedProductId}/localizacao`)
-      .then((response) => {
-        if (ignore) return
-        setCorredor(response.corredor)
-        setPrateleira(response.prateleira)
-      })
-      .catch(() => {
-        if (ignore) return
-        setCorredor('')
-        setPrateleira('')
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [selectedProductId])
-
-  async function saveMinimum(product: StockResponse) {
+  async function saveStockDetails(product: StockResponse) {
     setError(null)
     setMessage(null)
+    const location = locationDraft[product.produtoId] ?? { corredor: '', prateleira: '' }
+    const corredor = location.corredor.trim()
+    const prateleira = location.prateleira.trim()
+    if (!corredor || !prateleira) {
+      setError('Preencha o corredor e a prateleira antes de guardar.')
+      return
+    }
+
     try {
       await apiRequest<void>(`/stock/${product.produtoId}/nivel-minimo`, {
         method: 'PUT',
@@ -501,11 +477,24 @@ export function StockContent() {
           quantidade: minimumDraft[product.produtoId] ?? 0,
         }),
       })
+      const savedLocation = await apiRequest<LocalizacaoProdutoResponse>(`/produtos/${product.produtoId}/localizacao?lojaId=${product.lojaId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ corredor, prateleira }),
+      })
       await loadStock()
       await loadAlerts()
-      setMessage(`Nível mínimo atualizado para ${product.produto}.`)
+      setRows((current) => current.map((row) => (
+        row.produtoId === product.produtoId
+          ? { ...row, corredor: savedLocation.corredor, prateleira: savedLocation.prateleira }
+          : row
+      )))
+      setLocationDraft((state) => ({
+        ...state,
+        [product.produtoId]: { corredor: savedLocation.corredor, prateleira: savedLocation.prateleira },
+      }))
+      setMessage(`Stock atualizado para ${product.produto}.`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível atualizar o nível mínimo.')
+      setError(caught instanceof Error ? caught.message : 'Não foi possível atualizar o stock.')
     }
   }
 
@@ -522,23 +511,16 @@ export function StockContent() {
     }
   }
 
-  async function saveLocation() {
-    if (!selectedProductId) return
-    setError(null)
-    setMessage(null)
-    try {
-      await apiRequest<LocalizacaoProdutoResponse>(`/produtos/${selectedProductId}/localizacao`, {
-        method: 'PUT',
-        body: JSON.stringify({ corredor, prateleira }),
-      })
-      setMessage('Localização do produto atualizada.')
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível atualizar a localização.')
-    }
+  function updateLocationDraft(produtoId: string, field: 'corredor' | 'prateleira', value: string) {
+    setLocationDraft((state) => ({
+      ...state,
+      [produtoId]: {
+        corredor: state[produtoId]?.corredor ?? '',
+        prateleira: state[produtoId]?.prateleira ?? '',
+        [field]: value,
+      },
+    }))
   }
-
-  const selectedProduct = rows.find((row) => row.produtoId === selectedProductId)
-  const productOptions = rows.map((row) => ({ value: row.produtoId, label: row.produto }))
 
   const filteredRows = useMemo(() => {
     const term = query.trim().toLowerCase()
@@ -570,6 +552,8 @@ export function StockContent() {
               <th>PRODUTO</th>
               <th>STOCK</th>
               <th>MÍNIMO</th>
+              <th>CORREDOR</th>
+              <th>PRATELEIRA</th>
               <th>NÍVEL</th>
               <th>ESTADO</th>
               <th></th>
@@ -579,6 +563,7 @@ export function StockContent() {
             {filteredRows.map((row) => {
               const minimum = row.nivelMinimo ?? Math.max(row.quantidade, 1)
               const draftMinimum = minimumDraft[row.produtoId] ?? row.nivelMinimo ?? 0
+              const draftLocation = locationDraft[row.produtoId] ?? { corredor: row.corredor ?? '', prateleira: row.prateleira ?? '' }
               const percentValue = minimum === 0 ? 100 : Math.min(100, Math.round((row.quantidade / minimum) * 100))
               return (
                 <tr key={`${row.lojaId}-${row.produtoId}`}>
@@ -594,13 +579,27 @@ export function StockContent() {
                     />
                   </td>
                   <td>
+                    <TextField
+                      value={draftLocation.corredor}
+                      onChange={(event) => updateLocationDraft(row.produtoId, 'corredor', event.target.value)}
+                      className="receipt-input"
+                    />
+                  </td>
+                  <td>
+                    <TextField
+                      value={draftLocation.prateleira}
+                      onChange={(event) => updateLocationDraft(row.produtoId, 'prateleira', event.target.value)}
+                      className="receipt-input"
+                    />
+                  </td>
+                  <td>
                     <ProgressBar value={percentValue} tone={row.precisaReposicao ? 'danger' : 'success'} />
                   </td>
                   <td>
                     <StatusBadge tone={row.precisaReposicao ? 'danger' : 'success'}>{row.precisaReposicao ? 'Reposição' : 'OK'}</StatusBadge>
                   </td>
                   <td>
-                    <Button variant="secondary" className="small" onClick={() => void saveMinimum(row)}>Guardar</Button>
+                    <Button variant="secondary" className="small" onClick={() => void saveStockDetails(row)}>Guardar</Button>
                   </td>
                 </tr>
               )
@@ -609,36 +608,24 @@ export function StockContent() {
         </table>
       </Panel>
 
-      <div className="mf-two-column">
-        <Panel title="Alertas de stock">
-          {alerts.length === 0 ? <p className="mf-empty-state">Sem alertas ativos.</p> : null}
-          <div className="alert-list">
-            {alerts.map((alert) => (
-              <div key={alert.id} className="alert-row">
-                <div className="alert-left">
-                  <span className="alert-dot" />
-                  <span>{alert.produto}</span>
-                </div>
-                <div className="alert-right">
-                  <span className="muted">{alert.quantidadeNoMomento} un</span>
-                  <Button variant="ghost" className="small" onClick={() => void updateAlert(alert.id, 'lido')} disabled={alert.lido}>Lido</Button>
-                  <Button variant="secondary" className="small" onClick={() => void updateAlert(alert.id, 'resolver')}>Resolver</Button>
-                </div>
+      <Panel title="Alertas de stock">
+        {alerts.length === 0 ? <p className="mf-empty-state">Sem alertas ativos.</p> : null}
+        <div className="alert-list">
+          {alerts.map((alert) => (
+            <div key={alert.id} className="alert-row">
+              <div className="alert-left">
+                <span className="alert-dot" />
+                <span>{alert.produto}</span>
               </div>
-            ))}
-          </div>
-        </Panel>
-
-        <Panel title="Localização do produto">
-          <div className="mf-fields-grid two">
-            <SelectField label="Produto" value={selectedProductId} options={productOptions} onChange={(event) => setSelectedProductId(event.target.value)} />
-            <TextField label="Stock atual" value={selectedProduct?.quantidade ?? ''} readOnly />
-            <TextField label="Corredor" value={corredor} onChange={(event) => setCorredor(event.target.value)} />
-            <TextField label="Prateleira" value={prateleira} onChange={(event) => setPrateleira(event.target.value)} />
-          </div>
-          <Button className="mt-compact" onClick={() => void saveLocation()} disabled={!selectedProductId || !corredor || !prateleira}>Guardar localização</Button>
-        </Panel>
-      </div>
+              <div className="alert-right">
+                <span className="muted">{alert.quantidadeNoMomento} un</span>
+                <Button variant="ghost" className="small" onClick={() => void updateAlert(alert.id, 'lido')} disabled={alert.lido}>Lido</Button>
+                <Button variant="secondary" className="small" onClick={() => void updateAlert(alert.id, 'resolver')}>Resolver</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
     </div>
   )
 }

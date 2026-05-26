@@ -3,26 +3,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button, Callout, Panel, SelectField, TextField } from '../components/ui'
 import { apiDownload, apiRequest, type DevolucaoResponse, type FaturaResponse, type MeioPagamentoResponse, type PageResponse, type ProdutoResponse, type VendaResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { formatDateInput } from '../lib/date'
+import { downloadBlob } from '../lib/download'
 
 const money = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
-}
-
-function dateInput(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 async function fetchInvoices(lojaId: string, cliente = '') {
   const params = new URLSearchParams({ lojaId, size: '50' })
@@ -402,7 +386,7 @@ export function FuncionarioReturnPage() {
       const start = new Date(today)
       start.setDate(start.getDate() - 30)
       const [salesPage, returnRows] = await Promise.all([
-        apiRequest<PageResponse<VendaResponse>>(`/vendas?lojaId=${session.lojaId}&inicio=${dateInput(start)}&fim=${dateInput(today)}&size=50`),
+        apiRequest<PageResponse<VendaResponse>>(`/vendas?lojaId=${session.lojaId}&inicio=${formatDateInput(start)}&fim=${formatDateInput(today)}&size=50`),
         apiRequest<DevolucaoResponse[]>(`/vendas/devolucoes?lojaId=${session.lojaId}`),
       ])
       const finalizedSales = salesPage.content.filter((row) => !row.anulada && row.meioPagamento)
