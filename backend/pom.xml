@@ -121,6 +121,21 @@
                 <configuration>
                     <rules>
                         <rule>
+                            <element>BUNDLE</element>
+                            <limits>
+                                <limit>
+                                    <counter>LINE</counter>
+                                    <value>COVEREDRATIO</value>
+                                    <minimum>0.75</minimum>
+                                </limit>
+                                <limit>
+                                    <counter>BRANCH</counter>
+                                    <value>COVEREDRATIO</value>
+                                    <minimum>0.50</minimum>
+                                </limit>
+                            </limits>
+                        </rule>
+                        <rule>
                             <element>PACKAGE</element>
                             <includes>
                                 <include>pt.miniFormiga.domain</include>

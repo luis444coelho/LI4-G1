@@ -18,7 +18,7 @@ export JAVA_HOME="$PWD/.tools/jdk-21.0.11+10"
 export PATH="$JAVA_HOME/bin:$PWD/.tools/node-v20.19.5-linux-x64/bin:$PATH"
 ```
 
-Versoes validadas em 2026-05-23:
+Versoes validadas em 2026-05-26:
 
 - Temurin JDK 21.0.11
 - Node.js 20.19.5

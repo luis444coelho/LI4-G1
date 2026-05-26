@@ -18,11 +18,13 @@ import pt.miniFormiga.domain.Sincronizacao;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
+import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
 import pt.miniFormiga.subsistemas.stock.StockStore;
+import pt.miniFormiga.subsistemas.stock.StockItem;
 import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoPayload;
 import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.VendaRelatorioSync;
 
@@ -32,12 +34,17 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.*;
 
@@ -339,6 +346,256 @@ class RelatoriosFacadeTest {
         assertEquals("mini-formiga-vendas.csv", exportacao.nomeFicheiro());
         assertEquals("text/csv;charset=UTF-8", exportacao.mediaType());
         assertEquals("data,descricao,valor,iva,loja\n", csv);
+    }
+
+    @Test
+    void relatorioStockFiltraPorCategoriaProdutoEContaAlertasAtivos() {
+        Produto sumo = new Produto("5600000000028", "Sumo", new BigDecimal("3.00"), new BigDecimal("1.20"),
+                produto.getTaxaIVA(), produto.getCategoria());
+        Produto champo = new Produto("5600000000035", "Champo", new BigDecimal("4.00"), new BigDecimal("2.00"),
+                produto.getTaxaIVA(), new Categoria("Higiene", "Higiene pessoal"));
+        when(stockStore.listar(loja.getId())).thenReturn(List.of(
+                new StockItem(produto, loja.getId(), loja.getNome(), 5, 10, null, null, LocalDateTime.of(2026, 5, 10, 12, 0), null),
+                new StockItem(sumo, loja.getId(), loja.getNome(), 7, 5, null, null, null, null),
+                new StockItem(champo, loja.getId(), loja.getNome(), 2, 8, null, null, null, null)
+        ));
+        when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc())
+                .thenReturn(List.of(alertaStock(), new AlertaStock(new Stock(champo, loja, 2), 2)));
+
+        RelatorioStockResponse response = facade.relatorioStock(new RelatorioFiltro(
+                loja.getId(),
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 5, 31),
+                produto.getCategoria().getId(),
+                produto.getId(),
+                null
+        ));
+
+        assertEquals(1, response.totalProdutos());
+        assertEquals(5, response.totalUnidades());
+        assertEquals(1, response.produtosReposicao());
+        assertEquals(1, response.alertasAtivos());
+        assertEquals(new BigDecimal("3.75"), response.valorStockPrecoCusto());
+        assertEquals("Agua", response.itens().get(0).produto());
+    }
+
+    @Test
+    void relatorioStockResolveNomeDaLojaQuandoItemNaoTemNome() {
+        when(stockStore.listar(loja.getId())).thenReturn(List.of(
+                new StockItem(produto, loja.getId(), null, 3, null, null, null, null, null)
+        ));
+        when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
+        when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()).thenReturn(List.of());
+
+        RelatorioStockResponse response = facade.relatorioStock(new RelatorioFiltro(
+                loja.getId(),
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 5, 31),
+                null
+        ));
+
+        assertEquals("Loja Braga", response.itens().get(0).loja());
+        assertEquals(new BigDecimal("2.25"), response.valorStockPrecoCusto());
+    }
+
+    @Test
+    void relatoriosValidamPeriodoTurnoTipoEFormato() {
+        BusinessException periodo = assertThrows(BusinessException.class,
+                () -> facade.relatorioVendas(new RelatorioFiltro(
+                        null,
+                        LocalDate.of(2026, 6, 1),
+                        LocalDate.of(2026, 5, 31),
+                        null
+                )));
+        BusinessException turno = assertThrows(BusinessException.class,
+                () -> facade.relatorioVendas(new RelatorioFiltro(
+                        null,
+                        LocalDate.of(2026, 5, 1),
+                        LocalDate.of(2026, 5, 31),
+                        null,
+                        null,
+                        "madrugada"
+                )));
+        BusinessException tipo = assertThrows(BusinessException.class,
+                () -> facade.exportar(new ExportarRelatorioRequest(
+                        "financeiro", "csv", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null
+                )));
+        BusinessException formato = assertThrows(BusinessException.class,
+                () -> facade.exportar(new ExportarRelatorioRequest(
+                        "vendas", "xml", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null
+                )));
+
+        assertEquals("PERIODO_INVALIDO", periodo.getCode());
+        assertEquals("RELATORIO_TURNO_INVALIDO", turno.getCode());
+        assertEquals("RELATORIO_TIPO_INVALIDO", tipo.getCode());
+        assertEquals("RELATORIO_FORMATO_INVALIDO", formato.getCode());
+    }
+
+    @Test
+    void exportacoesDashboardStockERentabilidadeCobremCsvPdfEXlsx() {
+        Venda venda = vendaFinalizada(1, LocalDateTime.of(2026, 5, 10, 12, 0));
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of(venda));
+        when(lojaRepository.findAll()).thenReturn(List.of(loja));
+        when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()).thenReturn(List.of(alertaStock()));
+        when(stockStore.listar(loja.getId())).thenReturn(List.of(
+                new StockItem(produto, loja.getId(), loja.getNome(), 5, 10, null, null, null, null)
+        ));
+
+        ExportacaoRelatorio dashboardCsv = facade.exportar(new ExportarRelatorioRequest(
+                "dashboard", "csv", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        ExportacaoRelatorio dashboardPdf = facade.exportar(new ExportarRelatorioRequest(
+                "dashboard", "pdf", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        ExportacaoRelatorio dashboardXlsx = facade.exportar(new ExportarRelatorioRequest(
+                "dashboard", "xlsx", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        ExportacaoRelatorio stockCsv = facade.exportar(new ExportarRelatorioRequest(
+                "stock", "csv", loja.getId(), LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        ExportacaoRelatorio stockXlsx = facade.exportar(new ExportarRelatorioRequest(
+                "stock", "xlsx", loja.getId(), LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        ExportacaoRelatorio rentabilidadeCsv = facade.exportar(new ExportarRelatorioRequest(
+                "rentabilidade", "csv", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        ExportacaoRelatorio rentabilidadePdf = facade.exportar(new ExportarRelatorioRequest(
+                "rentabilidade", "pdf", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        ExportacaoRelatorio rentabilidadeXlsx = facade.exportar(new ExportarRelatorioRequest(
+                "rentabilidade", "xlsx", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+
+        assertTrue(new String(dashboardCsv.conteudo(), StandardCharsets.UTF_8).contains("total_vendas,2.46"));
+        assertTrue(new String(dashboardPdf.conteudo(), StandardCharsets.UTF_8).contains("Mini-Formiga - Dashboard"));
+        assertEquals('P', (char) dashboardXlsx.conteudo()[0]);
+        assertTrue(new String(stockCsv.conteudo(), StandardCharsets.UTF_8).contains("Agua,Bebidas,Loja Braga,5,10,true,3.75"));
+        assertEquals('K', (char) stockXlsx.conteudo()[1]);
+        assertTrue(new String(rentabilidadeCsv.conteudo(), StandardCharsets.UTF_8)
+                .startsWith("tipo,nome,receita,custo,margem,margem_percentagem"));
+        assertTrue(new String(rentabilidadePdf.conteudo(), StandardCharsets.UTF_8).contains("Mini-Formiga - Relatorio de rentabilidade"));
+        assertEquals("mini-formiga-rentabilidade.xlsx", rentabilidadeXlsx.nomeFicheiro());
+    }
+
+    @Test
+    void exportacaoCsvEscapaVirgulasAspasEQuebrasDeLinha() {
+        Loja lojaComVirgula = new Loja("Loja \"Centro\", Braga", "Rua Central", "123456789");
+        Produto produtoComVirgula = new Produto("5600000000042", "Agua,\nPremium", new BigDecimal("2.00"), new BigDecimal("0.75"),
+                produto.getTaxaIVA(), produto.getCategoria());
+        Utilizador operadorLocal = new Utilizador("operador.local", "hash", "Operador",
+                new Perfil("FUNCIONARIO", List.of("PDV_WRITE")), lojaComVirgula);
+        Venda venda = new Venda(lojaComVirgula, operadorLocal);
+        new LinhaVenda(venda, produtoComVirgula, 1);
+        venda.finalizar(new MeioPagamento("NUMERARIO", "Numerario"));
+        venda.calcularTotais();
+        ReflectionTestUtils.setField(venda, "dataHora", LocalDateTime.of(2026, 5, 10, 12, 0));
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of(venda));
+
+        ExportacaoRelatorio exportacao = facade.exportar(new ExportarRelatorioRequest(
+                "vendas", "csv", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+
+        String csv = new String(exportacao.conteudo(), StandardCharsets.UTF_8);
+        assertTrue(csv.contains("\"Venda " + venda.getId() + " - Agua,\nPremium\""));
+        assertTrue(csv.contains("\"Loja \"\"Centro\"\", Braga\""));
+    }
+
+    @Test
+    void relatorioVendasComLojaUsaRepositorioEspecificoEFiltraTurnosTardeENoite() {
+        Venda vendaAntesAbertura = vendaFinalizada(1, LocalDateTime.of(2026, 5, 10, 7, 29));
+        Venda vendaTarde = vendaFinalizada(1, LocalDateTime.of(2026, 5, 10, 14, 0));
+        Venda vendaNoite = vendaFinalizada(1, LocalDateTime.of(2026, 5, 10, 20, 1));
+        when(vendaRepository.findByLojaIdAndAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(eq(loja.getId()), any(), any()))
+                .thenReturn(List.of(vendaAntesAbertura, vendaTarde, vendaNoite));
+
+        RelatorioVendasResponse tarde = facade.relatorioVendas(new RelatorioFiltro(
+                loja.getId(),
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 5, 31),
+                null,
+                null,
+                "tarde"
+        ));
+        RelatorioVendasResponse noite = facade.relatorioVendas(new RelatorioFiltro(
+                loja.getId(),
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 5, 31),
+                null,
+                null,
+                "NOITE"
+        ));
+
+        assertEquals(new BigDecimal("2.46"), tarde.totalComIva());
+        assertEquals(new BigDecimal("4.92"), noite.totalComIva());
+        assertEquals("TARDE", tarde.turno());
+        assertEquals("NOITE", noite.turno());
+        verify(vendaRepository, times(2)).findByLojaIdAndAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(eq(loja.getId()), any(), any());
+    }
+
+    @Test
+    void payloadCentralComDashboardAgregadoAlimentaDashboardVendasERentabilidade() throws Exception {
+        DashboardResponse dashboard = new DashboardResponse(
+                new PeriodoResponse(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31)),
+                new BigDecimal("12.30"),
+                new BigDecimal("2.30"),
+                new BigDecimal("6.00"),
+                3,
+                1,
+                1,
+                0,
+                new BigDecimal("4.10"),
+                List.of(new VendasPorLojaResponse(loja.getId(), loja.getNome(), new BigDecimal("12.30"), new BigDecimal("2.30"), new BigDecimal("6.00"), 3))
+        );
+        SincronizacaoPayload payload = new SincronizacaoPayload(
+                loja.getId(),
+                LocalDateTime.of(2026, 5, 31, 23, 0),
+                null,
+                Map.of(),
+                dashboard,
+                List.of(),
+                List.of()
+        );
+        Sincronizacao sync = new Sincronizacao(loja, EstadoSincronizacaoCodigo.CONCLUIDA);
+        sync.concluir(EstadoSincronizacaoCodigo.CONCLUIDA,
+                new ObjectMapper().findAndRegisterModules().writeValueAsString(payload),
+                1,
+                "[]",
+                0);
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of());
+        when(sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(any()))
+                .thenReturn(List.of(sync));
+        when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()).thenReturn(List.of());
+
+        DashboardResponse dashboardResponse = facade.obterDashboard(
+                new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        RelatorioVendasResponse vendas = facade.relatorioVendas(
+                new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        RelatorioRentabilidadeResponse rentabilidade = facade.relatorioRentabilidade(
+                new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        ExportacaoRelatorio pdf = facade.exportar(new ExportarRelatorioRequest(
+                "vendas", "pdf", null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+        String conteudoPdf = new String(pdf.conteudo(), StandardCharsets.UTF_8);
+
+        assertEquals(new BigDecimal("12.30"), dashboardResponse.totalVendas());
+        assertEquals(new BigDecimal("12.30"), vendas.totalComIva());
+        assertEquals(new BigDecimal("6.00"), rentabilidade.margemTotal());
+        assertEquals(new BigDecimal("60.00"), rentabilidade.margemPercentagem());
+        assertTrue(conteudoPdf.contains("Loja Braga | vendas 3 | total 12.30"));
+    }
+
+    @Test
+    void sincronizacoesInvalidasOuDuplicadasSaoIgnoradasNoDashboardCentral() throws Exception {
+        Sincronizacao invalida = new Sincronizacao(loja, EstadoSincronizacaoCodigo.CONCLUIDA);
+        invalida.concluir(EstadoSincronizacaoCodigo.CONCLUIDA, "{json", 1, "[]", 0);
+        Sincronizacao semPayload = new Sincronizacao(new Loja("Loja Porto", "Rua Porto", "223456789"), EstadoSincronizacaoCodigo.CONCLUIDA);
+        semPayload.concluir(EstadoSincronizacaoCodigo.CONCLUIDA, "", 0, "[]", 0);
+        when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
+                .thenReturn(List.of());
+        when(sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(any()))
+                .thenReturn(List.of(invalida, semPayload));
+        when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()).thenReturn(List.of());
+        when(lojaRepository.findAll()).thenReturn(List.of(loja));
+
+        DashboardResponse response = facade.obterDashboard(
+                new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
+
+        assertEquals(new BigDecimal("0.00"), response.totalVendas());
+        assertEquals(0, response.numeroVendas());
+        assertEquals(1, response.totalLojas());
     }
 
     private Venda vendaFinalizada(int quantidade, LocalDateTime dataHora) {

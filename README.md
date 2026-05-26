@@ -137,7 +137,7 @@ cd backend
 mvn clean verify
 ```
 
-Validado em 2026-05-23 com Temurin JDK 21.0.11: 133 testes, 0 falhas, JaCoCo OK.
+Validado em 2026-05-26 com Temurin JDK 21.0.11: 215 testes, 0 falhas, JaCoCo OK. Cobertura global: 87.79% linhas e 64.13% ramos.
 
 ## Testes (frontend)
 
@@ -147,7 +147,7 @@ npm run lint
 npm run build
 ```
 
-Validado em 2026-05-23 com Node.js 20.19.5 e npm 10.8.2.
+Validado em 2026-05-26 com Node.js 20.19.5 e npm 10.8.2.
 
 ## Limpeza rapida
 
