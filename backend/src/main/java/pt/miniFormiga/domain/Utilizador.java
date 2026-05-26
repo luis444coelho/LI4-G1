@@ -13,8 +13,6 @@ import jakarta.persistence.Transient;
 import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -132,10 +130,6 @@ public class Utilizador extends EntidadeBase implements Persistable<java.util.UU
         this.tentativasFalhadas = 0;
     }
 
-    void adicionarLogAuditoria(LogAuditoria logAuditoria) {
-        // Auditoria e persistida em JSONL, fora da BD relacional.
-    }
-
     public String getUsername() {
         return username;
     }
@@ -170,10 +164,6 @@ public class Utilizador extends EntidadeBase implements Persistable<java.util.UU
 
     public Loja getLoja() {
         return loja;
-    }
-
-    public List<LogAuditoria> getLogsAuditoria() {
-        return Collections.emptyList();
     }
 
     @Override

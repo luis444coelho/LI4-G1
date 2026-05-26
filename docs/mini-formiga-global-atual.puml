@@ -1,0 +1,315 @@
+@startuml mini-formiga-global-atual
+title Mini-Formiga - Modelo Logico Global/Central Atual
+
+hide circle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity lojas {
+  * id : uuid <<PK>>
+  --
+  nome : varchar
+  morada : varchar
+  nif : varchar(9) <<UQ>>
+  telefone : varchar
+  ativa : boolean
+}
+
+entity utilizadores {
+  * id : uuid <<PK>>
+  --
+  loja_id : uuid <<FK>>
+  username : varchar <<UQ>>
+  password_hash : varchar
+  nome : varchar
+  email : varchar
+  ativo : boolean
+  tentativas_falhadas : integer
+  data_criacao : timestamp
+  perfil : perfil_utilizador
+}
+
+entity categorias {
+  * id : uuid <<PK>>
+  --
+  nome : varchar <<UQ>>
+  descricao : varchar(1000)
+}
+
+entity taxas_iva {
+  * id : uuid <<PK>>
+  --
+  descricao : varchar <<UQ>>
+  percentagem : decimal(5,2)
+}
+
+entity fornecedores {
+  * id : uuid <<PK>>
+  --
+  nome : varchar
+  nif : varchar(9) <<UQ>>
+  morada : varchar
+  telefone : varchar
+  email : varchar
+  ativo : boolean
+  horario_inicio_armazem : time
+  horario_fim_armazem : time
+}
+
+entity produtos {
+  * id : uuid <<PK>>
+  --
+  codigo : varchar <<UQ>>
+  codigo_barras : varchar <<UQ>>
+  nome : varchar
+  descricao : varchar(1000)
+  preco_venda : decimal(12,2)
+  preco_custo : decimal(12,2)
+  taxa_iva_id : uuid <<FK>>
+  categoria_id : uuid <<FK>>
+  fornecedor_principal_id : uuid <<FK>>
+  ativo : boolean
+  quantidade_stock : integer
+  nivel_minimo : integer
+  corredor : varchar
+  prateleira : varchar
+  stock_updated_at : timestamp
+}
+
+entity produtos_lojas {
+  * id : uuid <<PK>>
+  --
+  produto_id : uuid <<FK>>
+  loja_id : uuid <<FK>>
+  quantidade_stock : integer
+  nivel_minimo : integer
+  corredor : varchar
+  prateleira : varchar
+  ativo_na_loja : boolean
+  stock_updated_at : timestamp
+  --
+  unique(produto_id, loja_id)
+}
+
+entity condicoes_comerciais {
+  * id : uuid <<PK>>
+  --
+  fornecedor_id : uuid <<FK>>
+  produto_id : uuid <<FK>>
+  preco_unitario : decimal(12,2)
+  prazo_entrega_dias : integer
+  quantidade_minima : integer
+  data_vigencia : date
+}
+
+entity vendas {
+  * id : uuid <<PK>>
+  --
+  loja_id : uuid <<FK>>
+  utilizador_id : uuid <<FK>>
+  meio_pagamento : meio_pagamento_tipo
+  data_hora : timestamp
+  total_sem_iva : decimal(12,2)
+  total_iva : decimal(12,2)
+  total_com_iva : decimal(12,2)
+  anulada : boolean
+}
+
+entity linhas_venda {
+  * id : uuid <<PK>>
+  --
+  venda_id : uuid <<FK>>
+  produto_id : uuid <<FK>>
+  quantidade : integer
+  preco_unitario : decimal(12,2)
+  taxa_iva_percentagem : decimal(5,2)
+  anulada : boolean
+}
+
+entity faturas {
+  * id : uuid <<PK, FK vendas.id>>
+  --
+  loja_id : uuid
+  numero : integer
+  serie : varchar
+  data_emissao : timestamp
+  tipo : varchar
+  nif_cliente : varchar
+  nome_cliente : varchar
+  emitida : boolean
+}
+
+entity devolucoes {
+  * id : uuid <<PK>>
+  --
+  venda_id : uuid <<FK>>
+  produto_id : uuid <<FK>>
+  quantidade : integer
+  valor_creditado : decimal(12,2)
+  data_hora : timestamp
+  numero_documento : varchar <<UQ>>
+}
+
+entity fechos_caixa {
+  * id : uuid <<PK>>
+  --
+  loja_id : uuid <<FK>>
+  responsavel_id : uuid <<FK>>
+  data : date
+  total_numerario : decimal(12,2)
+  total_cartao : decimal(12,2)
+  total_mbway : decimal(12,2)
+  total_geral : decimal(12,2)
+  observacoes_discrepancia : varchar(2000)
+  confirmado : boolean
+}
+
+entity ajustes_inventario {
+  * id : uuid <<PK>>
+  --
+  produto_id : uuid <<FK, nullable>>
+  produto_loja_id : uuid <<FK>>
+  motivo : motivo_ajuste_codigo
+  utilizador_id : uuid <<FK>>
+  quantidade : integer
+  data_hora : timestamp
+  observacoes : varchar(2000)
+}
+
+entity alertas_stock {
+  * id : uuid <<PK>>
+  --
+  produto_id : uuid <<FK, nullable>>
+  produto_loja_id : uuid <<FK>>
+  loja_id : uuid <<FK>>
+  data_hora : timestamp
+  quantidade_no_momento : integer
+  lido : boolean
+  resolvido : boolean
+  data_resolucao : timestamp
+}
+
+entity inventarios_fisicos {
+  * id : uuid <<PK>>
+  --
+  loja_id : uuid <<FK>>
+  responsavel_id : uuid <<FK>>
+  data_inicio : timestamp
+  data_fecho : timestamp
+  total_discrepancias : integer
+  fechado : boolean
+}
+
+entity linhas_inventario {
+  * id : uuid <<PK>>
+  --
+  inventario_id : uuid <<FK>>
+  produto_id : uuid <<FK>>
+  quantidade_contada : integer
+  quantidade_sistema : integer
+  discrepancia : integer
+}
+
+entity encomendas {
+  * id : uuid <<PK>>
+  --
+  loja_id : uuid <<FK>>
+  fornecedor_id : uuid <<FK>>
+  estado : estado_encomenda_codigo
+  data_submissao : timestamp
+  data_processamento : timestamp
+  total_estimado : decimal(12,2)
+  observacoes : varchar(2000)
+}
+
+entity linhas_encomenda {
+  * id : uuid <<PK>>
+  --
+  encomenda_id : uuid <<FK>>
+  produto_id : uuid <<FK>>
+  quantidade : integer
+  preco_unitario : decimal(12,2)
+}
+
+entity guias_remessa {
+  * id : uuid <<PK>>
+  --
+  fornecedor_id : uuid <<FK>>
+  encomenda_id : uuid <<FK, nullable>>
+  numero : varchar
+  data_emissao : date
+  data_recepcao : date
+}
+
+entity entradas_mercadoria {
+  * id : uuid <<PK>>
+  --
+  guia_remessa_id : uuid <<FK>>
+  loja_id : uuid <<FK>>
+  responsavel_id : uuid <<FK>>
+  produto_id : uuid <<FK>>
+  data_hora : timestamp
+  quantidade_recebida : integer
+  quantidade_encomendada_snapshot : integer
+  observacoes : varchar(2000)
+}
+
+entity sincronizacoes {
+  * id : uuid <<PK>>
+  --
+  loja_id : uuid <<FK>>
+  estado : estado_sincronizacao_codigo
+  data_hora_inicio : timestamp
+  data_hora_fim : timestamp
+  quantidade_registos : integer
+  mensagem_erro : varchar(2000)
+  proxima_tentativa : timestamp
+  conflitos_resolvidos : integer
+  payload_json : text
+  conflitos_json : text
+}
+
+lojas ||--o{ utilizadores
+lojas ||--o{ produtos_lojas
+lojas ||--o{ vendas
+lojas ||--o{ fechos_caixa
+lojas ||--o{ inventarios_fisicos
+lojas ||--o{ encomendas
+lojas ||--o{ entradas_mercadoria
+lojas ||--o{ sincronizacoes
+lojas ||--o{ alertas_stock
+
+categorias ||--o{ produtos
+taxas_iva ||--o{ produtos
+fornecedores ||--o{ produtos : fornecedor_principal
+produtos ||--o{ produtos_lojas
+fornecedores ||--o{ condicoes_comerciais
+produtos ||--o{ condicoes_comerciais
+
+utilizadores ||--o{ vendas
+vendas ||--o{ linhas_venda
+produtos ||--o{ linhas_venda
+vendas ||--o| faturas
+vendas ||--o{ devolucoes
+produtos ||--o{ devolucoes
+utilizadores ||--o{ fechos_caixa
+
+produtos_lojas ||--o{ ajustes_inventario
+produtos_lojas ||--o{ alertas_stock
+produtos ||--o{ ajustes_inventario : fallback/local
+produtos ||--o{ alertas_stock : fallback/local
+utilizadores ||--o{ ajustes_inventario
+utilizadores ||--o{ inventarios_fisicos
+inventarios_fisicos ||--o{ linhas_inventario
+produtos ||--o{ linhas_inventario
+
+fornecedores ||--o{ encomendas
+encomendas ||--o{ linhas_encomenda
+produtos ||--o{ linhas_encomenda
+fornecedores ||--o{ guias_remessa
+encomendas ||--o{ guias_remessa
+guias_remessa ||--o{ entradas_mercadoria
+utilizadores ||--o{ entradas_mercadoria
+produtos ||--o{ entradas_mercadoria
+
+@enduml
