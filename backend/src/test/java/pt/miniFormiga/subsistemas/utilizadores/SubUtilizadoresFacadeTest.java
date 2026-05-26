@@ -4,7 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Perfil;
 import pt.miniFormiga.domain.PerfilUtilizador;
@@ -31,7 +31,7 @@ class SubUtilizadoresFacadeTest {
     private UtilizadorRepository utilizadorRepository;
     private LojaRepository lojaRepository;
     private PasswordEncoder passwordEncoder;
-    private AuditoriaService auditoriaService;
+    private ISubAuditoria auditoriaService;
     private SubUtilizadoresFacade facade;
 
     private Loja lojaBraga;
@@ -45,7 +45,7 @@ class SubUtilizadoresFacadeTest {
         utilizadorRepository = mock(UtilizadorRepository.class);
         lojaRepository = mock(LojaRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
-        auditoriaService = mock(AuditoriaService.class);
+        auditoriaService = mock(ISubAuditoria.class);
         facade = new SubUtilizadoresFacade(
                 utilizadorRepository,
                 lojaRepository,

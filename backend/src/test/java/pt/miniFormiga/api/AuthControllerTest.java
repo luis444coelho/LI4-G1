@@ -8,7 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pt.miniFormiga.api.error.ApiExceptionHandler;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Perfil;
 import pt.miniFormiga.domain.Utilizador;
@@ -40,7 +40,7 @@ class AuthControllerTest {
         utilizadores = mock(ISubUtilizadores.class);
         userDetailsService = mock(MiniFormigaUserDetailsService.class);
         jwtService = mock(JwtService.class);
-        AuditoriaService auditoriaService = mock(AuditoriaService.class);
+        ISubAuditoria auditoriaService = mock(ISubAuditoria.class);
         AuthController controller = new AuthController(utilizadores, userDetailsService, jwtService, auditoriaService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ApiExceptionHandler())

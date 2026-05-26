@@ -11,7 +11,7 @@ import org.springframework.security.web.method.annotation.AuthenticationPrincipa
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pt.miniFormiga.api.error.ApiExceptionHandler;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.Devolucao;
 import pt.miniFormiga.domain.Fatura;
@@ -55,7 +55,7 @@ class VendasControllerTest {
     private FaturaRepository faturaRepository;
     private DevolucaoRepository devolucaoRepository;
     private UtilizadorRepository utilizadorRepository;
-    private AuditoriaService auditoria;
+    private ISubAuditoria auditoria;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -64,7 +64,7 @@ class VendasControllerTest {
         faturaRepository = mock(FaturaRepository.class);
         devolucaoRepository = mock(DevolucaoRepository.class);
         utilizadorRepository = mock(UtilizadorRepository.class);
-        auditoria = mock(AuditoriaService.class);
+        auditoria = mock(ISubAuditoria.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new VendasController(
                         pdv,
                         faturaRepository,

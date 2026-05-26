@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pt.miniFormiga.api.dto.LoginRequest;
 import pt.miniFormiga.api.dto.LoginResponse;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.security.JwtService;
@@ -29,12 +29,12 @@ public class AuthController {
     private final ISubUtilizadores utilizadores;
     private final MiniFormigaUserDetailsService userDetailsService;
     private final JwtService jwtService;
-    private final AuditoriaService auditoriaService;
+    private final ISubAuditoria auditoriaService;
 
     public AuthController(ISubUtilizadores utilizadores,
                           MiniFormigaUserDetailsService userDetailsService,
                           JwtService jwtService,
-                          AuditoriaService auditoriaService) {
+                          ISubAuditoria auditoriaService) {
         this.utilizadores = utilizadores;
         this.userDetailsService = userDetailsService;
         this.jwtService = jwtService;

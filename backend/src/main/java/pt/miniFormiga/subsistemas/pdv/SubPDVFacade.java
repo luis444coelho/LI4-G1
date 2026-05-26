@@ -4,7 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.*;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.exception.FaturaNaoEmitidaException;
@@ -43,7 +43,7 @@ public class SubPDVFacade implements ISubPDV {
     private final DevolucaoRepository devolucaoRepository;
     private final ISubStock stock;
     private final ISubSincronizacao sincronizacao;
-    private final AuditoriaService auditoria;
+    private final ISubAuditoria auditoria;
 
     public SubPDVFacade(ProdutoRepository produtoRepository,
                      CategoriaRepository categoriaRepository,
@@ -57,7 +57,7 @@ public class SubPDVFacade implements ISubPDV {
                      DevolucaoRepository devolucaoRepository,
                      ISubStock stock,
                      ISubSincronizacao sincronizacao,
-                     AuditoriaService auditoria) {
+                     ISubAuditoria auditoria) {
         this.produtoRepository = produtoRepository;
         this.categoriaRepository = categoriaRepository;
         this.taxaIVARepository = taxaIVARepository;

@@ -8,7 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.*;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.exception.FaturaNaoEmitidaException;
@@ -50,7 +50,7 @@ class SubPDVFacadeTest {
     @Mock DevolucaoRepository devolucaoRepository;
     @Mock ISubStock stock;
     @Mock ISubSincronizacao sincronizacao;
-    @Mock AuditoriaService auditoria;
+    @Mock ISubAuditoria auditoria;
 
     SubPDVFacade facade;
     Loja loja;

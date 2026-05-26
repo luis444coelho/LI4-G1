@@ -2,7 +2,7 @@ package pt.miniFormiga.subsistemas.stock;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.AjusteInventario;
 import pt.miniFormiga.domain.AlertaStock;
 import pt.miniFormiga.domain.Categoria;
@@ -53,7 +53,7 @@ class SubStockFacadeTest {
     private LojaRepository lojaRepository;
     private ProdutoRepository produtoRepository;
     private UtilizadorRepository utilizadorRepository;
-    private AuditoriaService auditoria;
+    private ISubAuditoria auditoria;
     private SubStockFacade facade;
 
     @BeforeEach
@@ -65,7 +65,7 @@ class SubStockFacadeTest {
         lojaRepository = mock(LojaRepository.class);
         produtoRepository = mock(ProdutoRepository.class);
         utilizadorRepository = mock(UtilizadorRepository.class);
-        auditoria = mock(AuditoriaService.class);
+        auditoria = mock(ISubAuditoria.class);
         StockStore stockStore = new LocalProdutoStockStore(produtoRepository, lojaRepository);
         facade = new SubStockFacade(
                 alertaStockRepository,

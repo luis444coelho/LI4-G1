@@ -15,7 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.domain.Devolucao;
 import pt.miniFormiga.exception.BusinessException;
@@ -39,13 +39,13 @@ public class VendasController {
     private final FaturaRepository faturaRepository;
     private final DevolucaoRepository devolucaoRepository;
     private final UtilizadorRepository utilizadorRepository;
-    private final AuditoriaService auditoria;
+    private final ISubAuditoria auditoria;
 
     public VendasController(ISubPDV pdv,
                             FaturaRepository faturaRepository,
                             DevolucaoRepository devolucaoRepository,
                             UtilizadorRepository utilizadorRepository,
-                            AuditoriaService auditoria) {
+                            ISubAuditoria auditoria) {
         this.pdv = pdv;
         this.faturaRepository = faturaRepository;
         this.devolucaoRepository = devolucaoRepository;

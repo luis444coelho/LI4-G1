@@ -4,7 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.CondicaoComercial;
 import pt.miniFormiga.domain.Encomenda;
 import pt.miniFormiga.domain.EntradaMercadoria;
@@ -57,7 +57,7 @@ public class SubEncomendasFacade implements ISubEncomendas {
     private final ProdutoRepository produtoRepository;
     private final UtilizadorRepository utilizadorRepository;
     private final ISubStock stock;
-    private final AuditoriaService auditoria;
+    private final ISubAuditoria auditoria;
 
     public SubEncomendasFacade(FornecedorRepository fornecedorRepository,
                             CondicaoComercialRepository condicaoComercialRepository,
@@ -68,7 +68,7 @@ public class SubEncomendasFacade implements ISubEncomendas {
                             ProdutoRepository produtoRepository,
                             UtilizadorRepository utilizadorRepository,
                             ISubStock stock,
-                            AuditoriaService auditoria) {
+                            ISubAuditoria auditoria) {
         this.fornecedorRepository = fornecedorRepository;
         this.condicaoComercialRepository = condicaoComercialRepository;
         this.encomendaRepository = encomendaRepository;

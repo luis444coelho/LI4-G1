@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.CondicaoComercial;
 import pt.miniFormiga.domain.Encomenda;
@@ -57,7 +57,7 @@ class SubEncomendasFacadeTest {
     @Mock ProdutoRepository produtoRepository;
     @Mock UtilizadorRepository utilizadorRepository;
     @Mock ISubStock stock;
-    @Mock AuditoriaService auditoria;
+    @Mock ISubAuditoria auditoria;
 
     SubEncomendasFacade facade;
     Loja loja;

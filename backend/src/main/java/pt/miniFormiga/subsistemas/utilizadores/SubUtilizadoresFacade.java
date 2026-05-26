@@ -5,7 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.TipoOperacao;
@@ -32,12 +32,12 @@ public class SubUtilizadoresFacade implements ISubUtilizadores {
     private final UtilizadorRepository utilizadorRepository;
     private final LojaRepository lojaRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuditoriaService auditoriaService;
+    private final ISubAuditoria auditoriaService;
 
     public SubUtilizadoresFacade(UtilizadorRepository utilizadorRepository,
                               LojaRepository lojaRepository,
                               PasswordEncoder passwordEncoder,
-                              AuditoriaService auditoriaService) {
+                              ISubAuditoria auditoriaService) {
         this.utilizadorRepository = utilizadorRepository;
         this.lojaRepository = lojaRepository;
         this.passwordEncoder = passwordEncoder;

@@ -2,7 +2,7 @@ package pt.miniFormiga.subsistemas.stock;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pt.miniFormiga.auditoria.AuditoriaService;
+import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.AjusteInventario;
 import pt.miniFormiga.domain.AlertaStock;
 import pt.miniFormiga.domain.InventarioFisico;
@@ -36,7 +36,7 @@ public class SubStockFacade implements ISubStock {
     private final LinhaInventarioRepository linhaInventarioRepository;
     private final LojaRepository lojaRepository;
     private final UtilizadorRepository utilizadorRepository;
-    private final AuditoriaService auditoria;
+    private final ISubAuditoria auditoria;
     private final StockStore stockStore;
 
     public SubStockFacade(AlertaStockRepository alertaStockRepository,
@@ -45,7 +45,7 @@ public class SubStockFacade implements ISubStock {
                        LinhaInventarioRepository linhaInventarioRepository,
                        LojaRepository lojaRepository,
                        UtilizadorRepository utilizadorRepository,
-                       AuditoriaService auditoria,
+                       ISubAuditoria auditoria,
                        StockStore stockStore) {
         this.alertaStockRepository = alertaStockRepository;
         this.ajusteInventarioRepository = ajusteInventarioRepository;
