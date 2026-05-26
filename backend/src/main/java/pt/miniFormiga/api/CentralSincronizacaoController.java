@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pt.miniFormiga.exception.BusinessException;
-import pt.miniFormiga.subsistemas.sincronizacao.ServidorCentralSincronizacaoService;
+import pt.miniFormiga.subsistemas.sincronizacao.ISubSincronizacao;
 
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoPayload;
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.ResultadoTransmissao;
@@ -22,12 +22,12 @@ import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.R
 @Tag(name = "SINCRONIZACAO-CENTRAL", description = "Rececao de sincronizacoes das lojas no perfil central")
 public class CentralSincronizacaoController {
 
-    private final ServidorCentralSincronizacaoService servidorCentral;
+    private final ISubSincronizacao sincronizacao;
     private final String syncToken;
 
-    public CentralSincronizacaoController(ServidorCentralSincronizacaoService servidorCentral,
+    public CentralSincronizacaoController(ISubSincronizacao sincronizacao,
                                           @Value("${mini-formiga.sincronizacao.token:MiniFormigaSyncDevToken}") String syncToken) {
-        this.servidorCentral = servidorCentral;
+        this.sincronizacao = sincronizacao;
         this.syncToken = syncToken == null ? "" : syncToken.trim();
     }
 
@@ -39,6 +39,6 @@ public class CentralSincronizacaoController {
         if (!syncToken.isBlank() && !syncToken.equals(token)) {
             throw new BusinessException("SYNC_TOKEN_INVALIDO", "Token de sincronizacao invalido");
         }
-        return servidorCentral.receber(payload);
+        return sincronizacao.receber(payload);
     }
 }

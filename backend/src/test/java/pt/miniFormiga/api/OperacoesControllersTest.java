@@ -10,7 +10,6 @@ import pt.miniFormiga.api.error.ApiExceptionHandler;
 import pt.miniFormiga.subsistemas.encomendas.ISubEncomendas;
 import pt.miniFormiga.subsistemas.pdv.ISubPDV;
 import pt.miniFormiga.subsistemas.sincronizacao.ISubSincronizacao;
-import pt.miniFormiga.subsistemas.sincronizacao.ServidorCentralSincronizacaoService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -308,10 +307,9 @@ class OperacoesControllersTest {
     void fechosSincronizacaoCentralEMeiosPagamentoCobremContratosRest() throws Exception {
         ISubPDV pdv = mock(ISubPDV.class);
         ISubSincronizacao sincronizacao = mock(ISubSincronizacao.class);
-        ServidorCentralSincronizacaoService servidorCentral = mock(ServidorCentralSincronizacaoService.class);
         MockMvc fechosMvc = standalone(new FechosCaixaController(pdv));
         MockMvc sincronizacaoMvc = standalone(new SincronizacaoController(sincronizacao));
-        MockMvc centralMvc = standalone(new CentralSincronizacaoController(servidorCentral, "sync-token"));
+        MockMvc centralMvc = standalone(new CentralSincronizacaoController(sincronizacao, "sync-token"));
         MockMvc meiosMvc = standalone(new MeiosPagamentoController());
         UUID lojaId = UUID.randomUUID();
         UUID gerenteId = UUID.randomUUID();
@@ -355,7 +353,7 @@ class OperacoesControllersTest {
         when(sincronizacao.estadoAtual(lojaId)).thenReturn(sync);
         when(sincronizacao.historico(eq(lojaId), any())).thenReturn(new PageImpl<>(List.of(sync), PageRequest.of(0, 20), 1));
         when(sincronizacao.conflitos(lojaId)).thenReturn(List.of(conflito));
-        when(servidorCentral.receber(any())).thenReturn(ResultadoTransmissao.concluida());
+        when(sincronizacao.receber(any())).thenReturn(ResultadoTransmissao.concluida());
         when(pdv.registarFechoCaixa(lojaId, gerenteId)).thenReturn(new pt.miniFormiga.domain.FechoCaixa(
                 new pt.miniFormiga.domain.Loja(lojaId, "Loja Braga", "Rua Central", "123456789", "253000000"),
                 new pt.miniFormiga.domain.Utilizador(
@@ -461,7 +459,7 @@ class OperacoesControllersTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].tipo").exists());
 
-        verify(servidorCentral).receber(any());
+        verify(sincronizacao).receber(any());
         verify(pdv).listarFechosCaixa(eq(lojaId), any());
     }
 

@@ -1,6 +1,7 @@
 package pt.miniFormiga.subsistemas.sincronizacao;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
@@ -27,7 +28,9 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,6 +43,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.ConflitoSincronizacaoResponse;
+import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoPayload;
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoResponse;
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.Conflito;
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.ResultadoTransmissao;
@@ -56,10 +60,13 @@ class SubSincronizacaoFacadeTest {
     private EntradaMercadoriaRepository entradaRepository;
     private ISubRelatorios relatorios;
     private SincronizacaoTransporte transporte;
+    private ObjectProvider<ServidorCentralSincronizacaoService> servidorCentralProvider;
+    private ServidorCentralSincronizacaoService servidorCentral;
     private SubSincronizacaoFacade facade;
     private Loja loja;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() {
         sincronizacaoRepository = mock(SincronizacaoRepository.class);
         lojaRepository = mock(LojaRepository.class);
@@ -71,6 +78,9 @@ class SubSincronizacaoFacadeTest {
         entradaRepository = mock(EntradaMercadoriaRepository.class);
         relatorios = mock(ISubRelatorios.class);
         transporte = mock(SincronizacaoTransporte.class);
+        servidorCentralProvider = mock(ObjectProvider.class);
+        servidorCentral = mock(ServidorCentralSincronizacaoService.class);
+        when(servidorCentralProvider.getIfAvailable()).thenReturn(servidorCentral);
         facade = new SubSincronizacaoFacade(
                 sincronizacaoRepository,
                 lojaRepository,
@@ -82,6 +92,7 @@ class SubSincronizacaoFacadeTest {
                 entradaRepository,
                 relatorios,
                 transporte,
+                servidorCentralProvider,
                 new ObjectMapper().findAndRegisterModules()
         );
         loja = new Loja("Loja Sync", "Rua Sync", "123456789");
@@ -178,6 +189,25 @@ class SubSincronizacaoFacadeTest {
 
         assertEquals(1, conflitos.size());
         assertEquals(1, conflitos.get(0).conflitosResolvidos());
+    }
+
+    @Test
+    void receberPayloadCentralDelegaNoServicoCentral() {
+        SincronizacaoPayload payload = new SincronizacaoPayload(
+                loja.getId(),
+                LocalDateTime.now(),
+                null,
+                Map.of(),
+                null,
+                List.of(),
+                List.of()
+        );
+        when(servidorCentral.receber(payload)).thenReturn(ResultadoTransmissao.concluida());
+
+        ResultadoTransmissao resultado = facade.receber(payload);
+
+        assertEquals(true, resultado.sucesso());
+        verify(servidorCentral).receber(payload);
     }
 
     private void prepararPendentesVazios(Sincronizacao pendente) {

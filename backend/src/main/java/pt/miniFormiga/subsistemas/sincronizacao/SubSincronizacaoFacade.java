@@ -2,6 +2,7 @@ package pt.miniFormiga.subsistemas.sincronizacao;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -71,6 +72,7 @@ public class SubSincronizacaoFacade implements ISubSincronizacao {
     private final EntradaMercadoriaRepository entradaRepository;
     private final ISubRelatorios relatorios;
     private final SincronizacaoTransporte transporte;
+    private final ObjectProvider<ServidorCentralSincronizacaoService> servidorCentral;
     private final ObjectMapper objectMapper;
 
     @Value("${mini-formiga.audit.file:logs/audit-mini-formiga.jsonl}")
@@ -86,6 +88,7 @@ public class SubSincronizacaoFacade implements ISubSincronizacao {
                                EntradaMercadoriaRepository entradaRepository,
                                ISubRelatorios relatorios,
                                SincronizacaoTransporte transporte,
+                               ObjectProvider<ServidorCentralSincronizacaoService> servidorCentral,
                                ObjectMapper objectMapper) {
         this.sincronizacaoRepository = sincronizacaoRepository;
         this.lojaRepository = lojaRepository;
@@ -97,6 +100,7 @@ public class SubSincronizacaoFacade implements ISubSincronizacao {
         this.entradaRepository = entradaRepository;
         this.relatorios = relatorios;
         this.transporte = transporte;
+        this.servidorCentral = servidorCentral;
         this.objectMapper = objectMapper;
     }
 
@@ -167,6 +171,15 @@ public class SubSincronizacaoFacade implements ISubSincronizacao {
                 .stream()
                 .map(ConflitoSincronizacaoResponse::from)
                 .toList();
+    }
+
+    @Override
+    public ResultadoTransmissao receber(SincronizacaoPayload payload) {
+        ServidorCentralSincronizacaoService service = servidorCentral.getIfAvailable();
+        if (service == null) {
+            throw new BusinessException("PERFIL_CENTRAL_INATIVO", "Rececao central de sincronizacao indisponivel neste perfil");
+        }
+        return service.receber(payload);
     }
 
     private SincronizacaoPayload construirPayload(UUID lojaId) {
