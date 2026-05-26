@@ -26,6 +26,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -218,6 +219,24 @@ class UtilizadoresControllerTest {
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].nome").value("Loja Braga"))
                 .andExpect(jsonPath("$[1].nome").value("Loja Porto"));
+    }
+
+    @Test
+    void listarPerfisExpoePerfisEPermissoesDaAplicacao() {
+        UtilizadoresController controller = new UtilizadoresController(
+                mock(ISubUtilizadores.class),
+                mock(LojaRepository.class),
+                mock(UtilizadorRepository.class)
+        );
+
+        var perfis = controller.listarPerfis();
+
+        assertTrue(perfis.stream().anyMatch(perfil ->
+                perfil.id().equals("GERENTE") && perfil.permissoes().contains(Permissao.STOCK_WRITE)
+        ));
+        assertTrue(perfis.stream().anyMatch(perfil ->
+                perfil.id().equals("FUNCIONARIO") && perfil.permissoes().contains(Permissao.PDV_WRITE)
+        ));
     }
 
     private Authentication authenticationGerente() {

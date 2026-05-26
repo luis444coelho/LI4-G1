@@ -5,10 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 import pt.miniFormiga.auditoria.AuditoriaService;
 import pt.miniFormiga.domain.*;
 import pt.miniFormiga.exception.BusinessException;
+import pt.miniFormiga.exception.FaturaNaoEmitidaException;
 import pt.miniFormiga.exception.RecursoNaoEncontradoException;
 import pt.miniFormiga.exception.StockInsuficienteException;
 import pt.miniFormiga.repository.*;
@@ -17,7 +20,9 @@ import pt.miniFormiga.subsistemas.stock.ISubStock;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -86,6 +91,103 @@ class PDVFacadeTest {
     }
 
     @Test
+    void pesquisarProdutoPorCodigoInternoQuandoCodigoBarrasNaoExiste() {
+        when(produtoRepository.findByCodigoBarras("5600000000011")).thenReturn(Optional.empty());
+        when(produtoRepository.findByCodigo("5600000000011")).thenReturn(Optional.of(produto));
+
+        ProdutoDTO response = facade.obterProdutoPorCodigoBarras("5600000000011");
+
+        assertEquals(produto.getId(), response.id());
+        verify(produtoRepository).findByCodigo("5600000000011");
+    }
+
+    @Test
+    void criarProdutoResolveCategoriaTaxaIvaEFornecedor() {
+        Categoria categoria = new Categoria("Mercearia", "Produtos de mercearia");
+        TaxaIVA taxaIVA = new TaxaIVA("INTERMEDIA", new BigDecimal("13"));
+        Fornecedor fornecedor = fornecedor();
+        when(taxaIVARepository.findById(taxaIVA.getId())).thenReturn(Optional.of(taxaIVA));
+        when(categoriaRepository.findById(categoria.getId())).thenReturn(Optional.of(categoria));
+        when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
+        when(produtoRepository.save(any(Produto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProdutoDTO response = facade.criarProduto(new CriarProdutoRequest(
+                "5600000000097",
+                "Bolachas",
+                "Pacote familiar",
+                new BigDecimal("2.20"),
+                new BigDecimal("1.10"),
+                categoria.getId(),
+                taxaIVA.getId(),
+                fornecedor.getId()
+        ));
+
+        assertEquals("Bolachas", response.nome());
+        assertEquals("Pacote familiar", response.descricao());
+        assertEquals("Mercearia", response.categoria());
+        assertEquals(new BigDecimal("13"), response.taxaIva());
+    }
+
+    @Test
+    void criarProdutoSemTaxaIvaFalhaAntesDeConsultarRepositorios() {
+        BusinessException exception = assertThrows(BusinessException.class, () -> facade.criarProduto(
+                new CriarProdutoRequest(
+                        "5600000000097",
+                        "Bolachas",
+                        null,
+                        new BigDecimal("2.20"),
+                        new BigDecimal("1.10"),
+                        UUID.randomUUID(),
+                        null,
+                        null
+                )));
+
+        assertEquals("TAXA_IVA_OBRIGATORIA", exception.getCode());
+        verify(taxaIVARepository, never()).findById(any());
+        verify(produtoRepository, never()).save(any());
+    }
+
+    @Test
+    void atualizarProdutoAlteraDadosCategoriaTaxaFornecedorEEstado() {
+        Categoria novaCategoria = new Categoria("Higiene", "Higiene pessoal");
+        TaxaIVA novaTaxa = new TaxaIVA("REDUZIDA", new BigDecimal("6"));
+        Fornecedor fornecedor = fornecedor();
+        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
+        when(categoriaRepository.findById(novaCategoria.getId())).thenReturn(Optional.of(novaCategoria));
+        when(taxaIVARepository.findById(novaTaxa.getId())).thenReturn(Optional.of(novaTaxa));
+        when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
+
+        ProdutoDTO response = facade.atualizarProduto(produto.getId(), new AtualizarProdutoRequest(
+                "Agua 1L",
+                "Garrafa maior",
+                new BigDecimal("1.30"),
+                new BigDecimal("0.55"),
+                novaCategoria.getId(),
+                novaTaxa.getId(),
+                fornecedor.getId(),
+                false
+        ));
+
+        assertEquals("Agua 1L", response.nome());
+        assertEquals("Garrafa maior", response.descricao());
+        assertEquals("Higiene", response.categoria());
+        assertEquals(new BigDecimal("6"), response.taxaIva());
+        assertEquals(false, response.ativo());
+        assertEquals(fornecedor, produto.getFornecedorPrincipal());
+    }
+
+    @Test
+    void listarProdutosMapeiaPaginaDeDominioParaDto() {
+        PageRequest pageable = PageRequest.of(0, 5);
+        when(produtoRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(produto), pageable, 1));
+
+        var page = facade.listarProdutos(loja.getId(), pageable);
+
+        assertEquals(1, page.getTotalElements());
+        assertEquals("Agua", page.getContent().get(0).nome());
+    }
+
+    @Test
     void emissaoFaturaUsaSequenciaIninterruptaRd03() {
         Venda venda = vendaFinalizada();
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
@@ -149,6 +251,40 @@ class PDVFacadeTest {
         when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
 
         assertThrows(BusinessException.class, () -> facade.finalizarVenda(venda.getId(), produto.getId().toString()));
+    }
+
+    @Test
+    void emitirFaturaDeVendaAbertaOuDuplicadaFalha() {
+        Venda aberta = new Venda(loja, operador);
+        Venda finalizada = vendaFinalizada();
+        when(vendaRepository.findById(aberta.getId())).thenReturn(Optional.of(aberta));
+        when(vendaRepository.findById(finalizada.getId())).thenReturn(Optional.of(finalizada));
+        when(faturaRepository.existsByVendaId(finalizada.getId())).thenReturn(true);
+
+        FaturaNaoEmitidaException abertaException = assertThrows(FaturaNaoEmitidaException.class,
+                () -> facade.emitirFatura(aberta.getId(), null, null));
+        FaturaNaoEmitidaException duplicadaException = assertThrows(FaturaNaoEmitidaException.class,
+                () -> facade.emitirFatura(finalizada.getId(), null, null));
+
+        assertEquals("FATURA_NAO_EMITIDA", abertaException.getCode());
+        assertEquals("FATURA_NAO_EMITIDA", duplicadaException.getCode());
+        verify(faturaRepository, never()).save(any());
+    }
+
+    @Test
+    void obterFaturaEDocumentoFiscalInvalidoCobremContratos() {
+        Venda venda = vendaFinalizada();
+        Fatura fatura = new Fatura(venda, "00003", "A/2026", "SIMPLIFICADA", null, null);
+        fatura.emitir();
+        when(faturaRepository.findById(fatura.getId())).thenReturn(Optional.of(fatura));
+
+        FaturaDTO dto = facade.obterFatura(fatura.getId());
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> facade.gerarDocumentoFiscal(fatura.getId(), "nota"));
+
+        assertEquals("A/2026/00003", dto.numeroFatura());
+        assertEquals(new BigDecimal("1.00"), dto.totalSemIva());
+        assertEquals("DOCUMENTO_FISCAL_INVALIDO", exception.getCode());
     }
 
     @Test
@@ -267,6 +403,27 @@ class PDVFacadeTest {
     }
 
     @Test
+    void adicionarLinhaFalhaQuandoVendaNaoEstaAbertaOuProdutoEstaInativo() {
+        Venda vendaFinalizada = vendaFinalizada();
+        Venda vendaAberta = new Venda(loja, operador);
+        Produto produtoInativo = new Produto("5600000000042", "Produto inativo", BigDecimal.ONE, BigDecimal.ONE,
+                produto.getTaxaIVA(), produto.getCategoria());
+        produtoInativo.desativar();
+        when(vendaRepository.findById(vendaFinalizada.getId())).thenReturn(Optional.of(vendaFinalizada));
+        when(vendaRepository.findById(vendaAberta.getId())).thenReturn(Optional.of(vendaAberta));
+        when(produtoRepository.findById(produtoInativo.getId())).thenReturn(Optional.of(produtoInativo));
+
+        BusinessException vendaException = assertThrows(BusinessException.class,
+                () -> facade.adicionarLinhaVenda(vendaFinalizada.getId(), produto.getId(), 1));
+        BusinessException produtoException = assertThrows(BusinessException.class,
+                () -> facade.adicionarLinhaVenda(vendaAberta.getId(), produtoInativo.getId(), 1));
+
+        assertEquals("VENDA_NAO_ABERTA", vendaException.getCode());
+        assertEquals("PRODUTO_INATIVO", produtoException.getCode());
+        verify(stock, never()).consultarStock(loja.getId());
+    }
+
+    @Test
     void removerLinhaAntesDeFinalizarRecalculaTotalESoAnulaLinhaSelecionada() {
         Venda venda = new Venda(loja, operador);
         LinhaVenda linha1 = new LinhaVenda(venda, produto, 1);
@@ -314,6 +471,99 @@ class PDVFacadeTest {
     }
 
     @Test
+    void devolucaoFalhaParaVendaAbertaProdutoInexistenteOuQuantidadeSuperior() {
+        Venda aberta = new Venda(loja, operador);
+        Venda finalizada = vendaFinalizada();
+        when(vendaRepository.findById(aberta.getId())).thenReturn(Optional.of(aberta));
+        when(vendaRepository.findById(finalizada.getId())).thenReturn(Optional.of(finalizada));
+
+        BusinessException abertaException = assertThrows(BusinessException.class,
+                () -> facade.processarDevolucao(aberta.getId(), new ProcessarDevolucaoRequest(produto.getId(), 1)));
+        BusinessException produtoException = assertThrows(BusinessException.class,
+                () -> facade.processarDevolucao(finalizada.getId(), new ProcessarDevolucaoRequest(UUID.randomUUID(), 1)));
+        BusinessException quantidadeException = assertThrows(BusinessException.class,
+                () -> facade.processarDevolucao(finalizada.getId(), new ProcessarDevolucaoRequest(produto.getId(), 2)));
+
+        assertEquals("VENDA_NAO_FINALIZADA", abertaException.getCode());
+        assertEquals("PRODUTO_NAO_EXISTE_NA_VENDA", produtoException.getCode());
+        assertEquals("QUANTIDADE_DEVOLUCAO_INVALIDA", quantidadeException.getCode());
+        verify(stock, never()).atualizarStock(any(), any(), anyInt());
+    }
+
+    @Test
+    void registarFechoCaixaComVendasPorFecharCalculaTotaisEGrava() {
+        Venda vendaNumerario = vendaFinalizada();
+        Venda vendaCartao = vendaComLinhaAberta();
+        vendaCartao.finalizar(new MeioPagamento("CARTAO", "Cartao"));
+        when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
+        when(utilizadorRepository.findById(operador.getId())).thenReturn(Optional.of(operador));
+        when(fechoCaixaRepository.existsByLojaIdAndData(loja.getId(), LocalDate.now())).thenReturn(false);
+        when(vendaRepository.findVendasPorFechar(eq(loja.getId()), any(), any()))
+                .thenReturn(List.of(vendaNumerario, vendaCartao));
+        when(fechoCaixaRepository.save(any(FechoCaixa.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        FechoCaixa fecho = facade.registarFechoCaixa(loja.getId(), operador.getId());
+
+        assertEquals(new BigDecimal("1.23"), fecho.getTotalNumerario());
+        assertEquals(new BigDecimal("1.23"), fecho.getTotalCartao());
+        assertEquals(new BigDecimal("2.46"), fecho.getTotalGeral());
+        verify(auditoria).registar(TipoOperacao.FECHO_CAIXA_INICIADO, operador.getId(), "FECHO_CAIXA", "Fecho de caixa iniciado");
+    }
+
+    @Test
+    void registarFechoCaixaDuplicadoFalhaAntesDeConsultarVendas() {
+        when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
+        when(utilizadorRepository.findById(operador.getId())).thenReturn(Optional.of(operador));
+        when(fechoCaixaRepository.existsByLojaIdAndData(loja.getId(), LocalDate.now())).thenReturn(true);
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> facade.registarFechoCaixa(loja.getId(), operador.getId()));
+
+        assertEquals("FECHO_CAIXA_JA_EXISTE", exception.getCode());
+        verify(vendaRepository, never()).findVendasPorFechar(any(), any(), any());
+    }
+
+    @Test
+    void caixaFechadaBloqueiaRegistoDeVendaEFinalizacao() {
+        Venda venda = vendaComLinhaAberta();
+        when(fechoCaixaRepository.existsByLojaIdAndDataAndConfirmadoTrue(loja.getId(), LocalDate.now())).thenReturn(true);
+        when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
+
+        BusinessException registo = assertThrows(BusinessException.class,
+                () -> facade.registarVenda(loja.getId(), operador.getId()));
+        BusinessException finalizacao = assertThrows(BusinessException.class,
+                () -> facade.finalizarVenda(venda.getId(), "NUMERARIO"));
+
+        assertEquals("CAIXA_FECHADA", registo.getCode());
+        assertEquals("CAIXA_FECHADA", finalizacao.getCode());
+        verify(lojaRepository, never()).findById(loja.getId());
+    }
+
+    @Test
+    void metodosDeConsultaDeVendasEFechosMapeiamRepositorios() {
+        Venda venda = vendaFinalizada();
+        FechoCaixa fecho = new FechoCaixa(loja, operador, LocalDate.now(), List.of(venda));
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(vendaRepository.findByLojaIdAndDataHoraBetween(eq(loja.getId()), any(), any(), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(venda), pageable, 1));
+        when(vendaRepository.findVendasPorFechar(eq(loja.getId()), any(), any(), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(venda), pageable, 1));
+        when(vendaRepository.findByLojaIdAndDataHoraBetween(eq(loja.getId()), any(), any(), eq(org.springframework.data.domain.Pageable.unpaged())))
+                .thenReturn(new PageImpl<>(List.of(venda)));
+        when(fechoCaixaRepository.findByLojaId(loja.getId(), pageable)).thenReturn(new PageImpl<>(List.of(fecho), pageable, 1));
+        when(fechoCaixaRepository.findByLojaId(loja.getId(), org.springframework.data.domain.Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(fecho)));
+        when(fechoCaixaRepository.findById(fecho.getId())).thenReturn(Optional.of(fecho));
+
+        assertEquals(1, facade.listarVendas(loja.getId(), LocalDate.now(), LocalDate.now(), pageable).getTotalElements());
+        assertEquals(1, facade.listarVendasPorFechar(loja.getId(), LocalDate.now(), LocalDate.now(), pageable).getTotalElements());
+        assertEquals(1, facade.getVendasPorLoja(loja.getId(), LocalDate.now(), LocalDate.now()).size());
+        assertEquals(1, facade.listarFechosCaixa(loja.getId(), pageable).getTotalElements());
+        assertEquals(1, facade.getFechoCaixaByLoja(loja.getId()).size());
+        assertEquals(fecho.getId(), facade.obterFechoCaixa(fecho.getId()).id());
+    }
+
+    @Test
     void registarVendaForaHorarioGeraAuditoria() {
         Venda vendaForaHorario = new Venda(loja, operador);
         ReflectionTestUtils.setField(vendaForaHorario, "dataHora", LocalDateTime.of(2026, 5, 17, 22, 0));
@@ -345,5 +595,17 @@ class PDVFacadeTest {
         Venda venda = new Venda(loja, operador);
         new LinhaVenda(venda, produto, 1);
         return venda;
+    }
+
+    private Fornecedor fornecedor() {
+        return new Fornecedor(
+                "Fornecedor Norte",
+                "222333444",
+                "Rua Norte",
+                "253000000",
+                "fornecedor@mini.pt",
+                LocalTime.of(8, 0),
+                LocalTime.of(17, 0)
+        );
     }
 }

@@ -185,6 +185,7 @@ public class StockFacade implements ISubStock {
     @Transactional(readOnly = true)
     public List<LinhaInventario> listarDiscrepanciasInventario(UUID inventarioId) {
         return linhaInventarioRepository.findByInventarioId(inventarioId).stream()
+                .peek(LinhaInventario::calcularDiscrepancia)
                 .filter(linha -> linha.getDiscrepancia() != 0)
                 .toList();
     }

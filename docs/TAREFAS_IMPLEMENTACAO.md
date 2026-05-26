@@ -311,42 +311,42 @@ Testes obrigatorios:
 
 Requisitos/capitulo: Capitulo 6 do relatorio, verificacao SRS, cobertura, ISO/IEC 25010.
 
-Estado atual: existem testes de dominio, facades, controllers e uma cobertura inicial de seguranca; `mvn clean verify` passa com JDK 21. Ainda faltam mais testes de API, integracao e sistema.
+Estado atual: a suite automatizada cobre dominio, facades, controllers, seguranca, persistencia e fluxos de sistema/aceitacao ao nivel da API. Em 2026-05-26, `mvn clean verify` executou 215 testes, 0 falhas e 0 erros com JDK 21. O `pom.xml` passou a validar cobertura JaCoCo global alem do pacote `domain`.
 
 Tarefas:
 
-- [ ] Manter todos os testes existentes verdes.
-- [ ] Adicionar testes de controllers com MockMvc:
-  - [ ] AuthController.
-  - [ ] UtilizadoresController.
-  - [ ] VendasController.
-  - [ ] StockController.
-  - [ ] EncomendasController.
-  - [ ] InventariosController.
-  - [ ] SincronizacaoController, quando existir.
+- [x] Manter todos os testes existentes verdes.
+- [x] Adicionar testes de controllers com MockMvc:
+  - [x] AuthController.
+  - [x] UtilizadoresController.
+  - [x] VendasController.
+  - [x] StockController.
+  - [x] EncomendasController.
+  - [x] InventariosController.
+  - [x] SincronizacaoController, quando existir.
   - [x] RelatoriosController, quando existir.
   - [x] CategoriasController.
-- [ ] Adicionar testes de seguranca:
+- [x] Adicionar testes de seguranca:
   - [x] sem token da 401;
-  - [ ] token valido permite;
-  - [ ] permissao insuficiente da 403.
-- [ ] Adicionar testes de integracao com base de dados de teste.
-- [ ] Adicionar testes dos fluxos principais ponta-a-ponta a nivel API:
-  - [ ] login -> venda -> fatura -> fecho -> sincronizacao;
-  - [ ] alerta stock -> encomenda -> entrada mercadoria -> stock atualizado;
-  - [ ] inventario -> discrepancia -> ajuste.
-- [ ] Avaliar se PIT e jqwik vao mesmo ser usados. Se sim, adicionar dependencias/configuracao. Se nao, remover do relatorio.
-- [ ] Subir threshold JaCoCo para cobrir mais do que `domain`, ou justificar porque apenas o dominio tem threshold.
+  - [x] token valido permite;
+  - [x] permissao insuficiente da 403.
+- [x] Adicionar testes de integracao com base de dados de teste.
+- [x] Adicionar testes dos fluxos principais ponta-a-ponta a nivel API:
+  - [x] login -> venda -> fatura -> fecho -> sincronizacao;
+  - [x] alerta stock -> encomenda -> entrada mercadoria -> stock atualizado;
+  - [x] inventario -> discrepancia -> ajuste.
+- [x] Avaliar se PIT e jqwik vao mesmo ser usados. Decisao: nao configurados nesta entrega; referencias removidas como evidencia executada no relatorio.
+- [x] Subir threshold JaCoCo para cobrir mais do que `domain`: bundle minimo de 75% linhas e 50% ramos, mais 70% linhas em `pt.miniFormiga.domain`.
 
 Evidencias a recolher:
 
-- [x] Output de `mvn clean verify`: em 2026-05-23 executou 133 testes, 0 falhas, e o check JaCoCo passou.
+- [x] Output de `mvn clean verify`: em 2026-05-26 executou 215 testes, 0 falhas, 0 erros, gerou JaCoCo e passou os thresholds de cobertura.
 - [x] Reexecutar `mvn test`/`mvn verify` com JDK 21 instalado. Foi usada a toolchain local `.tools/jdk-21.0.11+10`.
 - [x] Reexecutar `npm run lint` e `npm run build` com Node.js 20+. Foi usada a toolchain local `.tools/node-v20.19.5-linux-x64`.
 - [x] Validar arranque Docker Compose: `docker compose up -d --build` deixou PostgreSQL, backend central, backend local e frontend ativos; login demo devolveu 200/JWT nos perfis local e central.
-- [ ] Screenshot/HTML do JaCoCo.
-- [ ] Percentagens de cobertura global e por pacote.
-- [ ] Lista de testes por RF/UC.
+- [x] Screenshot/HTML do JaCoCo: `backend/target/site/jacoco/index.html`.
+- [x] Percentagens de cobertura global e por pacote: global 87.79% linhas e 64.13% ramos; `pdv` com 89.09%/72.29% e `relatorios` com 94.45%/70.42%; tabela inserida no Capitulo 6 do relatorio.
+- [x] Lista de testes por RF/UC: resumida no Capitulo 6 por camadas e fluxos de aceitacao.
 
 ## 11. Verificacao Requisito a Requisito
 
@@ -387,12 +387,12 @@ Tarefas:
 
 - [ ] Completar "Revisao de codigo" com exemplos reais de problemas encontrados/corrigidos.
 - [ ] Completar "Interface" com descricao do frontend implementado, nao apenas mockups.
-- [ ] Completar "Testes Unitarios" com classes reais e exemplos.
-- [ ] Completar "Testes de Integracao" com controllers/facades/API.
-- [ ] Completar "Testes de Sistema" com fluxos ponta-a-ponta.
-- [ ] Completar "Testes de Aceitacao" usando os criterios das User Stories.
-- [ ] Inserir resultados JaCoCo reais.
-- [ ] Decidir PIT/jqwik: implementar ou remover as referencias.
+- [x] Completar "Testes Unitarios" com classes reais e exemplos.
+- [x] Completar "Testes de Integracao" com controllers/facades/API.
+- [x] Completar "Testes de Sistema" com fluxos ponta-a-ponta.
+- [x] Completar "Testes de Aceitacao" usando os criterios das User Stories.
+- [x] Inserir resultados JaCoCo reais.
+- [x] Decidir PIT/jqwik: implementar ou remover as referencias.
 - [ ] Completar avaliacao ISO/IEC 25010 com evidencias reais.
 - [ ] Completar verificacao da satisfacao dos SRS com matriz RF/RNF/RD.
 - [ ] Atualizar diagramas se o codigo final divergir:

@@ -17,7 +17,7 @@ Foram analisadas as tarefas já assinaladas em `TAREFAS_IMPLEMENTACAO.md`, o est
 - frontend mais ligado a API real para relatorios/exportacao, categorias, alertas de stock, localizacao, fatura completa, sincronizacao, inventario e funcionarios.
 - ambiente local atualizado com Temurin JDK 21.0.11 e Node.js 20.19.5 em `.tools/`, excluido do Git.
 
-A validacao oficial foi repetida em 2026-05-23 com a toolchain local: `mvn clean verify` executou 133 testes, 0 falhas, com JaCoCo OK; `npm run lint` e `npm run build` passaram com Node.js 20.19.5. O stack Docker Compose tambem arrancou com backend local, backend central, PostgreSQL e frontend, e os logins demo devolveram JWT.
+A validacao oficial foi atualizada em 2026-05-26 com a toolchain local: `mvn clean verify` executou 215 testes, 0 falhas e 0 erros, com JaCoCo global em 87.79% de linhas e 64.13% de ramos. O `pom.xml` passou a aplicar thresholds globais de 75% em linhas e 50% em ramos, mantendo 70% de linhas para `pt.miniFormiga.domain`. No frontend, `npm run lint` e `npm run build` passaram com Node.js 20.19.5. A validacao anterior de Docker Compose manteve-se como evidencia de integracao tecnica.
 
 ## Decisões com Impacto Pendente no Relatório
 
@@ -67,9 +67,9 @@ Ação necessária: expandir o payload com snapshots completos das entidades, ou
 
 ### DP-05 - PIT e jqwik não configurados
 
-Estado atual: o backend tem JaCoCo configurado, mas não há dependências de PIT nem jqwik no `pom.xml`. A secção de estratégia de testes do Capítulo 6 foi atualizada para indicar que estas ferramentas não foram implementadas no âmbito temporal do projeto.
+Estado atual: o backend tem JaCoCo configurado e validado com thresholds globais, mas não há dependências de PIT nem jqwik no `pom.xml`. A secção de estratégia de testes do Capítulo 6 foi atualizada para indicar que estas ferramentas não foram implementadas no âmbito temporal do projeto.
 
-Ação necessária: confirmar que o texto da secção de testes está alinhado com o que foi efetivamente executado e que não subsistem referências a PIT ou jqwik como trabalho realizado.
+Ação necessária: concluida para o Capítulo 6; manter esta decisão caso sejam feitas novas alterações ao relatório.
 
 ### DP-07 - Conformidade fiscal simplificada
 
