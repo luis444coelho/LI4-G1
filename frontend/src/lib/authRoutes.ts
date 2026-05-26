@@ -1,19 +1,15 @@
 import { roles, type RoleId } from '../data/mockData'
 
+const profileRoleMap: Record<string, RoleId> = {
+  GESTOR: 'gestor',
+  GERENTE: 'gerente',
+  FUNCIONARIO: 'funcionario',
+  RESPONSAVEL_ARMAZEM: 'armazem',
+  ARMAZEM: 'armazem',
+}
+
 export function perfilToRoleId(perfil: string): RoleId {
-  switch (perfil) {
-    case 'GESTOR':
-      return 'gestor'
-    case 'GERENTE':
-      return 'gerente'
-    case 'FUNCIONARIO':
-      return 'funcionario'
-    case 'RESPONSAVEL_ARMAZEM':
-    case 'ARMAZEM':
-      return 'armazem'
-    default:
-      return 'funcionario'
-  }
+  return profileRoleMap[perfil] ?? 'funcionario'
 }
 
 export function roleDefaultPath(roleId: RoleId) {

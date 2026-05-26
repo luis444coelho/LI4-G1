@@ -226,6 +226,8 @@ export interface StockResponse {
   lojaId: string
   quantidade: number
   nivelMinimo: number | null
+  corredor: string
+  prateleira: string
   precisaReposicao: boolean
 }
 

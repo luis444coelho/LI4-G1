@@ -4,8 +4,17 @@ import { Button, Callout, InitialAvatar, Panel, SelectField, StatusBadge, TextFi
 import { ReportsContent, StockContent } from '../components/pageSections'
 import { apiRequest, type AjusteInventarioResponse, type FechoCaixaResponse, type MotivoAjusteResponse, type PageResponse, type PerfilResponse, type StockResponse, type UtilizadorResponse, type VendaResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { formatDateInput } from '../lib/date'
 
 const money = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
+type PaymentTotalField = 'totalNumerario' | 'totalCartao' | 'totalMbway'
+type SalesTotals = Record<PaymentTotalField | 'totalGeral', number>
+
+const paymentTotalFields: Record<string, PaymentTotalField> = {
+  NUMERARIO: 'totalNumerario',
+  CARTAO: 'totalCartao',
+  MBWAY: 'totalMbway',
+}
 
 export function GerenteStockPage() {
   return <StockContent />
@@ -22,7 +31,7 @@ export function GerenteCashPage() {
 
   const loadCashData = useCallback(async () => {
     if (!lojaId) return
-    const today = formatLocalDate(new Date())
+    const today = formatDateInput(new Date())
     const [closingPage, salesPage] = await Promise.all([
       apiRequest<PageResponse<FechoCaixaResponse>>(`/fechos-caixa?lojaId=${lojaId}&size=5`),
       apiRequest<PageResponse<VendaResponse>>(`/vendas?lojaId=${lojaId}&inicio=${today}&fim=${today}&porFechar=true&size=100`),
@@ -83,7 +92,7 @@ export function GerenteCashPage() {
   const salesSummary = summarizeSales(todaySales)
   const summary = current ?? salesSummary
   const hasPendingClosing = Boolean(current && !current.confirmado)
-  const today = formatLocalDate(new Date())
+  const today = formatDateInput(new Date())
   const hasClosedToday = closings.some((closing) => closing.data === today && closing.confirmado)
 
   return (
@@ -146,25 +155,11 @@ export function GerenteCashPage() {
   )
 }
 
-function formatLocalDate(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 function summarizeSales(sales: VendaResponse[]): FechoCaixaResponse {
-  const totals = sales.reduce((accumulator, sale) => {
-    switch (sale.meioPagamento) {
-      case 'NUMERARIO':
-        accumulator.totalNumerario += sale.total
-        break
-      case 'CARTAO':
-        accumulator.totalCartao += sale.total
-        break
-      case 'MBWAY':
-        accumulator.totalMbway += sale.total
-        break
+  const totals = sales.reduce<SalesTotals>((accumulator, sale) => {
+    const field = sale.meioPagamento ? paymentTotalFields[sale.meioPagamento] : undefined
+    if (field) {
+      accumulator[field] += sale.total
     }
     accumulator.totalGeral += sale.total
     return accumulator
@@ -179,7 +174,7 @@ function summarizeSales(sales: VendaResponse[]): FechoCaixaResponse {
     id: 'preview',
     lojaId: '',
     gerenteId: '',
-    data: formatLocalDate(new Date()),
+    data: formatDateInput(new Date()),
     confirmado: false,
     ...totals,
   }

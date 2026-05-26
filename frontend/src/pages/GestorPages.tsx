@@ -4,6 +4,7 @@ import { Button, Callout, InitialAvatar, MetricCard, Panel, SelectField, StatusB
 import { ReportsContent } from '../components/pageSections'
 import { LOCAL_API_BASE_URL, apiRequest, type CondicaoComercialResponse, type ConflitoSincronizacaoResponse, type DashboardResponse, type EncomendaResponse, type FornecedorResponse, type LojaResponse, type PageResponse, type PerfilResponse, type ProdutoResponse, type RelatorioStockResponse, type SincronizacaoResponse, type SugestaoEncomendaResponse, type UtilizadorResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { formatDateInput } from '../lib/date'
 
 const currencyFormatter = new Intl.NumberFormat('pt-PT', {
   style: 'currency',
@@ -18,13 +19,6 @@ function money(value: number) {
 }
 
 const localApiOptions = { apiBaseUrl: LOCAL_API_BASE_URL }
-
-function formatDateInput(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 function firstDayOfCurrentMonth() {
   const today = new Date()
