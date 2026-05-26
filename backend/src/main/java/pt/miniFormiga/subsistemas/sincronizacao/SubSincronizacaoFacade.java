@@ -53,7 +53,7 @@ import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.R
 
 @Service
 @Transactional
-public class SincronizacaoFacade implements ISubSincronizacao {
+public class SubSincronizacaoFacade implements ISubSincronizacao {
 
     private static final String PENDENTE = "PENDENTE";
     private static final String EM_CURSO = "EM_CURSO";
@@ -76,7 +76,7 @@ public class SincronizacaoFacade implements ISubSincronizacao {
     @Value("${mini-formiga.audit.file:logs/audit-mini-formiga.jsonl}")
     private String auditFile;
 
-    public SincronizacaoFacade(SincronizacaoRepository sincronizacaoRepository,
+    public SubSincronizacaoFacade(SincronizacaoRepository sincronizacaoRepository,
                                LojaRepository lojaRepository,
                                VendaRepository vendaRepository,
                                FaturaRepository faturaRepository,

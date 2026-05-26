@@ -48,14 +48,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.*;
 
-class RelatoriosFacadeTest {
+class SubRelatoriosFacadeTest {
 
     private VendaRepository vendaRepository;
     private AlertaStockRepository alertaStockRepository;
     private LojaRepository lojaRepository;
     private StockStore stockStore;
     private SincronizacaoRepository sincronizacaoRepository;
-    private RelatoriosFacade facade;
+    private SubRelatoriosFacade facade;
 
     private Loja loja;
     private Utilizador operador;
@@ -68,7 +68,7 @@ class RelatoriosFacadeTest {
         lojaRepository = mock(LojaRepository.class);
         stockStore = mock(StockStore.class);
         sincronizacaoRepository = mock(SincronizacaoRepository.class);
-        facade = new RelatoriosFacade(
+        facade = new SubRelatoriosFacade(
                 vendaRepository,
                 alertaStockRepository,
                 lojaRepository,

@@ -46,7 +46,7 @@ import static org.mockito.Mockito.when;
 import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.*;
 
 @ExtendWith(MockitoExtension.class)
-class EncomendasFacadeTest {
+class SubEncomendasFacadeTest {
 
     @Mock FornecedorRepository fornecedorRepository;
     @Mock CondicaoComercialRepository condicaoComercialRepository;
@@ -59,7 +59,7 @@ class EncomendasFacadeTest {
     @Mock ISubStock stock;
     @Mock AuditoriaService auditoria;
 
-    EncomendasFacade facade;
+    SubEncomendasFacade facade;
     Loja loja;
     Fornecedor fornecedor;
     Produto produto;
@@ -67,7 +67,7 @@ class EncomendasFacadeTest {
 
     @BeforeEach
     void setUp() {
-        facade = new EncomendasFacade(
+        facade = new SubEncomendasFacade(
                 fornecedorRepository,
                 condicaoComercialRepository,
                 encomendaRepository,

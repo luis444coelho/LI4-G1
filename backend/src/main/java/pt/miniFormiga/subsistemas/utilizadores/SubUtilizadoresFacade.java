@@ -18,7 +18,7 @@ import java.util.Set;
 
 @Service
 @Transactional
-public class UtilizadoresFacade implements ISubUtilizadores {
+public class SubUtilizadoresFacade implements ISubUtilizadores {
 
     private static final int LIMITE_TENTATIVAS_FALHADAS = 5;
     private static final String PASSWORD_DEMO = "MiniFormiga2026!";
@@ -34,7 +34,7 @@ public class UtilizadoresFacade implements ISubUtilizadores {
     private final PasswordEncoder passwordEncoder;
     private final AuditoriaService auditoriaService;
 
-    public UtilizadoresFacade(UtilizadorRepository utilizadorRepository,
+    public SubUtilizadoresFacade(UtilizadorRepository utilizadorRepository,
                               LojaRepository lojaRepository,
                               PasswordEncoder passwordEncoder,
                               AuditoriaService auditoriaService) {

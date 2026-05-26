@@ -44,7 +44,7 @@ import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.Sincron
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.Conflito;
 import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.ResultadoTransmissao;
 
-class SincronizacaoFacadeTest {
+class SubSincronizacaoFacadeTest {
 
     private SincronizacaoRepository sincronizacaoRepository;
     private LojaRepository lojaRepository;
@@ -56,7 +56,7 @@ class SincronizacaoFacadeTest {
     private EntradaMercadoriaRepository entradaRepository;
     private ISubRelatorios relatorios;
     private SincronizacaoTransporte transporte;
-    private SincronizacaoFacade facade;
+    private SubSincronizacaoFacade facade;
     private Loja loja;
 
     @BeforeEach
@@ -71,7 +71,7 @@ class SincronizacaoFacadeTest {
         entradaRepository = mock(EntradaMercadoriaRepository.class);
         relatorios = mock(ISubRelatorios.class);
         transporte = mock(SincronizacaoTransporte.class);
-        facade = new SincronizacaoFacade(
+        facade = new SubSincronizacaoFacade(
                 sincronizacaoRepository,
                 lojaRepository,
                 vendaRepository,

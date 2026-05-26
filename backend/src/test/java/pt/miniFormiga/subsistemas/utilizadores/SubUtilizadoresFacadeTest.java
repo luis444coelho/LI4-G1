@@ -26,13 +26,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class UtilizadoresFacadeTest {
+class SubUtilizadoresFacadeTest {
 
     private UtilizadorRepository utilizadorRepository;
     private LojaRepository lojaRepository;
     private PasswordEncoder passwordEncoder;
     private AuditoriaService auditoriaService;
-    private UtilizadoresFacade facade;
+    private SubUtilizadoresFacade facade;
 
     private Loja lojaBraga;
     private Loja lojaGuimaraes;
@@ -46,7 +46,7 @@ class UtilizadoresFacadeTest {
         lojaRepository = mock(LojaRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
         auditoriaService = mock(AuditoriaService.class);
-        facade = new UtilizadoresFacade(
+        facade = new SubUtilizadoresFacade(
                 utilizadorRepository,
                 lojaRepository,
                 passwordEncoder,

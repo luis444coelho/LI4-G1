@@ -36,7 +36,7 @@ import static org.mockito.Mockito.*;
 import static pt.miniFormiga.subsistemas.pdv.PdvDtos.*;
 
 @ExtendWith(MockitoExtension.class)
-class PDVFacadeTest {
+class SubPDVFacadeTest {
 
     @Mock ProdutoRepository produtoRepository;
     @Mock CategoriaRepository categoriaRepository;
@@ -52,14 +52,14 @@ class PDVFacadeTest {
     @Mock ISubSincronizacao sincronizacao;
     @Mock AuditoriaService auditoria;
 
-    PDVFacade facade;
+    SubPDVFacade facade;
     Loja loja;
     Utilizador operador;
     Produto produto;
 
     @BeforeEach
     void setUp() {
-        facade = new PDVFacade(produtoRepository, categoriaRepository, taxaIVARepository, fornecedorRepository,
+        facade = new SubPDVFacade(produtoRepository, categoriaRepository, taxaIVARepository, fornecedorRepository,
                 lojaRepository, utilizadorRepository, vendaRepository, faturaRepository,
                 fechoCaixaRepository, devolucaoRepository, stock, sincronizacao, auditoria);
         loja = new Loja("Loja Braga", "Rua Central", "123456789");
@@ -567,7 +567,7 @@ class PDVFacadeTest {
     void registarVendaForaHorarioGeraAuditoria() {
         Venda vendaForaHorario = new Venda(loja, operador);
         ReflectionTestUtils.setField(vendaForaHorario, "dataHora", LocalDateTime.of(2026, 5, 17, 22, 0));
-        PDVFacade facadeComVendaForaHorario = new PDVFacade(produtoRepository, categoriaRepository, taxaIVARepository, fornecedorRepository,
+        SubPDVFacade facadeComVendaForaHorario = new SubPDVFacade(produtoRepository, categoriaRepository, taxaIVARepository, fornecedorRepository,
                 lojaRepository, utilizadorRepository, vendaRepository, faturaRepository,
                 fechoCaixaRepository, devolucaoRepository, stock, sincronizacao, auditoria) {
             @Override

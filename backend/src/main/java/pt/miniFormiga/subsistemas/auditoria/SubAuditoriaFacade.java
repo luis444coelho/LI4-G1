@@ -7,11 +7,11 @@ import pt.miniFormiga.domain.TipoOperacao;
 import java.util.UUID;
 
 @Service
-public class AuditoriaFacade implements ISubAuditoria {
+public class SubAuditoriaFacade implements ISubAuditoria {
 
     private final AuditoriaService auditoriaService;
 
-    public AuditoriaFacade(AuditoriaService auditoriaService) {
+    public SubAuditoriaFacade(AuditoriaService auditoriaService) {
         this.auditoriaService = auditoriaService;
     }
 

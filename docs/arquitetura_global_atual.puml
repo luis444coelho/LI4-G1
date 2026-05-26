@@ -1,0 +1,203 @@
+@startuml Mini-Formiga - Arquitetura Global Atual
+
+skinparam linetype ortho
+scale max 2200 width
+skinparam nodesep 40
+skinparam ranksep 50
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+
+skinparam rectangle {
+    BackgroundColor #E6F1FB
+    BorderColor #185FA5
+    FontColor #042C53
+    BorderThickness 1.5
+    RoundCorner 8
+}
+
+skinparam package {
+    BackgroundColor #D0E8F8
+    BorderColor #0C447C
+    FontColor #042C53
+    FontStyle bold
+    FontSize 13
+}
+
+skinparam database {
+    BackgroundColor #FAEEDA
+    BorderColor #BA7517
+    FontColor #042C53
+}
+
+skinparam component {
+    BackgroundColor #E6F1FB
+    BorderColor #185FA5
+    FontColor #042C53
+}
+
+skinparam arrow {
+    Color #185FA5
+    FontColor #444441
+    FontSize 10
+}
+
+skinparam note {
+    BackgroundColor #FAEEDA
+    BorderColor #BA7517
+    FontColor #042C53
+    FontSize 10
+}
+
+' ============================================================
+'  CLIENTES / APRESENTACAO
+' ============================================================
+package "Camada de Apresentacao" as UI {
+    rectangle "PDVUI\n(Operador de Caixa)" as PDVUI
+    rectangle "GerenteUI\n(Gerente de Loja)" as GerenteUI
+    rectangle "GestorUI\n(Gestor da Cadeia)" as GestorUI
+    rectangle "ArmazemUI\n(Resp. Armazem)" as ArmazemUI
+}
+
+' ============================================================
+'  BACKEND SPRING BOOT - LOCAL
+' ============================================================
+package "Backend Spring Boot\nperfil local" as BACKEND_LOCAL {
+
+    package "Seguranca" as SECURITY {
+        rectangle "Spring Security" as SpringSecurity
+        rectangle "JwtAuthenticationFilter" as JwtFilter
+        rectangle "JwtService" as JwtService
+        rectangle "MiniFormigaUserDetailsService" as UserDetails
+    }
+
+    package "API REST\npt.miniFormiga.api" as API {
+        rectangle "Controllers REST\n\nAuth | Utilizadores | Produtos | Vendas\nFechosCaixa | Stock | Inventarios | Categorias\nProdutoLocalizacao | MeiosPagamento\nFornecedores | Encomendas | EntradasMercadoria\nRelatorios | Sincronizacao" as ApiControllers
+    }
+
+    package "Logica de Negocio\npt.miniFormiga.subsistemas" as LN {
+        rectangle "SubUtilizadoresFacade\n(ISubUtilizadores)" as SubUtil #E8F4EC
+        rectangle "SubPDVFacade\n(ISubPDV)" as SubPDV #E8F4EC
+        rectangle "SubStockFacade\n(ISubStock)" as SubStock #E8F4EC
+        rectangle "SubEncomendasFacade\n(ISubEncomendas)" as SubEnc #E8F4EC
+        rectangle "SubRelatoriosFacade\n(ISubRelatorios)" as SubRel #E8F4EC
+        rectangle "SubSincronizacaoFacade\n(ISubSincronizacao)" as SubSinc #E8F4EC
+        rectangle "SubAuditoriaFacade\n(ISubAuditoria)" as SubAudit #E8F4EC
+        rectangle "AuditoriaService" as AuditService #E8F4EC
+    }
+
+    package "Transporte de Sincronizacao" as SYNC_TRANSPORT {
+        rectangle "RestSincronizacaoTransporte\nRestTemplate" as RestSync
+    }
+
+    package "Stock Store" as STOCKSTORE {
+        rectangle "StockStore\n(interface)" as StockStore
+        rectangle "LocalProdutoStockStore\nperfil !global & !central" as LocalStock
+        rectangle "GlobalProdutoLojaStockStore\nperfil global | central" as GlobalStock
+    }
+
+    package "Persistencia" as PERSIST {
+        rectangle "Spring Data JPA\nRepositories" as Repos
+        rectangle "Entidades de Dominio\npt.miniFormiga.domain" as Domain
+    }
+}
+
+' ============================================================
+'  DADOS
+' ============================================================
+package "Camada de Dados" as DADOS {
+    package "Loja (local)" as LOCAL_PKG {
+        database "BD Local\nSQLite\nmini-formiga-local.db" as SQLITE
+        rectangle "Log auditoria\nJSONL\nlogs/audit-mini-formiga.jsonl" as AuditFile
+    }
+
+    package "Servidor Central\nperfil central" as CENTRAL_PKG {
+        rectangle "CentralSincronizacaoController\n/api/v1/central/sincronizacao/receber" as CentralCtrl
+        rectangle "ServidorCentralSincronizacaoService" as CentralService
+        database "BD Central\nPostgreSQL\nminiFormiga_central" as POSTGRES
+    }
+}
+
+' ============================================================
+'  LIGACOES - CLIENTES -> API
+' ============================================================
+PDVUI -down-> SpringSecurity : HTTP/REST
+GerenteUI -down-> SpringSecurity : HTTP/REST
+GestorUI -down-> SpringSecurity : HTTP/REST
+ArmazemUI -down-> SpringSecurity : HTTP/REST
+
+SpringSecurity -down-> JwtFilter
+JwtFilter -right-> JwtService
+JwtFilter -right-> UserDetails
+SpringSecurity -down-> ApiControllers : pedidos autorizados
+
+' ============================================================
+'  LIGACOES - API -> SUBSISTEMAS
+' ============================================================
+ApiControllers -down-> LN : chama interfaces\nISub*
+ApiControllers -right-> JwtService : auth/login
+ApiControllers -down-> Repos : endpoints auxiliares
+
+' ============================================================
+'  LIGACOES ENTRE SUBSISTEMAS
+' ============================================================
+note bottom of LN
+  Dependencias internas principais:
+  PDV usa Stock e Sincronizacao.
+  Encomendas usa Stock.
+  Sincronizacao usa Relatorios.
+  Varios subsistemas usam AuditoriaService.
+end note
+
+' ============================================================
+'  LIGACOES - STOCK STORE / PERSISTENCIA / DADOS
+' ============================================================
+SubStock -down-> StockStore
+StockStore <|.. LocalStock
+StockStore <|.. GlobalStock
+
+LN -down-> Repos : Spring Data JPA
+Repos -down-> Domain
+Repos -down-> DADOS : SQLite ou PostgreSQL\nconforme perfil ativo
+AuditService -down-> DADOS : append JSONL\nficheiro de auditoria
+
+' ============================================================
+'  SINCRONIZACAO LOCAL -> CENTRAL
+' ============================================================
+SubSinc -down-> RestSync : SincronizacaoPayload
+RestSync -[#185FA5,thickness=2]down-> CentralCtrl : HTTP/REST\nX-Sync-Token
+CentralCtrl -down-> CentralService
+CentralService -down-> POSTGRES : regista sincronizacao\n e deteta conflitos
+CentralCtrl -[#185FA5,dashed]up-> RestSync : ResultadoTransmissao\nconcluida/conflitos/falha
+
+' ============================================================
+'  NOTAS
+' ============================================================
+note right of API
+  No codigo atual nao existe
+  IMiniFormigaLN nem MiniFormigaFacade.
+  Os controllers REST injetam diretamente
+  as interfaces dos subsistemas.
+end note
+
+note bottom of SQLITE
+  Perfil local:
+  spring.profiles.active=local
+  jdbc:sqlite:./mini-formiga-local.db
+  porta padrao 8080.
+end note
+
+note bottom of POSTGRES
+  Perfil central:
+  spring.profiles.active=central
+  jdbc:postgresql://localhost:5432/miniFormiga_central
+  porta padrao 8081.
+end note
+
+note bottom of RestSync
+  A comunicacao e REST via RestTemplate.
+  O codigo usa X-Sync-Token.
+  TLS depende da infraestrutura/deployment,
+  nao esta imposto no codigo.
+end note
+
+@enduml

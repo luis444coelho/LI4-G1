@@ -44,7 +44,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class StockFacadeTest {
+class SubStockFacadeTest {
 
     private AlertaStockRepository alertaStockRepository;
     private AjusteInventarioRepository ajusteInventarioRepository;
@@ -54,7 +54,7 @@ class StockFacadeTest {
     private ProdutoRepository produtoRepository;
     private UtilizadorRepository utilizadorRepository;
     private AuditoriaService auditoria;
-    private StockFacade facade;
+    private SubStockFacade facade;
 
     @BeforeEach
     void setUp() {
@@ -67,7 +67,7 @@ class StockFacadeTest {
         utilizadorRepository = mock(UtilizadorRepository.class);
         auditoria = mock(AuditoriaService.class);
         StockStore stockStore = new LocalProdutoStockStore(produtoRepository, lojaRepository);
-        facade = new StockFacade(
+        facade = new SubStockFacade(
                 alertaStockRepository,
                 ajusteInventarioRepository,
                 inventarioFisicoRepository,

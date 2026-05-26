@@ -26,7 +26,7 @@ import static pt.miniFormiga.subsistemas.pdv.PdvDtos.*;
 
 @Service
 @Transactional
-public class PDVFacade implements ISubPDV {
+public class SubPDVFacade implements ISubPDV {
 
     private static final LocalTime ABERTURA_LOJA = LocalTime.of(7, 30);
     private static final LocalTime FECHO_LOJA = LocalTime.of(20, 0);
@@ -45,7 +45,7 @@ public class PDVFacade implements ISubPDV {
     private final ISubSincronizacao sincronizacao;
     private final AuditoriaService auditoria;
 
-    public PDVFacade(ProdutoRepository produtoRepository,
+    public SubPDVFacade(ProdutoRepository produtoRepository,
                      CategoriaRepository categoriaRepository,
                      TaxaIVARepository taxaIVARepository,
                      FornecedorRepository fornecedorRepository,

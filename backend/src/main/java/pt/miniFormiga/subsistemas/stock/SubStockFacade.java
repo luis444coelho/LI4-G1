@@ -9,7 +9,6 @@ import pt.miniFormiga.domain.InventarioFisico;
 import pt.miniFormiga.domain.LinhaInventario;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MotivoAjusteCodigo;
-import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.ProdutoLoja;
 import pt.miniFormiga.domain.Utilizador;
@@ -29,7 +28,7 @@ import java.util.UUID;
 
 @Service
 @Transactional
-public class StockFacade implements ISubStock {
+public class SubStockFacade implements ISubStock {
 
     private final AlertaStockRepository alertaStockRepository;
     private final AjusteInventarioRepository ajusteInventarioRepository;
@@ -40,7 +39,7 @@ public class StockFacade implements ISubStock {
     private final AuditoriaService auditoria;
     private final StockStore stockStore;
 
-    public StockFacade(AlertaStockRepository alertaStockRepository,
+    public SubStockFacade(AlertaStockRepository alertaStockRepository,
                        AjusteInventarioRepository ajusteInventarioRepository,
                        InventarioFisicoRepository inventarioFisicoRepository,
                        LinhaInventarioRepository linhaInventarioRepository,
@@ -243,11 +242,4 @@ public class StockFacade implements ISubStock {
         }
     }
 
-    @SuppressWarnings("unused")
-    private List<Utilizador> destinatariosAlerta(UUID lojaId) {
-        List<Utilizador> destinatarios = new java.util.ArrayList<>();
-        destinatarios.addAll(utilizadorRepository.findByAtivoTrueAndPerfilIn(List.of(PerfilUtilizador.GESTOR)));
-        destinatarios.addAll(utilizadorRepository.findByAtivoTrueAndLojaIdAndPerfilIn(lojaId, List.of(PerfilUtilizador.GERENTE)));
-        return destinatarios.stream().distinct().toList();
-    }
 }

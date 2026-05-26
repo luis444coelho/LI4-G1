@@ -188,7 +188,7 @@ public class VendasController {
     @Operation(summary = "Processar devolucao")
     @ApiResponse(responseCode = "200", description = "Devolucao processada")
     public VendaDTO devolucao(@PathVariable UUID id, @Valid @RequestBody ProcessarDevolucaoRequest request) {
-        if (pdv instanceof pt.miniFormiga.subsistemas.pdv.PDVFacade facade) {
+        if (pdv instanceof pt.miniFormiga.subsistemas.pdv.SubPDVFacade facade) {
             return facade.processarDevolucao(id, request);
         }
         throw new IllegalStateException("SubPDV nao suporta devolucoes nesta implementacao");

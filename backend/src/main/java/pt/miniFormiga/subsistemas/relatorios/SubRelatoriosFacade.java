@@ -44,7 +44,7 @@ import static pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.*;
 
 @Service
 @Transactional(readOnly = true)
-public class RelatoriosFacade implements ISubRelatorios {
+public class SubRelatoriosFacade implements ISubRelatorios {
 
     private static final BigDecimal CEM = new BigDecimal("100");
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -56,7 +56,7 @@ public class RelatoriosFacade implements ISubRelatorios {
     private final SincronizacaoRepository sincronizacaoRepository;
     private final ObjectMapper objectMapper;
 
-    public RelatoriosFacade(VendaRepository vendaRepository,
+    public SubRelatoriosFacade(VendaRepository vendaRepository,
                             AlertaStockRepository alertaStockRepository,
                             LojaRepository lojaRepository,
                             StockStore stockStore,
@@ -944,35 +944,6 @@ public class RelatoriosFacade implements ISubRelatorios {
             linhaCsv(csv, "CATEGORIA", categoria.categoria(), categoria.receitaSemIva(), categoria.custo(),
                     categoria.margem(), categoria.margemPercentagem());
         }
-    }
-
-    private String resumoDashboard(DashboardResponse response) {
-        return "Total vendas: " + response.totalVendas()
-                + "\nIVA: " + response.totalIva()
-                + "\nMargem: " + response.margem()
-                + "\nVendas: " + response.numeroVendas()
-                + "\nAlertas ativos: " + response.alertasAtivos();
-    }
-
-    private String resumoVendas(RelatorioVendasResponse response) {
-        return "Periodo: " + response.periodo().inicio() + " a " + response.periodo().fim()
-                + "\nTotal: " + response.totalComIva()
-                + "\nIVA: " + response.totalIva()
-                + "\nVendas: " + response.numeroVendas();
-    }
-
-    private String resumoStock(RelatorioStockResponse response) {
-        return "Produtos: " + response.totalProdutos()
-                + "\nUnidades: " + response.totalUnidades()
-                + "\nValor stock: " + response.valorStockPrecoCusto()
-                + "\nAlertas ativos: " + response.alertasAtivos();
-    }
-
-    private String resumoRentabilidade(RelatorioRentabilidadeResponse response) {
-        return "Receita: " + response.receitaSemIva()
-                + "\nCusto: " + response.custoTotal()
-                + "\nMargem: " + response.margemTotal()
-                + "\nMargem %: " + response.margemPercentagem();
     }
 
     private List<String> linhasPdfDashboard(DashboardResponse response) {

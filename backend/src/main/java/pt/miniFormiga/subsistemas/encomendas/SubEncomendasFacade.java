@@ -43,7 +43,7 @@ import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.*;
 
 @Service
 @Transactional
-public class EncomendasFacade implements ISubEncomendas {
+public class SubEncomendasFacade implements ISubEncomendas {
 
     private static final String ESTADO_PENDENTE = "PENDENTE";
     private static final String ESTADO_RECEBIDA = "RECEBIDA";
@@ -59,7 +59,7 @@ public class EncomendasFacade implements ISubEncomendas {
     private final ISubStock stock;
     private final AuditoriaService auditoria;
 
-    public EncomendasFacade(FornecedorRepository fornecedorRepository,
+    public SubEncomendasFacade(FornecedorRepository fornecedorRepository,
                             CondicaoComercialRepository condicaoComercialRepository,
                             EncomendaRepository encomendaRepository,
                             GuiaRemessaRepository guiaRemessaRepository,

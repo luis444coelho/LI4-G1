@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 })
 class FaturaPersistenceTest {
 
-    @Autowired PDVFacade pdv;
+    @Autowired SubPDVFacade pdv;
     @Autowired LojaRepository lojaRepository;
     @Autowired CategoriaRepository categoriaRepository;
     @Autowired TaxaIVARepository taxaIVARepository;
