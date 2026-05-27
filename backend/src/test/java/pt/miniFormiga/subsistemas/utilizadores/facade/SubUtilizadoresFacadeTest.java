@@ -12,7 +12,10 @@ import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.subsistemas.lojas.repository.LojaRepository;
 import pt.miniFormiga.subsistemas.utilizadores.CredenciaisInvalidasException;
+import pt.miniFormiga.subsistemas.utilizadores.RecursoNaoEncontradoException;
+import pt.miniFormiga.subsistemas.utilizadores.RegraNegocioException;
 import pt.miniFormiga.subsistemas.utilizadores.dto.AtualizarUtilizadorCommand;
+import pt.miniFormiga.subsistemas.utilizadores.dto.CriarUtilizadorCommand;
 import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
 
 import java.util.List;
