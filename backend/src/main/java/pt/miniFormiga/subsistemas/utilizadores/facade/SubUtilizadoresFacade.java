@@ -19,6 +19,7 @@ import pt.miniFormiga.subsistemas.utilizadores.dto.AtualizarUtilizadorCommand;
 import pt.miniFormiga.subsistemas.utilizadores.dto.CriarUtilizadorCommand;
 
 import java.util.UUID;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -113,6 +114,12 @@ public class SubUtilizadoresFacade implements ISubUtilizadores {
     @Transactional(readOnly = true)
     public Page<Utilizador> listarUtilizadoresPorLoja(UUID lojaId, Pageable pageable) {
         return utilizadorRepository.findByLojaId(lojaId, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Utilizador> listarUtilizadoresPorLojaEPerfis(UUID lojaId, List<PerfilUtilizador> perfis, Pageable pageable) {
+        return utilizadorRepository.findByLojaIdAndPerfilIn(lojaId, perfis, pageable);
     }
 
     @Override

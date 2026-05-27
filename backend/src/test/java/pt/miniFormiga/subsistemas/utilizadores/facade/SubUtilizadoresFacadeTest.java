@@ -161,6 +161,16 @@ class SubUtilizadoresFacadeTest {
     }
 
     @Test
+    void listarUtilizadoresPorLojaEPerfisUsaRepositorioFiltradoPorPerfis() {
+        PageRequest pageable = PageRequest.of(0, 10);
+        List<PerfilUtilizador> perfis = List.of(PerfilUtilizador.FUNCIONARIO, PerfilUtilizador.ARMAZEM);
+
+        facade.listarUtilizadoresPorLojaEPerfis(lojaBraga.getId(), perfis, pageable);
+
+        verify(utilizadorRepository).findByLojaIdAndPerfilIn(lojaBraga.getId(), perfis, pageable);
+    }
+
+    @Test
     void listarUtilizadoresUsaRepositorioPaginado() {
         PageRequest pageable = PageRequest.of(0, 5);
         when(utilizadorRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(utilizador), pageable, 1));

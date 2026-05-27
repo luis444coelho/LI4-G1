@@ -44,6 +44,10 @@ import java.util.UUID;
 @Tag(name = "UTILIZADORES", description = "Gestao de utilizadores e perfis de acesso")
 public class UtilizadoresController {
     private static final Set<String> PERFIS_GERENTE_PODE_GERIR = Set.of("FUNCIONARIO", "ARMAZEM");
+    private static final List<PerfilUtilizador> PERFIS_OPERACIONAIS_GERIVEIS = List.of(
+            PerfilUtilizador.FUNCIONARIO,
+            PerfilUtilizador.ARMAZEM
+    );
 
     private final ISubUtilizadores utilizadores;
     private final LojaRepository lojaRepository;
@@ -84,7 +88,11 @@ public class UtilizadoresController {
         }
 
         Utilizador atual = utilizadorAtual(authentication);
-        return utilizadores.listarUtilizadoresPorLoja(atual.getLoja().getId(), pageable).map(UtilizadorResponse::from);
+        return utilizadores.listarUtilizadoresPorLojaEPerfis(
+                atual.getLoja().getId(),
+                PERFIS_OPERACIONAIS_GERIVEIS,
+                pageable
+        ).map(UtilizadorResponse::from);
     }
 
     @GetMapping("/perfis")

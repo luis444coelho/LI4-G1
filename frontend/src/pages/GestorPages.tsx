@@ -680,7 +680,7 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
         ) : null}
 
         <Callout tone="info" className="mt-compact">
-          Encomenda submetida após as 18h00 → processada a 21/04 (segunda-feira) às 08h00 (RD-06)
+          Encomenda submetida após as 18h00 → processada a 21/04 (segunda-feira) às 08h00   
         </Callout>
         {error ? <Callout tone="warning" className="mt-compact">{error}</Callout> : null}
         {message ? <Callout tone="info" className="mt-compact">{message}</Callout> : null}

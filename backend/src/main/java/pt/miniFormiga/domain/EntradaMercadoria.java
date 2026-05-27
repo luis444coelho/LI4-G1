@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
@@ -30,6 +32,10 @@ public class EntradaMercadoria extends EntidadeBase {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "linha_encomenda_id", nullable = false)
     private LinhaEncomenda linhaEncomenda;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "produto_id")
+    private Produto produto;
 
     @Column(nullable = false)
     private LocalDateTime dataHora;
@@ -60,6 +66,7 @@ public class EntradaMercadoria extends EntidadeBase {
         this.loja = Objects.requireNonNull(loja, "Loja e obrigatoria");
         this.responsavel = Objects.requireNonNull(responsavel, "Responsavel e obrigatorio");
         this.linhaEncomenda = Objects.requireNonNull(linhaEncomenda, "Linha de encomenda e obrigatoria");
+        this.produto = Objects.requireNonNull(this.linhaEncomenda.getProduto(), "Produto e obrigatorio");
         if (!this.linhaEncomenda.getEncomenda().getId().equals(this.guiaRemessa.getEncomenda().getId())) {
             throw new IllegalArgumentException("Linha de encomenda nao pertence a encomenda da guia de remessa");
         }
@@ -67,6 +74,14 @@ public class EntradaMercadoria extends EntidadeBase {
         this.quantidadeEncomendadaSnapshot = quantidadeEncomendada;
         this.observacoes = observacoes;
         registar();
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void sincronizarProduto() {
+        if (produto == null && linhaEncomenda != null) {
+            produto = linhaEncomenda.getProduto();
+        }
     }
 
     public void registar() {
@@ -91,7 +106,7 @@ public class EntradaMercadoria extends EntidadeBase {
     }
 
     public Produto getProduto() {
-        return linhaEncomenda.getProduto();
+        return produto == null ? linhaEncomenda.getProduto() : produto;
     }
 
     public LocalDateTime getDataHora() {
