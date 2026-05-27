@@ -105,10 +105,6 @@ public class Venda extends EntidadeBase {
         return totalComIVA;
     }
 
-    public void finalizar(MeioPagamento meioPagamento) {
-        finalizar(meioPagamento == null ? null : MeioPagamentoTipo.valueOf(meioPagamento.getTipo()));
-    }
-
     public void finalizar(MeioPagamentoTipo meioPagamento) {
         if (anulada) {
             throw new IllegalStateException("Venda anulada nao pode ser finalizada");

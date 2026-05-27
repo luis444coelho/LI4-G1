@@ -6,7 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.domain.Utilizador;
@@ -36,8 +36,8 @@ class SubUtilizadoresFacadeTest {
 
     private Loja lojaBraga;
     private Loja lojaGuimaraes;
-    private Perfil funcionario;
-    private Perfil gerente;
+    private PerfilUtilizador funcionario;
+    private PerfilUtilizador gerente;
     private Utilizador utilizador;
 
     @BeforeEach
@@ -55,8 +55,8 @@ class SubUtilizadoresFacadeTest {
 
         lojaBraga = new Loja("Loja Braga", "Rua Central", "123456789");
         lojaGuimaraes = new Loja("Loja Guimaraes", "Rua Nova", "987654321");
-        funcionario = new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE));
-        gerente = new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE));
+        funcionario = PerfilUtilizador.FUNCIONARIO;
+        gerente = PerfilUtilizador.GERENTE;
         utilizador = new Utilizador("operador", "hash-antigo", "Operador", "operador@mini.pt", funcionario, lojaBraga);
     }
 
@@ -112,10 +112,10 @@ class SubUtilizadoresFacadeTest {
     @Test
     void utilizadoresDemoRecuperamLoginComPasswordUnicaDeTeste() {
         List<Utilizador> utilizadoresDemo = List.of(
-                new Utilizador("gestor.formiga", "hash-antigo", "Sr. Formiga", "gestor@mini.pt", new Perfil("GESTOR", List.of(Permissao.GLOBAL_ADMIN)), lojaBraga),
+                new Utilizador("gestor.formiga", "hash-antigo", "Sr. Formiga", "gestor@mini.pt", PerfilUtilizador.GESTOR, lojaBraga),
                 new Utilizador("gerente.braga", "hash-antigo", "Gerente Braga", "gerente@mini.pt", gerente, lojaBraga),
                 new Utilizador("operador.braga", "hash-antigo", "Operador Braga", "operador@mini.pt", funcionario, lojaBraga),
-                new Utilizador("armazem.braga", "hash-antigo", "Armazem Braga", "armazem@mini.pt", new Perfil("ARMAZEM", List.of(Permissao.STOCK_WRITE)), lojaBraga)
+                new Utilizador("armazem.braga", "hash-antigo", "Armazem Braga", "armazem@mini.pt", PerfilUtilizador.ARMAZEM, lojaBraga)
         );
         utilizadoresDemo.forEach(Utilizador::desativar);
         utilizadoresDemo.forEach(demo -> {

@@ -41,11 +41,11 @@ class SubEncomendasDomainTest {
 
     @Test
     void encomendaMantemEstadoELinhasComTotalEstimado() {
-        Encomenda encomenda = new Encomenda(loja(), fornecedor(), new EstadoEncomenda("PENDENTE", "Pendente"));
+        Encomenda encomenda = new Encomenda(loja(), fornecedor(), EstadoEncomendaCodigo.PENDENTE);
         Produto produto = produto();
 
         new LinhaEncomenda(encomenda, produto, 3, new BigDecimal("0.60"));
-        encomenda.alterarEstado(new EstadoEncomenda("ENVIADA", "Enviada"));
+        encomenda.alterarEstado(EstadoEncomendaCodigo.ENVIADA);
 
         assertEquals("ENVIADA", encomenda.getEstado().getCodigo());
         assertEquals(new BigDecimal("1.80"), encomenda.calcularTotal());
@@ -55,10 +55,10 @@ class SubEncomendasDomainTest {
     @Test
     void guiaRemessaFicaAssociadaAEncomendaEEntradaCalculaDiscrepancia() {
         Loja loja = loja();
-        Encomenda encomenda = new Encomenda(loja, fornecedor(), new EstadoEncomenda("PENDENTE", "Pendente"));
+        Encomenda encomenda = new Encomenda(loja, fornecedor(), EstadoEncomendaCodigo.PENDENTE);
         GuiaRemessa guia = new GuiaRemessa(encomenda.getFornecedor(), encomenda, "GR-1", LocalDate.now(), LocalDate.now());
         Utilizador responsavel = new Utilizador("armazem", "hash", "Armazem",
-                new Perfil("RESPONSAVEL_ARMAZEM", java.util.List.of("ENCOMENDAS_WRITE")), loja);
+                PerfilUtilizador.ARMAZEM, loja);
 
         EntradaMercadoria entrada = new EntradaMercadoria(guia, loja, responsavel, 8, 10, "Entrega parcial");
 

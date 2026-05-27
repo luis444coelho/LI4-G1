@@ -65,7 +65,7 @@ class DiagramaMetodosDomainTest {
         Loja loja = criarLoja();
         Utilizador utilizador = criarUtilizador(loja);
         Produto produto = criarProduto();
-        MeioPagamento numerario = new MeioPagamento("NUMERARIO", "Numerario");
+        MeioPagamentoTipo numerario = MeioPagamentoTipo.NUMERARIO;
         Venda venda = new Venda(loja, utilizador);
         LinhaVenda linhaVenda = new LinhaVenda(venda, produto, 2);
         venda.finalizar(numerario);
@@ -175,10 +175,8 @@ class DiagramaMetodosDomainTest {
                 10,
                 LocalDate.of(2026, 4, 29)
         );
-        LocalizacaoProduto localizacao = new LocalizacaoProduto(produto, "A", "3", "Perto da caixa");
-        EstadoEncomenda estadoEncomenda = new EstadoEncomenda("PENDENTE", "Pendente");
-        EstadoSincronizacao estadoSincronizacao = new EstadoSincronizacao("CONCLUIDA", "Concluida");
-        MeioPagamento cartao = new MeioPagamento("CARTAO", "Cartao bancario");
+        EstadoEncomendaCodigo estadoEncomenda = EstadoEncomendaCodigo.PENDENTE;
+        MeioPagamentoTipo cartao = MeioPagamentoTipo.CARTAO;
 
         assertEquals("QUEBRA", motivo.getCodigo());
         assertEquals(-1, ajuste.getQuantidade());
@@ -187,11 +185,9 @@ class DiagramaMetodosDomainTest {
         alerta.marcarComoLido();
         assertTrue(alerta.isLido());
         assertEquals(new BigDecimal("0.60"), condicao.getPrecoUnitario());
-        assertEquals("A", localizacao.getCorredor());
         assertEquals("PENDENTE", estadoEncomenda.getCodigo());
-        assertEquals("CONCLUIDA", estadoSincronizacao.getCodigo());
-        assertEquals("CARTAO", cartao.getTipo());
-        assertArrayEquals("Cartao bancario".getBytes(StandardCharsets.UTF_8), cartao.getDescricao().getBytes(StandardCharsets.UTF_8));
+        assertEquals("CONCLUIDA", EstadoSincronizacaoCodigo.CONCLUIDA.getCodigo());
+        assertEquals("CARTAO", cartao.name());
     }
 
     private Loja criarLoja() {
@@ -203,8 +199,7 @@ class DiagramaMetodosDomainTest {
     }
 
     private Utilizador criarUtilizador(Loja loja) {
-        Perfil perfil = new Perfil("FUNCIONARIO", List.of("PDV_WRITE"));
-        return new Utilizador("operador", "hash", "Operador", "operador@mini.pt", perfil, loja);
+        return new Utilizador("operador", "hash", "Operador", "operador@mini.pt", PerfilUtilizador.FUNCIONARIO, loja);
     }
 
     private Produto criarProduto() {

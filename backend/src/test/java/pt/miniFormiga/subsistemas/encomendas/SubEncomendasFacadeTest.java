@@ -10,11 +10,11 @@ import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.CondicaoComercial;
 import pt.miniFormiga.domain.Encomenda;
 import pt.miniFormiga.domain.EntradaMercadoria;
-import pt.miniFormiga.domain.EstadoEncomenda;
+import pt.miniFormiga.domain.EstadoEncomendaCodigo;
 import pt.miniFormiga.domain.Fornecedor;
 import pt.miniFormiga.domain.LinhaEncomenda;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.TipoOperacao;
@@ -85,7 +85,7 @@ class SubEncomendasFacadeTest {
         produto = new Produto("5600000000110", "Agua", new BigDecimal("1.00"), new BigDecimal("0.40"),
                 new TaxaIVA("Normal", new BigDecimal("23")), new Categoria("Bebidas", "Bebidas"));
         responsavel = new Utilizador("armazem", "hash", "Armazem",
-                new Perfil("RESPONSAVEL_ARMAZEM", List.of("ENCOMENDAS_WRITE")), loja);
+                PerfilUtilizador.ARMAZEM, loja);
     }
 
     @Test
@@ -144,7 +144,7 @@ class SubEncomendasFacadeTest {
 
     @Test
     void criarEncomendaDefineEstadoPendenteEDataProcessamentoDoFornecedor() {
-        EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
+        EstadoEncomendaCodigo pendente = EstadoEncomendaCodigo.PENDENTE;
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
@@ -216,7 +216,7 @@ class SubEncomendasFacadeTest {
 
     @Test
     void criarEncomendaCalculaProcessamentoDentroDoHorario() {
-        EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
+        EstadoEncomendaCodigo pendente = EstadoEncomendaCodigo.PENDENTE;
         LocalDateTime submissao = LocalDateTime.of(2026, 5, 20, 10, 0);
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
@@ -237,7 +237,7 @@ class SubEncomendasFacadeTest {
 
     @Test
     void criarEncomendaCalculaProximoDiaUtilForaDoHorario() {
-        EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
+        EstadoEncomendaCodigo pendente = EstadoEncomendaCodigo.PENDENTE;
         LocalDateTime submissao = LocalDateTime.of(2026, 5, 22, 19, 0); // sexta-feira
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
@@ -258,7 +258,7 @@ class SubEncomendasFacadeTest {
 
     @Test
     void criarEncomendaSemCondicaoComercialFalha() {
-        EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
+        EstadoEncomendaCodigo pendente = EstadoEncomendaCodigo.PENDENTE;
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(fornecedorRepository.findById(fornecedor.getId())).thenReturn(Optional.of(fornecedor));
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
@@ -274,8 +274,8 @@ class SubEncomendasFacadeTest {
 
     @Test
     void registarEntradaAtualizaStockEMarcaEncomendaComoRecebidaQuandoCompleta() {
-        EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
-        EstadoEncomenda recebida = new EstadoEncomenda("RECEBIDA", "Recebida");
+        EstadoEncomendaCodigo pendente = EstadoEncomendaCodigo.PENDENTE;
+        EstadoEncomendaCodigo recebida = EstadoEncomendaCodigo.RECEBIDA;
         Encomenda encomenda = new Encomenda(loja, fornecedor, pendente);
         new LinhaEncomenda(encomenda, produto, 8, new BigDecimal("0.60"));
         when(encomendaRepository.findById(encomenda.getId())).thenReturn(Optional.of(encomenda));
@@ -306,7 +306,7 @@ class SubEncomendasFacadeTest {
 
     @Test
     void registarEntradaParcialNaoMarcaEncomendaComoRecebida() {
-        EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
+        EstadoEncomendaCodigo pendente = EstadoEncomendaCodigo.PENDENTE;
         Encomenda encomenda = new Encomenda(loja, fornecedor, pendente);
         new LinhaEncomenda(encomenda, produto, 10, new BigDecimal("0.60"));
         when(encomendaRepository.findById(encomenda.getId())).thenReturn(Optional.of(encomenda));
@@ -329,8 +329,8 @@ class SubEncomendasFacadeTest {
 
     @Test
     void registarEntradaMercadoriaComVariasLinhasAtualizaStockPorProduto() {
-        EstadoEncomenda pendente = new EstadoEncomenda("PENDENTE", "Pendente");
-        EstadoEncomenda recebida = new EstadoEncomenda("RECEBIDA", "Recebida");
+        EstadoEncomendaCodigo pendente = EstadoEncomendaCodigo.PENDENTE;
+        EstadoEncomendaCodigo recebida = EstadoEncomendaCodigo.RECEBIDA;
         Produto sandes = new Produto("5600000000226", "Sandes", new BigDecimal("2.00"), new BigDecimal("1.00"),
                 new TaxaIVA("Normal", new BigDecimal("23")), new Categoria("Snacks", "Snacks"));
         Encomenda encomenda = new Encomenda(loja, fornecedor, pendente);

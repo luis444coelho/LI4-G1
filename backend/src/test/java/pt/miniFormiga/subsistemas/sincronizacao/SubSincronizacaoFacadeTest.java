@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
-import pt.miniFormiga.domain.EstadoSincronizacao;
 import pt.miniFormiga.domain.EstadoSincronizacaoCodigo;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Sincronizacao;
@@ -112,7 +111,7 @@ class SubSincronizacaoFacadeTest {
 
     @Test
     void iniciarSincronizacaoSemRedeMantemPendente() {
-        Sincronizacao pendente = new Sincronizacao(loja, new EstadoSincronizacao("PENDENTE", "Pendente"));
+        Sincronizacao pendente = new Sincronizacao(loja, EstadoSincronizacaoCodigo.PENDENTE);
         prepararPendentesVazios(pendente);
         when(transporte.transmitir(any())).thenReturn(ResultadoTransmissao.falha("sem rede"));
         when(sincronizacaoRepository.save(any(Sincronizacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -126,7 +125,7 @@ class SubSincronizacaoFacadeTest {
 
     @Test
     void iniciarSincronizacaoComSucessoMarcaConcluida() {
-        Sincronizacao pendente = new Sincronizacao(loja, new EstadoSincronizacao("PENDENTE", "Pendente"));
+        Sincronizacao pendente = new Sincronizacao(loja, EstadoSincronizacaoCodigo.PENDENTE);
         prepararPendentesVazios(pendente);
         when(transporte.transmitir(any())).thenReturn(ResultadoTransmissao.concluida());
         when(sincronizacaoRepository.save(any(Sincronizacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -140,7 +139,7 @@ class SubSincronizacaoFacadeTest {
 
     @Test
     void conflitoAplicaLastWriteWinsERegistaConsulta() {
-        Sincronizacao pendente = new Sincronizacao(loja, new EstadoSincronizacao("PENDENTE", "Pendente"));
+        Sincronizacao pendente = new Sincronizacao(loja, EstadoSincronizacaoCodigo.PENDENTE);
         prepararPendentesVazios(pendente);
         when(transporte.transmitir(any())).thenReturn(ResultadoTransmissao.sucessoComConflitos(List.of(
                 new Conflito("STOCK", UUID.randomUUID(), "quantidade", "last-write-wins", "5", "4")
@@ -158,7 +157,7 @@ class SubSincronizacaoFacadeTest {
         Path auditFile = Files.createTempFile("audit-mini-formiga", ".jsonl");
         Files.write(auditFile, List.of("{\"tipoOperacao\":\"FECHO_CAIXA\"}"));
         ReflectionTestUtils.setField(facade, "auditFile", auditFile.toString());
-        Sincronizacao pendente = new Sincronizacao(loja, new EstadoSincronizacao("PENDENTE", "Pendente"));
+        Sincronizacao pendente = new Sincronizacao(loja, EstadoSincronizacaoCodigo.PENDENTE);
         prepararPendentesVazios(pendente);
         when(transporte.transmitir(any())).thenReturn(ResultadoTransmissao.concluida());
         when(sincronizacaoRepository.save(any(Sincronizacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -171,7 +170,7 @@ class SubSincronizacaoFacadeTest {
 
     @Test
     void historicoListaSincronizacoesAnteriores() {
-        Sincronizacao sync = new Sincronizacao(loja, new EstadoSincronizacao("CONCLUIDA", "Concluida"));
+        Sincronizacao sync = new Sincronizacao(loja, EstadoSincronizacaoCodigo.CONCLUIDA);
         when(sincronizacaoRepository.findByLojaIdOrderByDataHoraInicioDesc(eq(loja.getId()), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(sync)));
 
@@ -180,8 +179,8 @@ class SubSincronizacaoFacadeTest {
 
     @Test
     void endpointConflitosListaConflitosDetetados() {
-        Sincronizacao sync = new Sincronizacao(loja, new EstadoSincronizacao("PENDENTE", "Pendente"));
-        sync.concluir(new EstadoSincronizacao("COM_CONFLITOS", "Com conflitos"), "{}", 0, "[{}]", 1);
+        Sincronizacao sync = new Sincronizacao(loja, EstadoSincronizacaoCodigo.PENDENTE);
+        sync.concluir(EstadoSincronizacaoCodigo.COM_CONFLITOS, "{}", 0, "[{}]", 1);
         when(sincronizacaoRepository.findByLojaIdAndConflitosResolvidosGreaterThanOrderByDataHoraInicioDesc(loja.getId(), 0))
                 .thenReturn(List.of(sync));
 

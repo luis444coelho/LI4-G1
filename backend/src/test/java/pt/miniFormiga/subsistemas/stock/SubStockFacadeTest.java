@@ -11,7 +11,7 @@ import pt.miniFormiga.domain.LinhaInventario;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MotivoAjuste;
 import pt.miniFormiga.domain.NivelMinimo;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.Stock;
 import pt.miniFormiga.domain.TaxaIVA;
@@ -421,6 +421,6 @@ class SubStockFacadeTest {
 
     private Utilizador utilizador(Loja loja, String perfil) {
         return new Utilizador("gerente.stock", "hash", "Gerente Stock",
-                new Perfil(perfil, List.of("STOCK_WRITE")), loja);
+                PerfilUtilizador.valueOf(perfil), loja);
     }
 }

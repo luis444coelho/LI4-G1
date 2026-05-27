@@ -7,9 +7,9 @@ import pt.miniFormiga.domain.AlertaStock;
 import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.MeioPagamento;
+import pt.miniFormiga.domain.MeioPagamentoTipo;
 import pt.miniFormiga.domain.NivelMinimo;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.Stock;
 import pt.miniFormiga.domain.TaxaIVA;
@@ -74,7 +74,7 @@ class SubRelatoriosFacadeTest {
 
         loja = new Loja("Loja Braga", "Rua Central", "123456789");
         operador = new Utilizador("operador", "hash", "Operador",
-                new Perfil("FUNCIONARIO", List.of("PDV_WRITE")), loja);
+                PerfilUtilizador.FUNCIONARIO, loja);
         produto = new Produto("5600000000011", "Agua", new BigDecimal("2.00"), new BigDecimal("0.75"),
                 new TaxaIVA("Taxa Normal", new BigDecimal("23")), new Categoria("Bebidas", "Bebidas frias"));
     }
@@ -459,10 +459,10 @@ class SubRelatoriosFacadeTest {
         Produto produtoComVirgula = new Produto("5600000000042", "Agua,\nPremium", new BigDecimal("2.00"), new BigDecimal("0.75"),
                 produto.getTaxaIVA(), produto.getCategoria());
         Utilizador operadorLocal = new Utilizador("operador.local", "hash", "Operador",
-                new Perfil("FUNCIONARIO", List.of("PDV_WRITE")), lojaComVirgula);
+                PerfilUtilizador.FUNCIONARIO, lojaComVirgula);
         Venda venda = new Venda(lojaComVirgula, operadorLocal);
         new LinhaVenda(venda, produtoComVirgula, 1);
-        venda.finalizar(new MeioPagamento("NUMERARIO", "Numerario"));
+        venda.finalizar(MeioPagamentoTipo.NUMERARIO);
         venda.calcularTotais();
         ReflectionTestUtils.setField(venda, "dataHora", LocalDateTime.of(2026, 5, 10, 12, 0));
         when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
@@ -572,7 +572,7 @@ class SubRelatoriosFacadeTest {
     private Venda vendaFinalizada(Produto produtoVenda, int quantidade, LocalDateTime dataHora) {
         Venda venda = new Venda(loja, operador);
         new LinhaVenda(venda, produtoVenda, quantidade);
-        venda.finalizar(new MeioPagamento("NUMERARIO", "Numerario"));
+        venda.finalizar(MeioPagamentoTipo.NUMERARIO);
         venda.calcularTotais();
         ReflectionTestUtils.setField(venda, "dataHora", dataHora);
         return venda;

@@ -89,10 +89,6 @@ public final class PdvDtos {
     }
 
     public record MeioPagamentoDTO(UUID id, String tipo, String descricao) {
-        public static MeioPagamentoDTO from(MeioPagamento meioPagamento) {
-            return new MeioPagamentoDTO(meioPagamento.getId(), meioPagamento.getTipo(), meioPagamento.getDescricao());
-        }
-
         public static MeioPagamentoDTO from(MeioPagamentoTipo meioPagamento) {
             return new MeioPagamentoDTO(null, meioPagamento.name(), meioPagamento.name());
         }

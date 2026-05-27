@@ -53,10 +53,9 @@ class SubStockDomainTest {
         Stock stock = new Stock(produto, loja, 6);
         NivelMinimo nivelMinimo = new NivelMinimo(stock, 7);
         MotivoAjuste motivo = new MotivoAjuste("QUEBRA", "Produto danificado");
-        Utilizador utilizador = new Utilizador("gerente", "hash", "Gerente", new Perfil("GERENTE", List.of("STOCK_WRITE")), loja);
+        Utilizador utilizador = new Utilizador("gerente", "hash", "Gerente", PerfilUtilizador.GERENTE, loja);
         AjusteInventario ajuste = new AjusteInventario(stock, motivo, utilizador, -1, "produto partido");
         AlertaStock alerta = new AlertaStock(stock, stock.getQuantidade());
-        LocalizacaoProduto localizacao = new LocalizacaoProduto(produto, "A", "3", "Perto da caixa");
 
         assertEquals(produto, stock.getProduto());
         assertEquals(loja, stock.getLoja());
@@ -75,10 +74,6 @@ class SubStockDomainTest {
         assertEquals(utilizador, ajuste.getResponsavel());
         assertEquals("produto partido", ajuste.getObservacoes());
         assertNotNull(ajuste.getDataHora());
-        assertEquals(produto, localizacao.getProduto());
-        assertEquals("A", localizacao.getCorredor());
-        assertEquals("3", localizacao.getPrateleira());
-        assertEquals("Perto da caixa", localizacao.getDescricao());
     }
 
     @Test
@@ -87,22 +82,17 @@ class SubStockDomainTest {
         Stock stock = new Stock(produto, loja(), 6);
         NivelMinimo nivelMinimo = new NivelMinimo(stock, 7);
         LinhaInventario linha = new LinhaInventario(inventario(), produto, 5, 6);
-        LocalizacaoProduto localizacao = new LocalizacaoProduto(produto, "A", "3", "Perto da caixa");
         AlertaStock alerta = new AlertaStock(stock, 6);
 
         stock.atualizarQuantidade(2);
         nivelMinimo.atualizarQuantidade(8);
         linha.atualizarQuantidadeContada(9);
-        localizacao.atualizar("B", "1", "Entrada");
         alerta.marcarComoLido();
 
         assertEquals(8, stock.getQuantidade());
         assertEquals(8, nivelMinimo.getQuantidade());
         assertEquals(9, linha.getQuantidadeContada());
         assertEquals(3, linha.getDiscrepancia());
-        assertEquals("B", localizacao.getCorredor());
-        assertEquals("1", localizacao.getPrateleira());
-        assertEquals("Entrada", localizacao.getDescricao());
         assertTrue(alerta.isLido());
     }
 
@@ -120,7 +110,7 @@ class SubStockDomainTest {
 
     private InventarioFisico inventario() {
         Loja loja = loja();
-        Perfil perfil = new Perfil("RESPONSAVEL_ARMAZEM", List.of("STOCK_WRITE"));
+        PerfilUtilizador perfil = PerfilUtilizador.ARMAZEM;
         Utilizador utilizador = new Utilizador("armazem", "hash", "Armazem", perfil, loja);
         return new InventarioFisico(loja, utilizador);
     }

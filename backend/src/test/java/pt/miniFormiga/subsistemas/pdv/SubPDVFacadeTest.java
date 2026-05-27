@@ -63,7 +63,7 @@ class SubPDVFacadeTest {
                 lojaRepository, utilizadorRepository, vendaRepository, faturaRepository,
                 fechoCaixaRepository, devolucaoRepository, stock, sincronizacao, auditoria);
         loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        operador = new Utilizador("operador", "hash", "Operador", new Perfil("FUNCIONARIO", java.util.List.of("PDV_WRITE")), loja);
+        operador = new Utilizador("operador", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, loja);
         produto = new Produto("5600000000011", "Agua", new BigDecimal("1.00"), new BigDecimal("0.40"),
                 new TaxaIVA("NORMAL", new BigDecimal("23")), new Categoria("Bebidas", "Bebidas"));
     }
@@ -494,7 +494,7 @@ class SubPDVFacadeTest {
     void registarFechoCaixaComVendasPorFecharCalculaTotaisEGrava() {
         Venda vendaNumerario = vendaFinalizada();
         Venda vendaCartao = vendaComLinhaAberta();
-        vendaCartao.finalizar(new MeioPagamento("CARTAO", "Cartao"));
+        vendaCartao.finalizar(MeioPagamentoTipo.CARTAO);
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(utilizadorRepository.findById(operador.getId())).thenReturn(Optional.of(operador));
         when(fechoCaixaRepository.existsByLojaIdAndData(loja.getId(), LocalDate.now())).thenReturn(false);
@@ -587,7 +587,7 @@ class SubPDVFacadeTest {
     private Venda vendaFinalizada() {
         Venda venda = new Venda(loja, operador);
         new LinhaVenda(venda, produto, 1);
-        venda.finalizar(new MeioPagamento("NUMERARIO", "Numerario"));
+        venda.finalizar(MeioPagamentoTipo.NUMERARIO);
         return venda;
     }
 

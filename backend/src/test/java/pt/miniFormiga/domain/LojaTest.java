@@ -33,8 +33,7 @@ class LojaTest {
     @Test
     void deveAssociarUtilizadorCriadoALoja() {
         Loja loja = new Loja("Loja Viana", "Rua do Mercado", "111444777");
-        Perfil perfil = new Perfil("GERENTE", List.of("UTILIZADOR_WRITE"));
-        Utilizador utilizador = new Utilizador("gerente.viana", "$2a$10$hash", "Maria", perfil, loja);
+        Utilizador utilizador = new Utilizador("gerente.viana", "$2a$10$hash", "Maria", PerfilUtilizador.GERENTE, loja);
 
         assertEquals(1, loja.getUtilizadores().size());
         assertTrue(loja.getUtilizadores().contains(utilizador));

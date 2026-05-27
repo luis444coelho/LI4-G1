@@ -18,7 +18,7 @@ import pt.miniFormiga.domain.Fatura;
 import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MeioPagamentoTipo;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
@@ -255,7 +255,7 @@ class VendasControllerTest {
                 "hash",
                 "Operador Braga",
                 "operador@mini-formiga.pt",
-                new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)),
+                PerfilUtilizador.FUNCIONARIO,
                 loja
         );
     }

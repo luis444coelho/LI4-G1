@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
 
@@ -57,7 +57,7 @@ class JwtServiceTest {
                 "hash",
                 "Utilizador Teste",
                 username + "@mini-formiga.pt",
-                new Perfil("GESTOR", List.of(Permissao.GLOBAL_ADMIN)),
+                PerfilUtilizador.GESTOR,
                 new Loja("Loja Braga", "Rua Central", "123456789")
         );
     }

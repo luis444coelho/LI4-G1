@@ -10,7 +10,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pt.miniFormiga.api.error.ApiExceptionHandler;
 import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.security.JwtService;
 import pt.miniFormiga.security.MiniFormigaUserDetailsService;
@@ -50,7 +50,7 @@ class AuthControllerTest {
     @Test
     void loginComCredenciaisValidasDevolveJwt() throws Exception {
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Perfil perfil = new Perfil("GESTOR", List.of(Permissao.GLOBAL_ADMIN));
+        PerfilUtilizador perfil = PerfilUtilizador.GESTOR;
         Utilizador utilizador = new Utilizador("gestor.formiga", "hash", "Sr. Formiga", "gestor@mini.pt", perfil, loja);
         UserDetails userDetails = User.withUsername("gestor.formiga")
                 .password("hash")
