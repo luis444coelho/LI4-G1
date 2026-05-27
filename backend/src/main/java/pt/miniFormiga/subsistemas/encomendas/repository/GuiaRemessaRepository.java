@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface GuiaRemessaRepository extends JpaRepository<GuiaRemessa, UUID> {
-    @EntityGraph(attributePaths = {"fornecedor", "encomenda"})
+    @EntityGraph(attributePaths = {"encomenda", "encomenda.fornecedor"})
     Optional<GuiaRemessa> findByNumero(String numero);
 
     @Query("""

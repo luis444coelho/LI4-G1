@@ -11,13 +11,13 @@ import java.util.List;
 import java.util.UUID;
 
 public interface EntradaMercadoriaRepository extends JpaRepository<EntradaMercadoria, UUID> {
-    @EntityGraph(attributePaths = {"guiaRemessa", "guiaRemessa.encomenda", "loja", "responsavel", "produto"})
+    @EntityGraph(attributePaths = {"guiaRemessa", "guiaRemessa.encomenda", "loja", "responsavel", "linhaEncomenda", "linhaEncomenda.produto"})
     Page<EntradaMercadoria> findByLojaId(UUID lojaId, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"guiaRemessa", "guiaRemessa.encomenda", "loja", "responsavel", "produto"})
+    @EntityGraph(attributePaths = {"guiaRemessa", "guiaRemessa.encomenda", "loja", "responsavel", "linhaEncomenda", "linhaEncomenda.produto"})
     List<EntradaMercadoria> findByGuiaRemessaEncomendaId(UUID encomendaId);
 
     @Override
-    @EntityGraph(attributePaths = {"guiaRemessa", "guiaRemessa.encomenda", "loja", "responsavel", "produto"})
+    @EntityGraph(attributePaths = {"guiaRemessa", "guiaRemessa.encomenda", "loja", "responsavel", "linhaEncomenda", "linhaEncomenda.produto"})
     Optional<EntradaMercadoria> findById(UUID id);
 }

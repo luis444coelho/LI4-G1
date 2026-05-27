@@ -134,8 +134,10 @@ class DiagramaMetodosDomainTest {
         Loja loja = criarLoja();
         Utilizador utilizador = criarUtilizador(loja);
         Produto produto = criarProduto();
-        GuiaRemessa guia = new GuiaRemessa(criarFornecedor(), "GR-1", LocalDate.of(2026, 4, 29), null);
-        EntradaMercadoria entrada = new EntradaMercadoria(guia, loja, utilizador, 8, 10, "faltam unidades");
+        Encomenda encomenda = new Encomenda(loja, criarFornecedor());
+        LinhaEncomenda linhaEncomenda = new LinhaEncomenda(encomenda, produto, 10, new BigDecimal("0.50"));
+        GuiaRemessa guia = new GuiaRemessa(encomenda, "GR-1", LocalDate.of(2026, 4, 29), null);
+        EntradaMercadoria entrada = new EntradaMercadoria(guia, loja, utilizador, linhaEncomenda, 8, 10, "faltam unidades");
 
         assertEquals(-2, entrada.getDiscrepancia());
         assertNotNull(entrada.getDataHora());

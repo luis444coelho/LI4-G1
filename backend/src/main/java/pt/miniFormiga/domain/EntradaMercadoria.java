@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "entradas_mercadoria")
@@ -27,8 +28,8 @@ public class EntradaMercadoria extends EntidadeBase {
     private Utilizador responsavel;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "produto_id", nullable = false)
-    private Produto produto;
+    @JoinColumn(name = "linha_encomenda_id", nullable = false)
+    private LinhaEncomenda linhaEncomenda;
 
     @Column(nullable = false)
     private LocalDateTime dataHora;
@@ -51,23 +52,17 @@ public class EntradaMercadoria extends EntidadeBase {
     public EntradaMercadoria(GuiaRemessa guiaRemessa,
                              Loja loja,
                              Utilizador responsavel,
+                             LinhaEncomenda linhaEncomenda,
                              int quantidadeRecebida,
                              int quantidadeEncomendada,
                              String observacoes) {
-        this(guiaRemessa, loja, responsavel, null, quantidadeRecebida, quantidadeEncomendada, observacoes);
-    }
-
-    public EntradaMercadoria(GuiaRemessa guiaRemessa,
-                             Loja loja,
-                             Utilizador responsavel,
-                             Produto produto,
-                             int quantidadeRecebida,
-                             int quantidadeEncomendada,
-                             String observacoes) {
-        this.guiaRemessa = guiaRemessa;
-        this.loja = loja;
-        this.responsavel = responsavel;
-        this.produto = produto;
+        this.guiaRemessa = Objects.requireNonNull(guiaRemessa, "Guia de remessa e obrigatoria");
+        this.loja = Objects.requireNonNull(loja, "Loja e obrigatoria");
+        this.responsavel = Objects.requireNonNull(responsavel, "Responsavel e obrigatorio");
+        this.linhaEncomenda = Objects.requireNonNull(linhaEncomenda, "Linha de encomenda e obrigatoria");
+        if (!this.linhaEncomenda.getEncomenda().getId().equals(this.guiaRemessa.getEncomenda().getId())) {
+            throw new IllegalArgumentException("Linha de encomenda nao pertence a encomenda da guia de remessa");
+        }
         this.quantidadeRecebida = quantidadeRecebida;
         this.quantidadeEncomendadaSnapshot = quantidadeEncomendada;
         this.observacoes = observacoes;
@@ -91,8 +86,12 @@ public class EntradaMercadoria extends EntidadeBase {
         return responsavel;
     }
 
+    public LinhaEncomenda getLinhaEncomenda() {
+        return linhaEncomenda;
+    }
+
     public Produto getProduto() {
-        return produto;
+        return linhaEncomenda.getProduto();
     }
 
     public LocalDateTime getDataHora() {

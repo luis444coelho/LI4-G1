@@ -66,11 +66,12 @@ class SubEncomendasDomainTest {
     void guiaRemessaFicaAssociadaAEncomendaEEntradaCalculaDiscrepancia() {
         Loja loja = loja();
         Encomenda encomenda = new Encomenda(loja, fornecedor(), EstadoEncomendaCodigo.PENDENTE);
-        GuiaRemessa guia = new GuiaRemessa(encomenda.getFornecedor(), encomenda, "GR-1", LocalDate.now(), LocalDate.now());
+        LinhaEncomenda linhaEncomenda = new LinhaEncomenda(encomenda, produto(), 10, new BigDecimal("0.60"));
+        GuiaRemessa guia = new GuiaRemessa(encomenda, "GR-1", LocalDate.now(), LocalDate.now());
         Utilizador responsavel = new Utilizador("armazem", "hash", "Armazem",
                 PerfilUtilizador.ARMAZEM, loja);
 
-        EntradaMercadoria entrada = new EntradaMercadoria(guia, loja, responsavel, 8, 10, "Entrega parcial");
+        EntradaMercadoria entrada = new EntradaMercadoria(guia, loja, responsavel, linhaEncomenda, 8, 10, "Entrega parcial");
 
         assertEquals(encomenda, guia.getEncomenda());
         assertEquals(-2, entrada.getDiscrepancia());

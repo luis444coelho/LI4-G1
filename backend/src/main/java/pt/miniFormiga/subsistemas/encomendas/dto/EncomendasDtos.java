@@ -208,16 +208,13 @@ public final class EncomendasDtos {
                                             int discrepancia,
                                             String observacoes) {
         public static EntradaMercadoriaResponse from(EntradaMercadoria entrada) {
-            UUID encomendaId = entrada.getGuiaRemessa().getEncomenda() == null
-                    ? null
-                    : entrada.getGuiaRemessa().getEncomenda().getId();
             return new EntradaMercadoriaResponse(
                     entrada.getId(),
-                    encomendaId,
+                    entrada.getGuiaRemessa().getEncomenda().getId(),
                     entrada.getLoja().getId(),
                     entrada.getResponsavel().getId(),
-                    entrada.getProduto() == null ? null : entrada.getProduto().getId(),
-                    entrada.getProduto() == null ? null : entrada.getProduto().getNome(),
+                    entrada.getProduto().getId(),
+                    entrada.getProduto().getNome(),
                     entrada.getGuiaRemessa().getNumero(),
                     entrada.getDataHora(),
                     entrada.getQuantidadeRecebida(),

@@ -461,7 +461,6 @@ class SubEncomendasFacadeTest {
         when(encomendaRepository.findById(encomenda.getId())).thenReturn(Optional.of(encomenda));
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(utilizadorRepository.findById(responsavel.getId())).thenReturn(Optional.of(responsavel));
-        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(guiaRemessaRepository.findByNumero("GR-1")).thenReturn(Optional.empty());
         when(guiaRemessaRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(entradaMercadoriaRepository.save(any(EntradaMercadoria.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -492,7 +491,6 @@ class SubEncomendasFacadeTest {
         when(encomendaRepository.findById(encomenda.getId())).thenReturn(Optional.of(encomenda));
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(utilizadorRepository.findById(responsavel.getId())).thenReturn(Optional.of(responsavel));
-        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(guiaRemessaRepository.findByNumero("GR-2")).thenReturn(Optional.empty());
         when(guiaRemessaRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(entradaMercadoriaRepository.save(any(EntradaMercadoria.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -519,8 +517,6 @@ class SubEncomendasFacadeTest {
         when(encomendaRepository.findById(encomenda.getId())).thenReturn(Optional.of(encomenda));
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
         when(utilizadorRepository.findById(responsavel.getId())).thenReturn(Optional.of(responsavel));
-        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
-        when(produtoRepository.findById(sandes.getId())).thenReturn(Optional.of(sandes));
         when(guiaRemessaRepository.findByNumero("GR-3")).thenReturn(Optional.empty());
         when(guiaRemessaRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(entradaMercadoriaRepository.save(any(EntradaMercadoria.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -566,13 +562,12 @@ class SubEncomendasFacadeTest {
         )));
 
         when(utilizadorRepository.findById(responsavel.getId())).thenReturn(Optional.of(responsavel));
-        when(guiaRemessaRepository.findByNumero("GR-9")).thenReturn(Optional.of(new GuiaRemessa(fornecedor, encomenda, "GR-9", LocalDate.now(), LocalDate.now())));
+        when(guiaRemessaRepository.findByNumero("GR-9")).thenReturn(Optional.of(new GuiaRemessa(encomenda, "GR-9", LocalDate.now(), LocalDate.now())));
         assertThrows(pt.miniFormiga.exception.BusinessException.class, () -> facade.registarEntradaMercadoria(new RegistarEntradaMercadoriaRequest(
                 encomenda.getId(), loja.getId(), responsavel.getId(), "GR-9",
                 LocalDate.now(), LocalDate.now(), List.of()
         )));
 
-        when(produtoRepository.findById(sandes.getId())).thenReturn(Optional.of(sandes));
         assertThrows(pt.miniFormiga.exception.BusinessException.class, () -> facade.registarEntradaMercadoria(new RegistarEntradaMercadoriaRequest(
                 encomenda.getId(), loja.getId(), responsavel.getId(), "GR-9",
                 LocalDate.now(), LocalDate.now(),
@@ -582,8 +577,10 @@ class SubEncomendasFacadeTest {
 
     @Test
     void listarEntradasMercadoriaMapeiaPaginaDoRepositorio() {
-        GuiaRemessa guia = new GuiaRemessa(fornecedor, "GR-10", LocalDate.now(), LocalDate.now());
-        EntradaMercadoria entrada = new EntradaMercadoria(guia, loja, responsavel, produto, 2, 1, "Sobra");
+        Encomenda encomenda = new Encomenda(loja, fornecedor);
+        LinhaEncomenda linhaEncomenda = new LinhaEncomenda(encomenda, produto, 1, new BigDecimal("0.60"));
+        GuiaRemessa guia = new GuiaRemessa(encomenda, "GR-10", LocalDate.now(), LocalDate.now());
+        EntradaMercadoria entrada = new EntradaMercadoria(guia, loja, responsavel, linhaEncomenda, 2, 1, "Sobra");
         PageRequest pageable = PageRequest.of(0, 10);
         when(entradaMercadoriaRepository.findByLojaId(loja.getId(), pageable))
                 .thenReturn(new PageImpl<>(List.of(entrada), pageable, 1));

@@ -283,23 +283,22 @@ public class SubEncomendasFacade implements ISubEncomendas {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Utilizador", request.responsavelId()));
 
         GuiaRemessa guia = guiaRemessaRepository.findByNumero(request.guiaNumero())
+                .map(existente -> validarGuiaDaEncomenda(existente, encomenda))
                 .orElseGet(() -> guiaRemessaRepository.save(new GuiaRemessa(
-                        encomenda.getFornecedor(),
                         encomenda,
                         request.guiaNumero(),
                         request.dataEmissao(),
                         request.dataRecepcao()
-                )));
+        )));
         List<EntradaMercadoria> guardadas = new ArrayList<>();
         for (RegistarEntradaMercadoriaLinhaRequest linha : linhasEntrada(request)) {
-            Produto produto = produtoRepository.findById(linha.produtoId())
-                    .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", linha.produtoId()));
-            validarProdutoEncomendado(encomenda, produto.getId());
+            LinhaEncomenda linhaEncomenda = obterLinhaEncomenda(encomenda, linha.produtoId());
+            Produto produto = linhaEncomenda.getProduto();
             EntradaMercadoria entrada = new EntradaMercadoria(
                     guia,
                     loja,
                     responsavel,
-                    produto,
+                    linhaEncomenda,
                     linha.quantidadeRecebida(),
                     linha.quantidadeEncomendada(),
                     linha.observacoes()
@@ -417,12 +416,19 @@ public class SubEncomendasFacade implements ISubEncomendas {
         return request.linhas();
     }
 
-    private void validarProdutoEncomendado(Encomenda encomenda, UUID produtoId) {
-        boolean existe = encomenda.getLinhas().stream()
-                .anyMatch(linha -> linha.getProduto().getId().equals(produtoId));
-        if (!existe) {
-            throw new BusinessException("PRODUTO_FORA_DA_ENCOMENDA", "Produto nao pertence a encomenda indicada");
+    private LinhaEncomenda obterLinhaEncomenda(Encomenda encomenda, UUID produtoId) {
+        return encomenda.getLinhas().stream()
+                .filter(linha -> linha.getProduto().getId().equals(produtoId))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("PRODUTO_FORA_DA_ENCOMENDA",
+                        "Produto nao pertence a encomenda indicada"));
+    }
+
+    private GuiaRemessa validarGuiaDaEncomenda(GuiaRemessa guia, Encomenda encomenda) {
+        if (!guia.getEncomenda().getId().equals(encomenda.getId())) {
+            throw new BusinessException("GUIA_ENCOMENDA_INVALIDA", "Guia de remessa ja esta associada a outra encomenda");
         }
+        return guia;
     }
 
     private void atualizarEstadoRececao(Encomenda encomenda, List<EntradaMercadoria> novasEntradas) {
@@ -433,7 +439,6 @@ public class SubEncomendasFacade implements ISubEncomendas {
             }
         });
         Map<UUID, Integer> recebidoPorProduto = todas.stream()
-                .filter(entrada -> entrada.getProduto() != null)
                 .collect(Collectors.groupingBy(
                         entrada -> entrada.getProduto().getId(),
                         Collectors.summingInt(EntradaMercadoria::getQuantidadeRecebida)
