@@ -2,14 +2,14 @@ import type { CSSProperties, FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 
-import { getRole, roleList, type RoleId } from '../data/mockData'
+import { getRole, roleList, type RoleId } from '../config/appConfig'
 import { Icon, LogoMark } from '../components/icons'
 import { Button, TextField } from '../components/ui'
 import { ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { roleDefaultPath } from '../lib/authRoutes'
 
-const demoUsers: Record<RoleId, string> = {
+const defaultUsernames: Record<RoleId, string> = {
   gestor: 'gestor.formiga',
   gerente: 'gerente.braga',
   funcionario: 'operador.braga',
@@ -55,7 +55,6 @@ export function ProfileSelectionPage() {
           ))}
         </div>
 
-        <p className="auth-note">Demonstração · autenticação real por perfil</p>
       </div>
     </div>
   )
@@ -66,7 +65,7 @@ export function AuthenticationPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const role = useMemo(() => getRole(roleId), [roleId])
-  const [username, setUsername] = useState(role ? demoUsers[role.id] : '')
+  const [username, setUsername] = useState(role ? defaultUsernames[role.id] : '')
   const [password, setPassword] = useState('MiniFormiga2026!')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -74,7 +73,7 @@ export function AuthenticationPage() {
   useEffect(() => {
     if (!role) return
     const timeoutId = window.setTimeout(() => {
-      setUsername(demoUsers[role.id])
+      setUsername(defaultUsernames[role.id])
       setPassword('MiniFormiga2026!')
       setError(null)
     }, 0)
@@ -160,7 +159,6 @@ export function AuthenticationPage() {
           {loading ? 'A entrar...' : 'Entrar'}
         </Button>
 
-        <p className="auth-note">Demonstração · credenciais reais preenchidas automaticamente</p>
       </form>
     </div>
   )

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, MetricCard, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
-import { ReportsContent } from '../components/pageSections'
+import { ReportsContent } from '../features/shared/PageSections'
 import { LOCAL_API_BASE_URL, apiRequest, type CondicaoComercialResponse, type ConflitoSincronizacaoResponse, type DashboardResponse, type EncomendaResponse, type FornecedorResponse, type LojaResponse, type PageResponse, type PerfilResponse, type ProdutoResponse, type RelatorioStockResponse, type SincronizacaoResponse, type SugestaoEncomendaResponse, type UtilizadorResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { formatDateInput } from '../lib/date'

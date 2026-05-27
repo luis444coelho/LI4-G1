@@ -1,4 +1,4 @@
-import { roles, type RoleId } from '../data/mockData'
+import { roles, type RoleId } from '../config/appConfig'
 
 const profileRoleMap: Record<string, RoleId> = {
   GESTOR: 'gestor',

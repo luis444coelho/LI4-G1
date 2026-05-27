@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AppShell } from './components/AppShell'
-import { roles, type RoleId } from './data/mockData'
+import { roles, type RoleId } from './config/appConfig'
 import { AuthProvider, useAuth } from './lib/auth'
 import { roleDefaultPath } from './lib/authRoutes'
 import { AuthenticationPage, ProfileSelectionPage } from './pages/AuthPages'

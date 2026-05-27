@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { Button, Callout, MetricCard, Panel, ProgressBar, SelectField, StatusBadge, TextField } from './ui'
+import { Button, Callout, MetricCard, Panel, ProgressBar, SelectField, StatusBadge, TextField } from '../../components/ui'
 import {
   apiDownload,
   apiRequest,
@@ -14,10 +14,10 @@ import {
   type RelatorioStockResponse,
   type RelatorioVendasResponse,
   type StockResponse,
-} from '../lib/api'
-import { useAuth } from '../lib/auth'
-import { formatDateInput } from '../lib/date'
-import { downloadBlob } from '../lib/download'
+} from '../../lib/api'
+import { useAuth } from '../../lib/auth'
+import { formatDateInput } from '../../lib/date'
+import { downloadBlob } from '../../lib/download'
 
 const money = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
 const percent = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 1 })

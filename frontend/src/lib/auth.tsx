@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import type { ReactNode } from 'react'
 
 import { AUTH_STORAGE_KEY, CENTRAL_API_BASE_URL, LOCAL_API_BASE_URL, apiRequest, type LoginResponse } from './api'
-import type { RoleId } from '../data/mockData'
+import type { RoleId } from '../config/appConfig'
 import { perfilToRoleId } from './authRoutes'
 
 export interface AuthSession extends LoginResponse {

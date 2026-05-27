@@ -1,4 +1,4 @@
-import type { IconName } from '../data/mockData'
+import type { IconName } from '../config/appConfig'
 
 interface IconProps {
   name: IconName
