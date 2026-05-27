@@ -2,6 +2,7 @@ package pt.miniFormiga.subsistemas.utilizadores;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
@@ -21,7 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -110,6 +113,19 @@ class SubUtilizadoresFacadeTest {
     }
 
     @Test
+    void autenticarComCredenciaisValidasRegistaLoginELimpaFalhas() {
+        utilizador.registarFalhaAutenticacao(5);
+        when(utilizadorRepository.findByUsername("operador")).thenReturn(Optional.of(utilizador));
+        when(passwordEncoder.matches("certa", "hash-antigo")).thenReturn(true);
+
+        Utilizador autenticado = facade.autenticar("operador", "certa");
+
+        assertSame(utilizador, autenticado);
+        assertEquals(0, autenticado.getTentativasFalhadas());
+        verify(auditoriaService).registar(TipoOperacao.LOGIN, utilizador.getId(), "AUTH_LOGIN", "Login efetuado");
+    }
+
+    @Test
     void utilizadoresDemoRecuperamLoginComPasswordUnicaDeTeste() {
         List<Utilizador> utilizadoresDemo = List.of(
                 new Utilizador("gestor.formiga", "hash-antigo", "Sr. Formiga", "gestor@mini.pt", new Perfil("GESTOR", List.of(Permissao.GLOBAL_ADMIN)), lojaBraga),
@@ -138,6 +154,165 @@ class SubUtilizadoresFacadeTest {
         facade.listarUtilizadoresPorLoja(lojaBraga.getId(), PageRequest.of(0, 10));
 
         verify(utilizadorRepository).findByLojaId(lojaBraga.getId(), PageRequest.of(0, 10));
+    }
+
+    @Test
+    void listarUtilizadoresUsaRepositorioPaginado() {
+        PageRequest pageable = PageRequest.of(0, 5);
+        when(utilizadorRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(utilizador), pageable, 1));
+
+        var pagina = facade.listarUtilizadores(pageable);
+
+        assertEquals(1, pagina.getTotalElements());
+        verify(utilizadorRepository).findAll(pageable);
+    }
+
+    @Test
+    void criarUtilizadorComLojaExistenteCodificaPasswordEAudita() {
+        when(utilizadorRepository.existsByUsername("novo")).thenReturn(false);
+        when(lojaRepository.findById(lojaBraga.getId())).thenReturn(Optional.of(lojaBraga));
+        when(passwordEncoder.encode("segura")).thenReturn("hash-seguro");
+        when(utilizadorRepository.save(any(Utilizador.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Utilizador criado = facade.criarUtilizador(new CriarUtilizadorCommand(
+                "novo",
+                "segura",
+                "Novo",
+                "NOVO@MINI.PT",
+                "FUNCIONARIO",
+                lojaBraga.getId(),
+                null
+        ));
+
+        assertEquals("novo", criado.getUsername());
+        assertEquals("hash-seguro", criado.getPasswordHash());
+        assertEquals("novo@mini.pt", criado.getEmail());
+        assertEquals(PerfilUtilizador.FUNCIONARIO, criado.getPerfil());
+        assertSame(lojaBraga, criado.getLoja());
+        verify(auditoriaService).registar(TipoOperacao.UTILIZADOR_CRIADO, criado.getId(), "UTILIZADOR_CRIADO", "Utilizador criado");
+    }
+
+    @Test
+    void criarUtilizadorComUsernameDuplicadoFalhaAntesDeCodificarPassword() {
+        when(utilizadorRepository.existsByUsername("operador")).thenReturn(true);
+
+        assertThrows(RegraNegocioException.class, () -> facade.criarUtilizador(new CriarUtilizadorCommand(
+                "operador",
+                "segura",
+                "Operador",
+                null,
+                "FUNCIONARIO",
+                lojaBraga.getId(),
+                null
+        )));
+
+        verify(passwordEncoder, never()).encode(any());
+        verify(utilizadorRepository, never()).save(any());
+    }
+
+    @Test
+    void criarGerenteComNomeDeLojaCriaLojaNovaComNifTemporarioDisponivel() {
+        when(utilizadorRepository.existsByUsername("gerente.nova")).thenReturn(false);
+        when(lojaRepository.findByNif("900000000")).thenReturn(Optional.of(lojaBraga));
+        when(lojaRepository.findByNif("900000001")).thenReturn(Optional.empty());
+        when(lojaRepository.save(any(Loja.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(passwordEncoder.encode("segura")).thenReturn("hash-gerente");
+        when(utilizadorRepository.save(any(Utilizador.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Utilizador criado = facade.criarUtilizador(new CriarUtilizadorCommand(
+                "gerente.nova",
+                "segura",
+                "Gerente Nova",
+                null,
+                "GERENTE",
+                null,
+                " Nova Loja "
+        ));
+
+        assertEquals("Nova Loja", criado.getLoja().getNome());
+        assertEquals("900000001", criado.getLoja().getNif());
+        assertEquals(PerfilUtilizador.GERENTE, criado.getPerfil());
+    }
+
+    @Test
+    void criarUtilizadorSemLojaOuComPerfilInvalidoFalha() {
+        when(utilizadorRepository.existsByUsername("sem.loja")).thenReturn(false);
+        assertThrows(RecursoNaoEncontradoException.class, () -> facade.criarUtilizador(new CriarUtilizadorCommand(
+                "sem.loja",
+                "segura",
+                "Sem Loja",
+                null,
+                "FUNCIONARIO",
+                null,
+                null
+        )));
+
+        when(utilizadorRepository.existsByUsername("perfil.invalido")).thenReturn(false);
+        assertThrows(RecursoNaoEncontradoException.class, () -> facade.criarUtilizador(new CriarUtilizadorCommand(
+                "perfil.invalido",
+                "segura",
+                "Perfil Invalido",
+                null,
+                "INVALIDO",
+                lojaBraga.getId(),
+                null
+        )));
+    }
+
+    @Test
+    void atualizarUtilizadorComCamposOmitidosMantemDadosEPermiteReativar() {
+        utilizador.desativar();
+        when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
+
+        Utilizador atualizado = facade.atualizarUtilizador(utilizador.getId(), new AtualizarUtilizadorCommand(
+                null,
+                null,
+                null,
+                null,
+                " ",
+                true
+        ));
+
+        assertSame(utilizador, atualizado);
+        assertEquals("Operador", atualizado.getNome());
+        assertEquals("operador@mini.pt", atualizado.getEmail());
+        assertEquals(PerfilUtilizador.FUNCIONARIO, atualizado.getPerfil());
+        assertSame(lojaBraga, atualizado.getLoja());
+        assertEquals("hash-antigo", atualizado.getPasswordHash());
+        assertTrue(atualizado.isAtivo());
+    }
+
+    @Test
+    void atualizarUtilizadorComLojaInexistenteFalha() {
+        when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
+        when(lojaRepository.findById(lojaGuimaraes.getId())).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNaoEncontradoException.class, () -> facade.atualizarUtilizador(utilizador.getId(), new AtualizarUtilizadorCommand(
+                null,
+                null,
+                null,
+                lojaGuimaraes.getId(),
+                null,
+                null
+        )));
+    }
+
+    @Test
+    void obterEDesativarUtilizadorTratamExistenciaEAuditoria() {
+        when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.of(utilizador));
+
+        assertSame(utilizador, facade.obterUtilizador(utilizador.getId()));
+        facade.desativarUtilizador(utilizador.getId());
+
+        assertFalse(utilizador.isAtivo());
+        verify(auditoriaService).registar(TipoOperacao.UTILIZADOR_DESATIVADO, utilizador.getId(), "UTILIZADOR_DESATIVADO", "Utilizador desativado");
+    }
+
+    @Test
+    void obterUtilizadorInexistenteFalha() {
+        when(utilizadorRepository.findById(utilizador.getId())).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNaoEncontradoException.class, () -> facade.obterUtilizador(utilizador.getId()));
     }
 
     @Test

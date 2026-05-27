@@ -20,6 +20,8 @@
     <properties>
         <java.version>21</java.version>
         <jjwt.version>0.12.6</jjwt.version>
+        <pitest.version>1.24.1</pitest.version>
+        <pitest.junit5.version>1.2.3</pitest.junit5.version>
     </properties>
 
     <dependencies>
@@ -149,6 +151,60 @@
                             </limits>
                         </rule>
                     </rules>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>${pitest.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>${pitest.junit5.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <targetClasses>
+                        <param>pt.miniFormiga.domain.Categoria</param>
+                        <param>pt.miniFormiga.domain.TaxaIVA</param>
+                        <param>pt.miniFormiga.domain.Perfil</param>
+                        <param>pt.miniFormiga.domain.Fornecedor</param>
+                        <param>pt.miniFormiga.domain.ProdutoLoja</param>
+                        <param>pt.miniFormiga.domain.Stock</param>
+                        <param>pt.miniFormiga.domain.FechoCaixa</param>
+                        <param>pt.miniFormiga.domain.Loja</param>
+                        <param>pt.miniFormiga.subsistemas.stock.GlobalProdutoLojaStockStore</param>
+                        <param>pt.miniFormiga.subsistemas.stock.LocalProdutoStockStore</param>
+                        <param>pt.miniFormiga.subsistemas.sincronizacao.RestSincronizacaoTransporte</param>
+                        <param>pt.miniFormiga.api.error.ApiExceptionHandler</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>pt.miniFormiga.domain.*Test</param>
+                        <param>pt.miniFormiga.subsistemas.stock.*Test</param>
+                        <param>pt.miniFormiga.subsistemas.sincronizacao.RestSincronizacaoTransporteTest</param>
+                        <param>pt.miniFormiga.api.error.ApiExceptionHandlerTest</param>
+                    </targetTests>
+                    <excludedClasses>
+                        <param>pt.miniFormiga.MiniFormigaApplication</param>
+                        <param>pt.miniFormiga.api.dto.*</param>
+                        <param>pt.miniFormiga.bootstrap.*</param>
+                        <param>pt.miniFormiga.config.*</param>
+                        <param>pt.miniFormiga.repository.*</param>
+                        <param>pt.miniFormiga.subsistemas.*.*Dtos*</param>
+                    </excludedClasses>
+                    <outputFormats>
+                        <param>HTML</param>
+                        <param>XML</param>
+                    </outputFormats>
+                    <timestampedReports>false</timestampedReports>
+                    <mutationThreshold>0</mutationThreshold>
+                    <coverageThreshold>0</coverageThreshold>
+                    <failWhenNoMutations>false</failWhenNoMutations>
+                    <threads>4</threads>
+                    <timeoutFactor>2.0</timeoutFactor>
+                    <timeoutConstant>4000</timeoutConstant>
+                    <useClasspathFile>true</useClasspathFile>
                 </configuration>
             </plugin>
         </plugins>
