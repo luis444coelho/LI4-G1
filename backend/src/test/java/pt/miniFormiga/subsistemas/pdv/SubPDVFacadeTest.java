@@ -20,6 +20,7 @@ import pt.miniFormiga.subsistemas.stock.ISubStock;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -28,6 +29,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -319,6 +321,21 @@ class SubPDVFacadeTest {
         verify(stock).atualizarStock(produto.getId(), loja.getId(), -2);
         verify(auditoria).registar(TipoOperacao.VENDA_FINALIZADA, operador.getId(), "VENDA", "Venda finalizada");
         verify(sincronizacao).iniciarSincronizacao(loja.getId());
+    }
+
+    @Test
+    void operacoesPdvCriticasRespeitamLimiteDeDoisSegundosRnf01() {
+        Venda venda = new Venda(loja, operador);
+        when(vendaRepository.findById(venda.getId())).thenReturn(Optional.of(venda));
+        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
+        when(stock.consultarStock(loja.getId()))
+                .thenReturn(List.of(new ISubStock.StockDTO(produto.getId(), loja.getId(), 5)));
+        when(vendaRepository.save(venda)).thenReturn(venda);
+
+        assertTimeout(Duration.ofSeconds(2), () -> {
+            facade.adicionarLinhaVenda(venda.getId(), produto.getId(), 2);
+            facade.finalizarVenda(venda.getId(), "CARTAO");
+        });
     }
 
     @Test
