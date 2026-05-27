@@ -2,6 +2,7 @@ package pt.miniFormiga.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,6 +18,8 @@ import pt.miniFormiga.domain.Perfil;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
+import pt.miniFormiga.subsistemas.utilizadores.AtualizarUtilizadorCommand;
+import pt.miniFormiga.subsistemas.utilizadores.CriarUtilizadorCommand;
 import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
 
@@ -31,8 +34,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,6 +74,27 @@ class UtilizadoresControllerTest {
         assertEquals(1, response.getTotalElements());
         assertEquals(lojaPropria.getId(), response.getContent().get(0).lojaId());
         verify(utilizadores).listarUtilizadoresPorLoja(lojaPropria.getId(), pageable);
+    }
+
+    @Test
+    void gestorListaTodosOuFiltraPorLojaQuandoLojaIdEIndicado() {
+        ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
+        UtilizadoresController controller = new UtilizadoresController(
+                utilizadores,
+                mock(LojaRepository.class),
+                mock(UtilizadorRepository.class)
+        );
+        Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
+        Utilizador operador = new Utilizador("operador", "hash", "Operador", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), loja);
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(utilizadores.listarUtilizadores(pageable)).thenReturn(new PageImpl<>(List.of(operador), pageable, 1));
+        when(utilizadores.listarUtilizadoresPorLoja(loja.getId(), pageable)).thenReturn(new PageImpl<>(List.of(operador), pageable, 1));
+
+        assertEquals(1, controller.listar(null, pageable, authenticationGestor()).getTotalElements());
+        assertEquals(1, controller.listar(loja.getId(), pageable, authenticationGestor()).getTotalElements());
+
+        verify(utilizadores).listarUtilizadores(pageable);
+        verify(utilizadores).listarUtilizadoresPorLoja(loja.getId(), pageable);
     }
 
     @Test
@@ -131,6 +157,53 @@ class UtilizadoresControllerTest {
     }
 
     @Test
+    void gerenteNaoPodeCriarNovaLojaNemCriarSemPerfilOuSemLoja() {
+        ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
+        LojaRepository lojaRepository = mock(LojaRepository.class);
+        UtilizadorRepository utilizadorRepository = mock(UtilizadorRepository.class);
+        UtilizadoresController controller = new UtilizadoresController(
+                utilizadores,
+                lojaRepository,
+                utilizadorRepository
+        );
+        Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE)), lojaPropria);
+        Authentication authentication = authenticationGerente();
+        when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
+
+        assertThrows(AccessDeniedException.class, () -> controller.criar(new CriarUtilizadorRequest(
+                "gerente.nova",
+                "MiniFormiga2026!",
+                "Gerente Nova",
+                null,
+                "FUNCIONARIO",
+                null,
+                lojaPropria.getId(),
+                "Nova Loja"
+        ), authentication));
+        assertThrows(IllegalArgumentException.class, () -> controller.criar(new CriarUtilizadorRequest(
+                "sem.perfil",
+                "MiniFormiga2026!",
+                "Sem Perfil",
+                null,
+                null,
+                null,
+                lojaPropria.getId(),
+                null
+        ), authenticationGestor()));
+        assertThrows(IllegalArgumentException.class, () -> controller.criar(new CriarUtilizadorRequest(
+                "sem.loja",
+                "MiniFormiga2026!",
+                "Sem Loja",
+                null,
+                "FUNCIONARIO",
+                null,
+                null,
+                null
+        ), authenticationGestor()));
+    }
+
+    @Test
     void gerenteNaoPodeAtualizarUtilizadorDeOutraLoja() {
         ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
         LojaRepository lojaRepository = mock(LojaRepository.class);
@@ -159,6 +232,65 @@ class UtilizadoresControllerTest {
         );
 
         assertThrows(AccessDeniedException.class, () -> controller.atualizar(operadorPorto.getId(), request, authentication));
+    }
+
+    @Test
+    void gerenteAtualizaUtilizadorDaPropriaLojaComPerfilOperacional() {
+        ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
+        UtilizadorRepository utilizadorRepository = mock(UtilizadorRepository.class);
+        UtilizadoresController controller = new UtilizadoresController(
+                utilizadores,
+                mock(LojaRepository.class),
+                utilizadorRepository
+        );
+        Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE)), lojaPropria);
+        Utilizador operador = new Utilizador("operador.braga", "hash", "Operador", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), lojaPropria);
+        when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
+        when(utilizadores.obterUtilizador(operador.getId())).thenReturn(operador);
+        when(utilizadores.atualizarUtilizador(any(), any())).thenReturn(operador);
+
+        var response = controller.atualizar(operador.getId(), new AtualizarUtilizadorRequest(
+                "Operador Atualizado",
+                "operador@mini.pt",
+                null,
+                "ARMAZEM",
+                lojaPropria.getId(),
+                null,
+                true
+        ), authenticationGerente());
+
+        assertEquals("operador.braga", response.username());
+        ArgumentCaptor<AtualizarUtilizadorCommand> command = ArgumentCaptor.forClass(AtualizarUtilizadorCommand.class);
+        verify(utilizadores).atualizarUtilizador(any(), command.capture());
+        assertEquals("ARMAZEM", command.getValue().perfil());
+    }
+
+    @Test
+    void gerenteNaoPodePromoverUtilizadorNemGerirSemAutenticacaoValida() {
+        ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
+        UtilizadorRepository utilizadorRepository = mock(UtilizadorRepository.class);
+        UtilizadoresController controller = new UtilizadoresController(
+                utilizadores,
+                mock(LojaRepository.class),
+                utilizadorRepository
+        );
+        Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE)), lojaPropria);
+        Utilizador operador = new Utilizador("operador.braga", "hash", "Operador", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), lojaPropria);
+        when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
+        when(utilizadores.obterUtilizador(operador.getId())).thenReturn(operador);
+
+        assertThrows(AccessDeniedException.class, () -> controller.atualizar(operador.getId(), new AtualizarUtilizadorRequest(
+                null,
+                null,
+                "GESTOR",
+                null,
+                lojaPropria.getId(),
+                null,
+                true
+        ), authenticationGerente()));
+        assertThrows(AccessDeniedException.class, () -> controller.listar(null, PageRequest.of(0, 1), null));
     }
 
     @Test
@@ -196,6 +328,34 @@ class UtilizadoresControllerTest {
     }
 
     @Test
+    void gestorCriaUtilizadorComPerfilIdLegadoEControllerEnviaCommandNormalizado() {
+        ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
+        UtilizadoresController controller = new UtilizadoresController(
+                utilizadores,
+                mock(LojaRepository.class),
+                mock(UtilizadorRepository.class)
+        );
+        Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
+        Utilizador criado = new Utilizador("perfil.legado", "hash", "Perfil Legado", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), loja);
+        when(utilizadores.criarUtilizador(any())).thenReturn(criado);
+
+        controller.criar(new CriarUtilizadorRequest(
+                "perfil.legado",
+                "MiniFormiga2026!",
+                "Perfil Legado",
+                null,
+                null,
+                "FUNCIONARIO",
+                loja.getId(),
+                null
+        ), authenticationGestor());
+
+        ArgumentCaptor<CriarUtilizadorCommand> command = ArgumentCaptor.forClass(CriarUtilizadorCommand.class);
+        verify(utilizadores).criarUtilizador(command.capture());
+        assertEquals("FUNCIONARIO", command.getValue().perfil());
+    }
+
+    @Test
     void listarLojasRemoveDuplicadosPorNomeParaGestor() throws Exception {
         ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
         LojaRepository lojaRepository = mock(LojaRepository.class);
@@ -219,6 +379,65 @@ class UtilizadoresControllerTest {
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].nome").value("Loja Braga"))
                 .andExpect(jsonPath("$[1].nome").value("Loja Porto"));
+    }
+
+    @Test
+    void listarLojasParaGerenteDevolveApenasLojaDoUtilizadorAtual() {
+        UtilizadorRepository utilizadorRepository = mock(UtilizadorRepository.class);
+        UtilizadoresController controller = new UtilizadoresController(
+                mock(ISubUtilizadores.class),
+                mock(LojaRepository.class),
+                utilizadorRepository
+        );
+        Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_READ)), loja);
+        when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
+
+        var lojas = controller.listarLojas(authenticationGerente());
+
+        assertEquals(1, lojas.size());
+        assertEquals(loja.getId(), lojas.get(0).id());
+    }
+
+    @Test
+    void obterValidaEscopoEPerfilParaGerente() {
+        ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
+        UtilizadorRepository utilizadorRepository = mock(UtilizadorRepository.class);
+        UtilizadoresController controller = new UtilizadoresController(
+                utilizadores,
+                mock(LojaRepository.class),
+                utilizadorRepository
+        );
+        Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
+        Utilizador gerente = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_READ)), loja);
+        Utilizador operador = new Utilizador("operador.braga", "hash", "Operador", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), loja);
+        Utilizador gestor = new Utilizador("gestor.formiga", "hash", "Gestor", new Perfil("GESTOR", List.of(Permissao.GLOBAL_ADMIN)), loja);
+        when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerente));
+        when(utilizadores.obterUtilizador(operador.getId())).thenReturn(operador);
+        when(utilizadores.obterUtilizador(gestor.getId())).thenReturn(gestor);
+
+        assertEquals("operador.braga", controller.obter(operador.getId(), authenticationGerente()).username());
+        assertThrows(AccessDeniedException.class, () -> controller.obter(gestor.getId(), authenticationGerente()));
+    }
+
+    @Test
+    void desativarDelegadoAoSubsistema() throws Exception {
+        ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
+        UtilizadoresController controller = new UtilizadoresController(
+                utilizadores,
+                mock(LojaRepository.class),
+                mock(UtilizadorRepository.class)
+        );
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
+        UUID id = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/v1/utilizadores/{id}", id)
+                        .principal(authenticationGestor()))
+                .andExpect(status().isNoContent());
+
+        verify(utilizadores).desativarUtilizador(id);
     }
 
     @Test

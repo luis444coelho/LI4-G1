@@ -1,16 +1,21 @@
 package pt.miniFormiga.api.error;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.subsistemas.utilizadores.RecursoNaoEncontradoException;
 import pt.miniFormiga.subsistemas.utilizadores.RegraNegocioException;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -75,5 +80,39 @@ class ApiExceptionHandlerTest {
         assertEquals("SCHEMA_LEGADO", schema.getBody().code());
         assertEquals("DATA_INTEGRITY_VIOLATION", generico.getBody().code());
         assertTrue(generico.getBody().details().containsKey("detalhe"));
+    }
+
+    @Test
+    void validacaoAgrupaCamposOrdenadosEUsaMensagemSeguraQuandoCampoNaoTemMensagem() throws Exception {
+        BeanPropertyBindingResult binding = new BeanPropertyBindingResult(new Object(), "request");
+        binding.addError(new FieldError("request", "username", null, false, null, null, "obrigatorio"));
+        binding.addError(new FieldError("request", "email", null, false, null, null, null));
+        binding.addError(new FieldError("request", "username", null, false, null, null, "duplicado"));
+
+        var response = handler.validacao(new MethodArgumentNotValidException(methodParameter(), binding));
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("VALIDATION_ERROR", response.getBody().code());
+        assertEquals("Pedido invalido: email, username", response.getBody().message());
+        assertEquals("valor invalido", response.getBody().details().get("email"));
+        assertEquals("obrigatorio", response.getBody().details().get("username"));
+    }
+
+    @Test
+    void validacaoSemCamposMantemMensagemGenerica() throws Exception {
+        BeanPropertyBindingResult binding = new BeanPropertyBindingResult(new Object(), "request");
+
+        var response = handler.validacao(new MethodArgumentNotValidException(methodParameter(), binding));
+
+        assertEquals("Pedido invalido", response.getBody().message());
+    }
+
+    private MethodParameter methodParameter() throws NoSuchMethodException {
+        Method method = ApiExceptionHandlerTest.class.getDeclaredMethod("endpointTeste", String.class);
+        return new MethodParameter(method, 0);
+    }
+
+    @SuppressWarnings("unused")
+    private void endpointTeste(String request) {
     }
 }
