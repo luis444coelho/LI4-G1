@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
-import { ReportsContent, StockContent } from '../components/pageSections'
+import { ReportsContent, StockContent } from '../features/shared/PageSections'
 import { apiRequest, type AjusteInventarioResponse, type FechoCaixaResponse, type MotivoAjusteResponse, type PageResponse, type PerfilResponse, type StockResponse, type UtilizadorResponse, type VendaResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { formatDateInput } from '../lib/date'
@@ -250,7 +250,7 @@ export function GerenteAdjustmentPage() {
           <TextField label="Quantidade (+ ou −)" type="number" value={quantidade} onChange={(event) => setQuantidade(Number(event.target.value))} />
           <SelectField label="Motivo" value={motivo} options={motiveOptions} onChange={(event) => setMotivo(event.target.value)} />
         </div>
-        <Callout tone="info" className="mt-compact">Operação registada no log de auditoria com identificação e hora (RNF-05)</Callout>
+        <Callout tone="info" className="mt-compact">Operação registada no histórico de auditoria.</Callout>
         {error ? <Callout tone="warning">{error}</Callout> : null}
         {message ? <Callout tone="info">{message}</Callout> : null}
         <Button className="full-width mt-large" onClick={submitAdjustment} disabled={!produtoId}>Confirmar ajuste</Button>
