@@ -54,7 +54,7 @@ public class ApiExceptionHandler {
             return erro(HttpStatus.BAD_REQUEST, "USERNAME_DUPLICADO", "Username ja existe", Map.of("detalhe", detalhe));
         }
         if (normalizado.contains("perfil_id")) {
-            return erro(HttpStatus.BAD_REQUEST, "SCHEMA_LEGADO", "Schema antigo da base de dados: reinicie com rebuild ou limpe os volumes", Map.of("detalhe", detalhe));
+            return erro(HttpStatus.BAD_REQUEST, "SCHEMA_DESATUALIZADO", "Schema da base de dados desatualizado: reinicie com rebuild ou limpe os volumes", Map.of("detalhe", detalhe));
         }
         return erro(HttpStatus.BAD_REQUEST, "DATA_INTEGRITY_VIOLATION", "Dados invalidos ou duplicados", Map.of("detalhe", detalhe));
     }

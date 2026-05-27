@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pt.miniFormiga.api.error.ApiExceptionHandler;
-import pt.miniFormiga.subsistemas.relatorios.ISubRelatorios;
+import pt.miniFormiga.subsistemas.relatorios.facade.ISubRelatorios;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.*;
+import static pt.miniFormiga.subsistemas.relatorios.dto.RelatoriosDtos.*;
 
 class RelatoriosControllerTest {
 

@@ -8,14 +8,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pt.miniFormiga.api.error.ApiExceptionHandler;
-import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
+import pt.miniFormiga.subsistemas.auditoria.facade.ISubAuditoria;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.security.JwtService;
 import pt.miniFormiga.security.MiniFormigaUserDetailsService;
 import pt.miniFormiga.subsistemas.utilizadores.CredenciaisInvalidasException;
-import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
+import pt.miniFormiga.subsistemas.utilizadores.facade.ISubUtilizadores;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
 
 import java.util.List;

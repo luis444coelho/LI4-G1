@@ -8,11 +8,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import pt.miniFormiga.subsistemas.pdv.ISubPDV;
+import pt.miniFormiga.subsistemas.pdv.facade.ISubPDV;
 
 import java.util.UUID;
 
-import static pt.miniFormiga.subsistemas.pdv.PdvDtos.*;
+import static pt.miniFormiga.subsistemas.pdv.dto.PdvDtos.*;
 
 @RestController
 @RequestMapping("/api/v1/produtos")

@@ -12,11 +12,11 @@ import pt.miniFormiga.domain.Fornecedor;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.Utilizador;
-import pt.miniFormiga.repository.FornecedorRepository;
-import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.ProdutoRepository;
-import pt.miniFormiga.repository.UtilizadorRepository;
-import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte;
+import pt.miniFormiga.subsistemas.encomendas.repository.FornecedorRepository;
+import pt.miniFormiga.subsistemas.lojas.repository.LojaRepository;
+import pt.miniFormiga.subsistemas.catalogo.repository.ProdutoRepository;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
+import pt.miniFormiga.subsistemas.sincronizacao.transport.SincronizacaoTransporte;
 
 import java.util.UUID;
 
@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.ResultadoTransmissao;
+import static pt.miniFormiga.subsistemas.sincronizacao.transport.SincronizacaoTransporte.ResultadoTransmissao;
 
 @SpringBootTest(properties = {
         "mini-formiga.demo-data.enabled=true",

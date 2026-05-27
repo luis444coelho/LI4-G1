@@ -5,7 +5,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Utilizador;
-import pt.miniFormiga.repository.UtilizadorRepository;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
 
 import java.util.List;

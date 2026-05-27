@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pt.miniFormiga.domain.Categoria;
-import pt.miniFormiga.repository.CategoriaRepository;
+import pt.miniFormiga.subsistemas.catalogo.repository.CategoriaRepository;
 
 import java.util.List;
 import java.util.UUID;

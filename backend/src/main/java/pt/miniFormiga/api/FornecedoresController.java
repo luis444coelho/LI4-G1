@@ -17,12 +17,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import pt.miniFormiga.subsistemas.encomendas.ISubEncomendas;
+import pt.miniFormiga.subsistemas.encomendas.facade.ISubEncomendas;
 
 import java.util.List;
 import java.util.UUID;
 
-import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.*;
+import static pt.miniFormiga.subsistemas.encomendas.dto.EncomendasDtos.*;
 
 @RestController
 @RequestMapping("/api/v1/fornecedores")

@@ -15,21 +15,21 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
+import pt.miniFormiga.subsistemas.auditoria.facade.ISubAuditoria;
 import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.domain.Devolucao;
 import pt.miniFormiga.exception.BusinessException;
-import pt.miniFormiga.repository.DevolucaoRepository;
-import pt.miniFormiga.repository.FaturaRepository;
-import pt.miniFormiga.repository.UtilizadorRepository;
-import pt.miniFormiga.subsistemas.pdv.ISubPDV;
+import pt.miniFormiga.subsistemas.pdv.repository.DevolucaoRepository;
+import pt.miniFormiga.subsistemas.pdv.repository.FaturaRepository;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
+import pt.miniFormiga.subsistemas.pdv.facade.ISubPDV;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static pt.miniFormiga.subsistemas.pdv.PdvDtos.*;
+import static pt.miniFormiga.subsistemas.pdv.dto.PdvDtos.*;
 
 @RestController
 @RequestMapping("/api/v1/vendas")
@@ -188,7 +188,7 @@ public class VendasController {
     @Operation(summary = "Processar devolucao")
     @ApiResponse(responseCode = "200", description = "Devolucao processada")
     public VendaDTO devolucao(@PathVariable UUID id, @Valid @RequestBody ProcessarDevolucaoRequest request) {
-        if (pdv instanceof pt.miniFormiga.subsistemas.pdv.SubPDVFacade facade) {
+        if (pdv instanceof pt.miniFormiga.subsistemas.pdv.facade.SubPDVFacade facade) {
             return facade.processarDevolucao(id, request);
         }
         throw new IllegalStateException("SubPDV nao suporta devolucoes nesta implementacao");

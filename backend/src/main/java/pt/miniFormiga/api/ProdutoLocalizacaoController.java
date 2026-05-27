@@ -5,9 +5,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import pt.miniFormiga.subsistemas.stock.StockDtos.LocalizacaoRequest;
-import pt.miniFormiga.subsistemas.stock.StockDtos.LocalizacaoResponse;
-import pt.miniFormiga.subsistemas.stock.StockStore;
+import pt.miniFormiga.subsistemas.stock.dto.StockDtos.LocalizacaoRequest;
+import pt.miniFormiga.subsistemas.stock.dto.StockDtos.LocalizacaoResponse;
+import pt.miniFormiga.subsistemas.stock.service.StockStore;
 
 import java.util.UUID;
 

@@ -13,14 +13,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import pt.miniFormiga.subsistemas.sincronizacao.ISubSincronizacao;
+import pt.miniFormiga.subsistemas.sincronizacao.facade.ISubSincronizacao;
 
 import java.util.List;
 import java.util.UUID;
 
-import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.ConflitoSincronizacaoResponse;
-import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.IniciarSincronizacaoRequest;
-import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoResponse;
+import static pt.miniFormiga.subsistemas.sincronizacao.dto.SincronizacaoDtos.ConflitoSincronizacaoResponse;
+import static pt.miniFormiga.subsistemas.sincronizacao.dto.SincronizacaoDtos.IniciarSincronizacaoRequest;
+import static pt.miniFormiga.subsistemas.sincronizacao.dto.SincronizacaoDtos.SincronizacaoResponse;
 
 @RestController
 @RequestMapping("/api/v1/sincronizacao")

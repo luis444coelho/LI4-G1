@@ -7,7 +7,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import pt.miniFormiga.domain.*;
-import pt.miniFormiga.repository.*;
+import pt.miniFormiga.subsistemas.catalogo.repository.CategoriaRepository;
+import pt.miniFormiga.subsistemas.catalogo.repository.ProdutoRepository;
+import pt.miniFormiga.subsistemas.catalogo.repository.TaxaIVARepository;
+import pt.miniFormiga.subsistemas.encomendas.repository.CondicaoComercialRepository;
+import pt.miniFormiga.subsistemas.encomendas.repository.FornecedorRepository;
+import pt.miniFormiga.subsistemas.lojas.repository.LojaRepository;
+import pt.miniFormiga.subsistemas.stock.repository.StockProdutoLojaRepository;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

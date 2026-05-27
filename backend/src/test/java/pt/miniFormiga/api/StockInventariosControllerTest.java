@@ -19,12 +19,12 @@ import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
-import pt.miniFormiga.repository.AjusteInventarioRepository;
-import pt.miniFormiga.repository.InventarioFisicoRepository;
-import pt.miniFormiga.repository.LinhaInventarioRepository;
-import pt.miniFormiga.subsistemas.stock.ISubStock;
-import pt.miniFormiga.subsistemas.stock.StockItem;
-import pt.miniFormiga.subsistemas.stock.StockStore;
+import pt.miniFormiga.subsistemas.stock.repository.AjusteInventarioRepository;
+import pt.miniFormiga.subsistemas.stock.repository.InventarioFisicoRepository;
+import pt.miniFormiga.subsistemas.stock.repository.LinhaInventarioRepository;
+import pt.miniFormiga.subsistemas.stock.facade.ISubStock;
+import pt.miniFormiga.subsistemas.stock.service.StockItem;
+import pt.miniFormiga.subsistemas.stock.service.StockStore;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
 
 import java.math.BigDecimal;
