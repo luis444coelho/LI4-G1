@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, MetricCard, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
-import { ReportsContent } from '../components/pageSections'
+import { ReportsContent } from '../features/shared/PageSections'
 import { LOCAL_API_BASE_URL, apiRequest, type CondicaoComercialResponse, type ConflitoSincronizacaoResponse, type DashboardResponse, type EncomendaResponse, type FornecedorResponse, type LojaResponse, type PageResponse, type PerfilResponse, type ProdutoResponse, type RelatorioStockResponse, type SincronizacaoResponse, type SugestaoEncomendaResponse, type UtilizadorResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { formatDateInput } from '../lib/date'
@@ -680,7 +680,7 @@ export function GestorOrdersPage({ fixedStore = false }: { fixedStore?: boolean 
         ) : null}
 
         <Callout tone="info" className="mt-compact">
-          Encomenda submetida após as 18h00 → processada a 21/04 (segunda-feira) às 08h00 (RD-06)
+          Encomenda submetida após as 18h00 → processada a 21/04 (segunda-feira) às 08h00   
         </Callout>
         {error ? <Callout tone="warning" className="mt-compact">{error}</Callout> : null}
         {message ? <Callout tone="info" className="mt-compact">{message}</Callout> : null}

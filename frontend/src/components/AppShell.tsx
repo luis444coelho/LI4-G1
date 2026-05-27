@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 
-import type { RoleConfig } from '../data/mockData'
+import type { RoleConfig } from '../config/appConfig'
 import { useAuth } from '../lib/auth'
 import { cn } from '../lib/cn'
 import { Icon, LogoMark } from './icons'

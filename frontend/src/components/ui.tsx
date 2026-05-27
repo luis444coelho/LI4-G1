@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
 
-import type { IconName, StatusTone } from '../data/mockData'
+import type { IconName, StatusTone } from '../config/appConfig'
 import { cn } from '../lib/cn'
 import { Icon } from './icons'
 

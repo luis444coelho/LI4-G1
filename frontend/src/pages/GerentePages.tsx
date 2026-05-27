@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { Button, Callout, InitialAvatar, Panel, SelectField, StatusBadge, TextField } from '../components/ui'
-import { ReportsContent, StockContent } from '../components/pageSections'
+import { ReportsContent, StockContent } from '../features/shared/PageSections'
 import { apiRequest, type AjusteInventarioResponse, type FechoCaixaResponse, type MotivoAjusteResponse, type PageResponse, type PerfilResponse, type StockResponse, type UtilizadorResponse, type VendaResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { formatDateInput } from '../lib/date'
@@ -14,6 +14,11 @@ const paymentTotalFields: Record<string, PaymentTotalField> = {
   NUMERARIO: 'totalNumerario',
   CARTAO: 'totalCartao',
   MBWAY: 'totalMbway',
+}
+const operationalEmployeeProfiles = ['FUNCIONARIO', 'ARMAZEM', 'RESPONSAVEL_ARMAZEM']
+
+function isOperationalEmployee(profile: string) {
+  return operationalEmployeeProfiles.includes(profile)
 }
 
 export function GerenteStockPage() {
@@ -245,7 +250,7 @@ export function GerenteAdjustmentPage() {
           <TextField label="Quantidade (+ ou −)" type="number" value={quantidade} onChange={(event) => setQuantidade(Number(event.target.value))} />
           <SelectField label="Motivo" value={motivo} options={motiveOptions} onChange={(event) => setMotivo(event.target.value)} />
         </div>
-        <Callout tone="info" className="mt-compact">Operação registada no log de auditoria com identificação e hora (RNF-05)</Callout>
+        <Callout tone="info" className="mt-compact">Operação registada no histórico de auditoria.</Callout>
         {error ? <Callout tone="warning">{error}</Callout> : null}
         {message ? <Callout tone="info">{message}</Callout> : null}
         <Button className="full-width mt-large" onClick={submitAdjustment} disabled={!produtoId}>Confirmar ajuste</Button>
@@ -292,8 +297,8 @@ export function GerenteEmployeesPage() {
       apiRequest<PerfilResponse[]>('/utilizadores/perfis'),
     ])
       .then(([page, profileRows]) => {
-        const operationalProfiles = profileRows.filter((profile) => ['FUNCIONARIO', 'ARMAZEM', 'RESPONSAVEL_ARMAZEM'].includes(profile.nome))
-        setRows(page.content)
+        const operationalProfiles = profileRows.filter((profile) => isOperationalEmployee(profile.nome))
+        setRows(page.content.filter((row) => isOperationalEmployee(row.perfilId || row.perfil)))
         setProfiles(operationalProfiles)
         setDraft((state) => ({ ...state, perfilId: state.perfilId || operationalProfiles.find((profile) => profile.nome === 'FUNCIONARIO')?.nome || operationalProfiles[0]?.nome || '' }))
       })
@@ -328,7 +333,9 @@ export function GerenteEmployeesPage() {
             password: draft.password.trim() ? draft.password : null,
           }),
         })
-        setRows((items) => items.map((item) => (item.id === updated.id ? updated : item)))
+        setRows((items) => isOperationalEmployee(updated.perfilId || updated.perfil)
+          ? items.map((item) => (item.id === updated.id ? updated : item))
+          : items.filter((item) => item.id !== updated.id))
         setMessage('Funcionário atualizado.')
       } else {
         const created = await apiRequest<UtilizadorResponse>('/utilizadores', {
@@ -342,7 +349,7 @@ export function GerenteEmployeesPage() {
             lojaId: session?.lojaId,
           }),
         })
-        setRows((items) => [created, ...items])
+        setRows((items) => isOperationalEmployee(created.perfilId || created.perfil) ? [created, ...items] : items)
         setMessage('Funcionário criado.')
       }
       resetDraft()

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { Button, Callout, Panel, SelectField, TextField } from '../components/ui'
-import { StockContent } from '../components/pageSections'
+import { StockContent } from '../features/shared/PageSections'
 import { apiRequest, type EncomendaResponse, type EntradaMercadoriaResponse, type InventarioFisicoResponse, type LinhaInventarioResponse, type PageResponse, type ProximaGuiaRemessaResponse, type StockResponse } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
