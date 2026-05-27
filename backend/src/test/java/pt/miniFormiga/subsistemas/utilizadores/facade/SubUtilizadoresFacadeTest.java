@@ -1,26 +1,5 @@
 package pt.miniFormiga.subsistemas.utilizadores.facade;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import pt.miniFormiga.subsistemas.auditoria.facade.ISubAuditoria;
-import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.PerfilUtilizador;
-import pt.miniFormiga.domain.TipoOperacao;
-import pt.miniFormiga.domain.Utilizador;
-import pt.miniFormiga.subsistemas.lojas.repository.LojaRepository;
-import pt.miniFormiga.subsistemas.utilizadores.CredenciaisInvalidasException;
-import pt.miniFormiga.subsistemas.utilizadores.dto.AtualizarUtilizadorCommand;
-import pt.miniFormiga.subsistemas.utilizadores.dto.CriarUtilizadorCommand;
-import pt.miniFormiga.subsistemas.utilizadores.RecursoNaoEncontradoException;
-import pt.miniFormiga.subsistemas.utilizadores.RegraNegocioException;
-import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
-
-import java.util.List;
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -29,12 +8,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SubUtilizadoresFacadeTest {
 
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import pt.miniFormiga.domain.Loja;
+import pt.miniFormiga.domain.PerfilUtilizador;
+import pt.miniFormiga.domain.TipoOperacao;
+import pt.miniFormiga.domain.Utilizador;
+import pt.miniFormiga.subsistemas.auditoria.facade.ISubAuditoria;
+import pt.miniFormiga.subsistemas.lojas.repository.LojaRepository;
+import pt.miniFormiga.subsistemas.utilizadores.CredenciaisInvalidasException;
+import pt.miniFormiga.subsistemas.utilizadores.RecursoNaoEncontradoException;
+import pt.miniFormiga.subsistemas.utilizadores.RegraNegocioException;
+import pt.miniFormiga.subsistemas.utilizadores.dto.AtualizarUtilizadorCommand;
+import pt.miniFormiga.subsistemas.utilizadores.dto.CriarUtilizadorCommand;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
     private UtilizadorRepository utilizadorRepository;
     private LojaRepository lojaRepository;
     private PasswordEncoder passwordEncoder;
