@@ -1,0 +1,66 @@
+title UC-02 - Registar Venda no PDV
+
+actor Funcionario
+participant "SubPDVFacade" as PDV
+participant "Venda" as Venda
+participant "LinhaVenda" as LinhaVenda
+participant "Produto" as Produto
+participant "ISubStock" as Stock
+participant "Fatura" as Fatura
+participant "ISubAuditoria" as Auditoria
+participant "ISubSincronizacao" as Sincronizacao
+
+Funcionario->PDV: iniciar nova transacao\nregistarVenda(lojaId, funcionarioId)
+PDV->Venda: new Venda(loja, funcionario)
+Venda-->PDV: venda aberta
+PDV-->Funcionario: venda
+
+loop Para cada produto lido ou pesquisado
+    Funcionario->PDV: registar produto lido/pesquisado\nadicionarLinhaVenda(vendaId, produtoId, quantidade)
+    PDV->Produto: validar produto ativo
+    PDV->Stock: consultarStock(lojaId)
+
+    alt Produto nao encontrado
+        PDV-->Funcionario: produto nao encontrado
+    else Stock insuficiente
+        PDV-->Funcionario: stock insuficiente
+    else Produto valido e stock suficiente
+        PDV->LinhaVenda: new LinhaVenda(venda, produto, quantidade, precoUnitario)
+        LinhaVenda->Venda: adicionarLinha(this)
+        PDV->Venda: calcularTotais()
+        Venda-->PDV: total atualizado
+        PDV-->Funcionario: linha adicionada
+    end
+end
+
+opt Remocao de linha antes de finalizar
+    Funcionario->PDV: remover linha antes de finalizar\nanularLinhaVenda(vendaId, linhaId)
+    PDV->Venda: anularLinha(linhaId)
+    PDV->Venda: calcularTotais()
+    Venda-->PDV: total recalculado
+    PDV-->Funcionario: linha removida
+end
+
+Funcionario->PDV: selecionar meio de pagamento MBWAY\nfinalizarVenda(vendaId, "MBWAY")
+
+loop Para cada linha nao anulada
+    PDV->Stock: atualizarStock(produtoId, lojaId, -quantidade)
+    Stock-->PDV: stock atualizado
+end
+
+PDV->Venda: finalizar(MBWAY)
+Venda->Venda: calcularTotais()
+Venda-->PDV: venda finalizada
+
+PDV->Auditoria: registar(VENDA_FINALIZADA, funcionarioId, "VENDA", "Venda finalizada")
+PDV->Sincronizacao: sincronizar venda sem bloquear operacao
+Sincronizacao-->PDV: sincronizacao registada
+
+Funcionario->PDV: pedir recibo/fatura\nemitirFatura(vendaId, nifCliente, nomeCliente)
+PDV->Venda: calcularTotais()
+PDV->Fatura: decidirTipo(total, nifCliente)
+PDV->Fatura: new Fatura(venda, numero, serie, tipo, nifCliente, nomeCliente)
+PDV->Fatura: emitir()
+Fatura-->PDV: fatura emitida
+PDV->Auditoria: registar(FATURA_EMITIDA, funcionarioId, "FATURA", "Fatura emitida")
+PDV-->Funcionario: recibo/fatura emitido

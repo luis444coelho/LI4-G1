@@ -1,0 +1,77 @@
+title UC - Sincronizar Dados com Servidor Central
+
+actor Sistema
+participant "SubSincronizacaoFacade" as Sync
+participant "Loja" as Loja
+participant "Sincronizacao" as Sincronizacao
+participant "StockStore" as StockStore
+participant "ISubRelatorios" as Relatorios
+participant "SincronizacaoTransporte" as Transporte
+participant "ServidorCentralSincronizacaoService" as Central
+
+Sistema->Sync: iniciarSincronizacao(lojaId)
+
+alt Nao existe sincronizacao pendente
+    Sync->Sync: agendarSincronizacao(lojaId)
+    Sync->Loja: obter loja
+    Sync->Sincronizacao: new Sincronizacao(loja, PENDENTE)
+    Sincronizacao-->Sync: sincronizacao pendente
+else Existe sincronizacao pendente
+    Sync->Sincronizacao: reutilizar sincronizacao PENDENTE
+end
+
+Sync->Sync: construirPayload(lojaId)
+Sync->Sync: recolher vendas pendentes
+Sync->Sync: recolher faturas pendentes
+Sync->StockStore: listar(lojaId)
+StockStore-->Sync: stock pendente
+Sync->Sync: recolher ajustes de stock pendentes
+Sync->Sync: recolher fechos de caixa pendentes
+Sync->Sync: recolher entradas de mercadoria pendentes
+Sync->Relatorios: obterDashboard(filtroLoja)
+Relatorios-->Sync: dashboard
+Sync->Sync: anexar vendas de relatorio e logs de auditoria
+
+Sync->Sincronizacao: iniciar(EM_CURSO, payloadJson, quantidadeRegistos)
+Sincronizacao-->Sync: estado EM_CURSO
+
+Sync->Transporte: transmitir(payload)\nTLS 1.2+
+
+alt Falha de ligacao ou servidor central indisponivel
+    Transporte-->Sync: ResultadoTransmissao.falha(mensagemErro)
+    Sync->Sincronizacao: falharMantendoPendente(PENDENTE, payloadJson, quantidadeRegistos, mensagemErro, proximaTentativa)
+    Sincronizacao-->Sync: estado PENDENTE
+    Sync-->Sistema: sincronizacao pendente e nova tentativa agendada
+else Transmissao recebida pelo servidor central
+    Transporte->Central: receber(payload)
+    Central->Loja: obter ou criar loja central
+    Central->Central: detetarConflitos(payload)
+
+    loop Para cada registo recebido
+        Central->Central: comparar updatedAt/version com entidade central
+        alt Existe conflito
+            Central->Central: aplicar regra last-write-wins
+            Central->Central: registar conflito
+        else Sem conflito
+            Central->Central: aceitar registo
+        end
+    end
+
+    Central->Sincronizacao: new Sincronizacao(loja, CONCLUIDA ou COM_CONFLITOS)
+    Central->Sincronizacao: concluir(estadoFinal, payloadJson, quantidadeRegistos, conflitosJson, conflitosResolvidos)
+    Sincronizacao-->Central: resultado central registado
+
+    alt Sem conflitos
+        Central-->Transporte: ResultadoTransmissao.concluida()
+        Transporte-->Sync: sucesso sem conflitos
+        Sync->Sincronizacao: concluir(CONCLUIDA, payloadJson, quantidadeRegistos, "[]", 0)
+        Sincronizacao-->Sync: estado CONCLUIDA
+        Sync-->Sistema: sincronizacao concluida
+    else Com conflitos
+        Central-->Transporte: ResultadoTransmissao.sucessoComConflitos(conflitos)
+        Transporte-->Sync: sucesso com conflitos
+        Sync->Sincronizacao: concluir(COM_CONFLITOS, payloadJson, quantidadeRegistos, conflitosJson, conflitosResolvidos)
+        Sincronizacao-->Sync: estado COM_CONFLITOS
+        Sync-->Sistema: sincronizacao concluida com conflitos registados
+    end
+end

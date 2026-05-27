@@ -1,0 +1,45 @@
+title UC-05 - Registar Fecho de Caixa Diario
+
+actor Gerente
+participant "SubPDVFacade" as PDV
+participant "Venda" as Venda
+participant "FechoCaixa" as FechoCaixa
+participant "Loja" as Loja
+participant "ISubAuditoria" as Auditoria
+participant "ISubSincronizacao" as Sincronizacao
+
+Gerente->PDV: iniciar fecho de caixa\nregistarFechoCaixa(lojaId, gerenteId)
+PDV->Loja: validar loja operacional
+Loja-->PDV: loja
+PDV->PDV: obter vendas do dia por fechar
+
+PDV->FechoCaixa: new FechoCaixa(loja, gerente, dataAtual, vendasDoDia)
+PDV->FechoCaixa: calcularTotais()
+
+loop Para cada venda do dia nao anulada
+    FechoCaixa->Venda: calcularTotais()
+    Venda-->FechoCaixa: totalComIVA e meioPagamento
+    FechoCaixa->FechoCaixa: acumular total por meio de pagamento
+end
+
+FechoCaixa-->PDV: totais numerario, cartao, MBWAY e total geral
+PDV->Auditoria: registar(FECHO_CAIXA_INICIADO, gerenteId, "FECHO_CAIXA", "Fecho de caixa iniciado")
+PDV-->Gerente: resumo do fecho para conferencia
+
+alt Gerente deteta discrepancia
+    Gerente->PDV: confirmar com observacao\nconfirmarFechoCaixa(fechoCaixaId, observacoesDiscrepancia)
+    PDV->FechoCaixa: setObservacaoDiscrepancia(observacoesDiscrepancia)
+else Valores conferidos sem discrepancia
+    Gerente->PDV: confirmar fecho\nconfirmarFechoCaixa(fechoCaixaId, null)
+end
+
+PDV->FechoCaixa: confirmar()
+FechoCaixa->FechoCaixa: calcularTotais()
+FechoCaixa->FechoCaixa: marcar como confirmado
+FechoCaixa-->PDV: fecho confirmado
+
+PDV->Auditoria: registar(FECHO_CAIXA_CONFIRMADO, gerenteId, "FECHO_CAIXA", "Fecho de caixa confirmado")
+PDV->Loja: iniciarSincronizacao()
+PDV->Sincronizacao: iniciarSincronizacao(lojaId)
+Sincronizacao-->PDV: sincronizacao agendada/iniciada
+PDV-->Gerente: fecho de caixa confirmado
