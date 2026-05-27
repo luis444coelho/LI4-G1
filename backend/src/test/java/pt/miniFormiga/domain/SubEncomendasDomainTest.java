@@ -10,6 +10,7 @@ import java.time.LocalTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SubEncomendasDomainTest {
 
@@ -32,6 +33,15 @@ class SubEncomendasDomainTest {
 
         fornecedor.atualizarDados("Fornecedor Sul", "123456789", "Rua Sul", "210000000",
                 "sul@mini-formiga.pt", LocalTime.of(8, 30), LocalTime.of(17, 30));
+
+        assertTrue(fornecedor.isAtivo());
+        assertEquals("Rua Sul", fornecedor.getMorada());
+        assertEquals("210000000", fornecedor.getTelefone());
+        assertEquals("sul@mini-formiga.pt", fornecedor.getEmail());
+        assertEquals(LocalTime.of(8, 30), fornecedor.getHorarioInicioArmazem());
+        assertEquals(LocalTime.of(17, 30), fornecedor.getHorarioFimArmazem());
+        assertFalse(fornecedor.estaDisponivel(null));
+
         fornecedor.desativar();
 
         assertEquals("Fornecedor Sul", fornecedor.getNome());

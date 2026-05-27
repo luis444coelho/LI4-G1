@@ -1,8 +1,7 @@
 package pt.miniFormiga.domain;
 
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
+import pt.miniFormiga.subsistemas.utilizadores.Permissao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -15,39 +14,31 @@ class PerfilTest {
     void deveValidarPermissoesDoPerfil() {
         PerfilUtilizador perfil = PerfilUtilizador.GERENTE;
 
-        assertTrue(perfil.temPermissao("STOCK_WRITE"));
-        assertFalse(perfil.temPermissao("PDV_WRITE"));
+        assertTrue(perfil.temPermissao(Permissao.STOCK_WRITE));
+        assertFalse(perfil.temPermissao(Permissao.PDV_WRITE));
     }
 
     @Test
     void deveProtegerColecaoDePermissoesContraAlteracoesExternas() {
-        List<String> permissoes = PerfilUtilizador.GERENTE.getPermissoes();
+        var permissoes = PerfilUtilizador.GERENTE.getPermissoes();
 
-        assertThrows(UnsupportedOperationException.class, () -> permissoes.add("STOCK_WRITE"));
+        assertTrue(permissoes.contains(Permissao.STOCK_WRITE));
+        assertThrows(UnsupportedOperationException.class, () -> permissoes.add(Permissao.STOCK_WRITE));
     }
 
     @Test
-    void normalizaNomePermiteGlobalAdminERegistaUtilizadoresSemDuplicar() {
-        Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Perfil perfil = new Perfil(" gestor ", List.of("GLOBAL_ADMIN"));
-        Utilizador utilizador = new Utilizador("gestor", "hash", "Gestor", perfil, loja);
-
-        perfil.adicionarUtilizador(utilizador);
-        perfil.adicionarUtilizador(utilizador);
-        perfil.adicionarUtilizador(null);
-
-        assertEquals("GESTOR", perfil.getNome());
-        assertTrue(perfil.temPermissao("QUALQUER_PERMISSAO"));
-        assertEquals(1, perfil.getUtilizadores().size());
-        assertThrows(UnsupportedOperationException.class, () -> perfil.getUtilizadores().clear());
+    void nomeDoPerfilCorrespondeAoCodigoDoEnum() {
+        assertEquals("GESTOR", PerfilUtilizador.GESTOR.getNome());
+        assertEquals("GERENTE", PerfilUtilizador.GERENTE.getNome());
+        assertEquals("FUNCIONARIO", PerfilUtilizador.FUNCIONARIO.getNome());
+        assertEquals("ARMAZEM", PerfilUtilizador.ARMAZEM.getNome());
     }
 
     @Test
-    void rejeitaNomeNuloOuVazioEPermissoesNulasCriamListaVazia() {
-        Perfil semPermissoes = new Perfil("FUNCIONARIO", null);
-
-        assertTrue(semPermissoes.getPermissoes().isEmpty());
-        assertThrows(NullPointerException.class, () -> new Perfil(null, List.of()));
-        assertThrows(IllegalArgumentException.class, () -> new Perfil("   ", List.of()));
+    void gestorTemPermissaoAdministrativaQuePerfisOperacionaisNaoTem() {
+        assertTrue(PerfilUtilizador.GESTOR.temPermissao(Permissao.GLOBAL_ADMIN));
+        assertFalse(PerfilUtilizador.GERENTE.temPermissao(Permissao.GLOBAL_ADMIN));
+        assertFalse(PerfilUtilizador.FUNCIONARIO.temPermissao(Permissao.GLOBAL_ADMIN));
+        assertFalse(PerfilUtilizador.ARMAZEM.temPermissao(Permissao.GLOBAL_ADMIN));
     }
 }

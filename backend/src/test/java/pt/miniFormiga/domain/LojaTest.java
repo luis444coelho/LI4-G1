@@ -13,10 +13,26 @@ class LojaTest {
 
     @Test
     void deveCriarLojaAtivaPorDefeito() {
-        Loja loja = new Loja("Loja Braga", "Rua Central 10", "123456789");
+        Loja loja = new Loja("Loja Braga", "Rua Central 10", "123456789", "253000000");
 
         assertEquals("Loja Braga", loja.getNome());
+        assertEquals("Rua Central 10", loja.getMorada());
+        assertEquals("123456789", loja.getNif());
+        assertEquals("253000000", loja.getTelefone());
         assertTrue(loja.isAtiva());
+    }
+
+    @Test
+    void construtorComIdMantemIdentidadeExternaDaLoja() {
+        java.util.UUID id = java.util.UUID.randomUUID();
+
+        Loja loja = new Loja(id, "Loja Famalicao", "Rua Nova", "222333444", "252000000");
+
+        assertEquals(id, loja.getId());
+        assertEquals("Loja Famalicao", loja.getNome());
+        assertEquals("Rua Nova", loja.getMorada());
+        assertEquals("222333444", loja.getNif());
+        assertEquals("252000000", loja.getTelefone());
     }
 
     @Test

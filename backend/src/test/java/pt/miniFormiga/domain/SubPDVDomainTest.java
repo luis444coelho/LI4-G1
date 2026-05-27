@@ -8,6 +8,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -63,6 +64,10 @@ class SubPDVDomainTest {
         Venda mbway = vendaFinalizada(loja, operador, MeioPagamentoTipo.MBWAY, "3.00");
         FechoCaixa fecho = new FechoCaixa(loja, operador, LocalDate.now(), List.of(numerario, cartao, mbway));
 
+        assertEquals(operador, fecho.getResponsavel());
+        assertEquals(3, fecho.getVendas().size());
+        assertFalse(fecho.isConfirmado());
+
         fecho.calcularTotais();
 
         assertEquals(new BigDecimal("1.23"), fecho.getTotalNumerario());
@@ -89,6 +94,26 @@ class SubPDVDomainTest {
         assertEquals(new BigDecimal("2.46"), fecho.getTotalNumerario());
         assertEquals(new BigDecimal("0"), fecho.getTotalCartao());
         assertEquals(new BigDecimal("2.46"), fecho.getTotalGeral());
+    }
+
+    @Test
+    void fechoCaixaCalculaTotaisRecebendoListaERecalculaVendasAbertas() {
+        Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
+        Utilizador operador = new Utilizador("op-lista", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, loja);
+        Venda venda = new Venda(loja, operador, MeioPagamentoTipo.NUMERARIO);
+        new LinhaVenda(venda, produto("Agua", "2.00", "0.40", "23"), 1);
+        FechoCaixa fecho = new FechoCaixa(loja, operador, LocalDate.now(), List.of());
+
+        fecho.calcularTotais(List.of(venda));
+
+        assertEquals(List.of(venda), fecho.getVendas());
+        assertEquals(new BigDecimal("2.46"), fecho.getTotalNumerario());
+        assertEquals(new BigDecimal("2.46"), fecho.getTotalGeral());
+
+        fecho.calcularTotais(null);
+
+        assertTrue(fecho.getVendas().isEmpty());
+        assertEquals(new BigDecimal("0"), fecho.getTotalGeral());
     }
 
     @Test

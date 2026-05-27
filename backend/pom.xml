@@ -168,21 +168,21 @@
                     <targetClasses>
                         <param>pt.miniFormiga.domain.Categoria</param>
                         <param>pt.miniFormiga.domain.TaxaIVA</param>
-                        <param>pt.miniFormiga.domain.Perfil</param>
+                        <param>pt.miniFormiga.domain.PerfilUtilizador</param>
                         <param>pt.miniFormiga.domain.Fornecedor</param>
-                        <param>pt.miniFormiga.domain.ProdutoLoja</param>
-                        <param>pt.miniFormiga.domain.Stock</param>
+                        <param>pt.miniFormiga.domain.StockProdutoLoja</param>
                         <param>pt.miniFormiga.domain.FechoCaixa</param>
                         <param>pt.miniFormiga.domain.Loja</param>
-                        <param>pt.miniFormiga.subsistemas.stock.GlobalProdutoLojaStockStore</param>
-                        <param>pt.miniFormiga.subsistemas.stock.LocalProdutoStockStore</param>
-                        <param>pt.miniFormiga.subsistemas.sincronizacao.RestSincronizacaoTransporte</param>
+                        <param>pt.miniFormiga.subsistemas.stock.service.GlobalStockProdutoLojaStore</param>
+                        <param>pt.miniFormiga.subsistemas.stock.service.LocalProdutoStockStore</param>
+                        <param>pt.miniFormiga.subsistemas.sincronizacao.transport.RestSincronizacaoTransporte</param>
                         <param>pt.miniFormiga.api.error.ApiExceptionHandler</param>
                     </targetClasses>
                     <targetTests>
                         <param>pt.miniFormiga.domain.*Test</param>
-                        <param>pt.miniFormiga.subsistemas.stock.*Test</param>
-                        <param>pt.miniFormiga.subsistemas.sincronizacao.RestSincronizacaoTransporteTest</param>
+                        <param>pt.miniFormiga.subsistemas.stock.facade.*Test</param>
+                        <param>pt.miniFormiga.subsistemas.stock.service.*Test</param>
+                        <param>pt.miniFormiga.subsistemas.sincronizacao.transport.RestSincronizacaoTransporteTest</param>
                         <param>pt.miniFormiga.api.error.ApiExceptionHandlerTest</param>
                     </targetTests>
                     <excludedClasses>
@@ -190,7 +190,7 @@
                         <param>pt.miniFormiga.api.dto.*</param>
                         <param>pt.miniFormiga.bootstrap.*</param>
                         <param>pt.miniFormiga.config.*</param>
-                        <param>pt.miniFormiga.repository.*</param>
+                        <param>pt.miniFormiga.subsistemas.*.repository.*</param>
                         <param>pt.miniFormiga.subsistemas.*.*Dtos*</param>
                     </excludedClasses>
                     <outputFormats>

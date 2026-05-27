@@ -16,12 +16,12 @@ import pt.miniFormiga.api.dto.CriarUtilizadorRequest;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Utilizador;
-import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.UtilizadorRepository;
-import pt.miniFormiga.subsistemas.utilizadores.AtualizarUtilizadorCommand;
-import pt.miniFormiga.subsistemas.utilizadores.CriarUtilizadorCommand;
-import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
+import pt.miniFormiga.subsistemas.lojas.repository.LojaRepository;
+import pt.miniFormiga.subsistemas.utilizadores.dto.AtualizarUtilizadorCommand;
+import pt.miniFormiga.subsistemas.utilizadores.dto.CriarUtilizadorCommand;
+import pt.miniFormiga.subsistemas.utilizadores.facade.ISubUtilizadores;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -85,7 +85,7 @@ class UtilizadoresControllerTest {
                 mock(UtilizadorRepository.class)
         );
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador operador = new Utilizador("operador", "hash", "Operador", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), loja);
+        Utilizador operador = new Utilizador("operador", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, loja);
         PageRequest pageable = PageRequest.of(0, 10);
         when(utilizadores.listarUtilizadores(pageable)).thenReturn(new PageImpl<>(List.of(operador), pageable, 1));
         when(utilizadores.listarUtilizadoresPorLoja(loja.getId(), pageable)).thenReturn(new PageImpl<>(List.of(operador), pageable, 1));
@@ -167,7 +167,7 @@ class UtilizadoresControllerTest {
                 utilizadorRepository
         );
         Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE)), lojaPropria);
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", PerfilUtilizador.GERENTE, lojaPropria);
         Authentication authentication = authenticationGerente();
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
 
@@ -244,8 +244,8 @@ class UtilizadoresControllerTest {
                 utilizadorRepository
         );
         Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE)), lojaPropria);
-        Utilizador operador = new Utilizador("operador.braga", "hash", "Operador", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), lojaPropria);
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", PerfilUtilizador.GERENTE, lojaPropria);
+        Utilizador operador = new Utilizador("operador.braga", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, lojaPropria);
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
         when(utilizadores.obterUtilizador(operador.getId())).thenReturn(operador);
         when(utilizadores.atualizarUtilizador(any(), any())).thenReturn(operador);
@@ -276,8 +276,8 @@ class UtilizadoresControllerTest {
                 utilizadorRepository
         );
         Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE)), lojaPropria);
-        Utilizador operador = new Utilizador("operador.braga", "hash", "Operador", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), lojaPropria);
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", PerfilUtilizador.GERENTE, lojaPropria);
+        Utilizador operador = new Utilizador("operador.braga", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, lojaPropria);
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
         when(utilizadores.obterUtilizador(operador.getId())).thenReturn(operador);
 
@@ -336,7 +336,7 @@ class UtilizadoresControllerTest {
                 mock(UtilizadorRepository.class)
         );
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador criado = new Utilizador("perfil.legado", "hash", "Perfil Legado", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), loja);
+        Utilizador criado = new Utilizador("perfil.legado", "hash", "Perfil Legado", PerfilUtilizador.FUNCIONARIO, loja);
         when(utilizadores.criarUtilizador(any())).thenReturn(criado);
 
         controller.criar(new CriarUtilizadorRequest(
@@ -390,7 +390,7 @@ class UtilizadoresControllerTest {
                 utilizadorRepository
         );
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_READ)), loja);
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", PerfilUtilizador.GERENTE, loja);
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
 
         var lojas = controller.listarLojas(authenticationGerente());
@@ -409,9 +409,9 @@ class UtilizadoresControllerTest {
                 utilizadorRepository
         );
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador gerente = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_READ)), loja);
-        Utilizador operador = new Utilizador("operador.braga", "hash", "Operador", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), loja);
-        Utilizador gestor = new Utilizador("gestor.formiga", "hash", "Gestor", new Perfil("GESTOR", List.of(Permissao.GLOBAL_ADMIN)), loja);
+        Utilizador gerente = new Utilizador("gerente.braga", "hash", "Gerente", PerfilUtilizador.GERENTE, loja);
+        Utilizador operador = new Utilizador("operador.braga", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, loja);
+        Utilizador gestor = new Utilizador("gestor.formiga", "hash", "Gestor", PerfilUtilizador.GESTOR, loja);
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerente));
         when(utilizadores.obterUtilizador(operador.getId())).thenReturn(operador);
         when(utilizadores.obterUtilizador(gestor.getId())).thenReturn(gestor);
