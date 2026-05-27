@@ -74,6 +74,8 @@ class SubEncomendasDomainTest {
         EntradaMercadoria entrada = new EntradaMercadoria(guia, loja, responsavel, linhaEncomenda, 8, 10, "Entrega parcial");
 
         assertEquals(encomenda, guia.getEncomenda());
+        assertEquals(encomenda.getFornecedor(), guia.getFornecedor());
+        assertEquals(linhaEncomenda.getProduto(), entrada.getProduto());
         assertEquals(-2, entrada.getDiscrepancia());
         assertEquals("Entrega parcial", entrada.getObservacoes());
     }

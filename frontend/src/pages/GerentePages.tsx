@@ -15,6 +15,11 @@ const paymentTotalFields: Record<string, PaymentTotalField> = {
   CARTAO: 'totalCartao',
   MBWAY: 'totalMbway',
 }
+const operationalEmployeeProfiles = ['FUNCIONARIO', 'ARMAZEM', 'RESPONSAVEL_ARMAZEM']
+
+function isOperationalEmployee(profile: string) {
+  return operationalEmployeeProfiles.includes(profile)
+}
 
 export function GerenteStockPage() {
   return <StockContent />
@@ -292,8 +297,8 @@ export function GerenteEmployeesPage() {
       apiRequest<PerfilResponse[]>('/utilizadores/perfis'),
     ])
       .then(([page, profileRows]) => {
-        const operationalProfiles = profileRows.filter((profile) => ['FUNCIONARIO', 'ARMAZEM', 'RESPONSAVEL_ARMAZEM'].includes(profile.nome))
-        setRows(page.content)
+        const operationalProfiles = profileRows.filter((profile) => isOperationalEmployee(profile.nome))
+        setRows(page.content.filter((row) => isOperationalEmployee(row.perfilId || row.perfil)))
         setProfiles(operationalProfiles)
         setDraft((state) => ({ ...state, perfilId: state.perfilId || operationalProfiles.find((profile) => profile.nome === 'FUNCIONARIO')?.nome || operationalProfiles[0]?.nome || '' }))
       })
@@ -328,7 +333,9 @@ export function GerenteEmployeesPage() {
             password: draft.password.trim() ? draft.password : null,
           }),
         })
-        setRows((items) => items.map((item) => (item.id === updated.id ? updated : item)))
+        setRows((items) => isOperationalEmployee(updated.perfilId || updated.perfil)
+          ? items.map((item) => (item.id === updated.id ? updated : item))
+          : items.filter((item) => item.id !== updated.id))
         setMessage('Funcionário atualizado.')
       } else {
         const created = await apiRequest<UtilizadorResponse>('/utilizadores', {
@@ -342,7 +349,7 @@ export function GerenteEmployeesPage() {
             lojaId: session?.lojaId,
           }),
         })
-        setRows((items) => [created, ...items])
+        setRows((items) => isOperationalEmployee(created.perfilId || created.perfil) ? [created, ...items] : items)
         setMessage('Funcionário criado.')
       }
       resetDraft()

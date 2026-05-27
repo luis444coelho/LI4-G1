@@ -45,7 +45,7 @@ class UtilizadoresControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void utilizadorSemGlobalAdminFicaLimitadoALojaPropriaAoListarUtilizadores() {
+    void utilizadorSemGlobalAdminListaApenasFuncionariosGeriveisDaLojaPropria() {
         ISubUtilizadores utilizadores = mock(ISubUtilizadores.class);
         LojaRepository lojaRepository = mock(LojaRepository.class);
         UtilizadorRepository utilizadorRepository = mock(UtilizadorRepository.class);
@@ -58,6 +58,7 @@ class UtilizadoresControllerTest {
         Loja outraLoja = new Loja("Loja Porto", "Rua Norte", "987654321");
         PerfilUtilizador gerente = PerfilUtilizador.GERENTE;
         Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", gerente, lojaPropria);
+        Utilizador operadorBraga = new Utilizador("operador.braga", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, lojaPropria);
         PageRequest pageable = PageRequest.of(0, 10);
         Authentication authentication = mock(Authentication.class);
         when(authentication.getName()).thenReturn("gerente.braga");
@@ -66,14 +67,22 @@ class UtilizadoresControllerTest {
                 new SimpleGrantedAuthority("ROLE_GERENTE")
         ));
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
-        when(utilizadores.listarUtilizadoresPorLoja(lojaPropria.getId(), pageable))
-                .thenReturn(new PageImpl<>(List.of(gerenteBraga), pageable, 1));
+        when(utilizadores.listarUtilizadoresPorLojaEPerfis(
+                lojaPropria.getId(),
+                List.of(PerfilUtilizador.FUNCIONARIO, PerfilUtilizador.ARMAZEM),
+                pageable
+        )).thenReturn(new PageImpl<>(List.of(operadorBraga), pageable, 1));
 
         var response = controller.listar(outraLoja.getId(), pageable, authentication);
 
         assertEquals(1, response.getTotalElements());
         assertEquals(lojaPropria.getId(), response.getContent().get(0).lojaId());
-        verify(utilizadores).listarUtilizadoresPorLoja(lojaPropria.getId(), pageable);
+        assertEquals("FUNCIONARIO", response.getContent().get(0).perfil());
+        verify(utilizadores).listarUtilizadoresPorLojaEPerfis(
+                lojaPropria.getId(),
+                List.of(PerfilUtilizador.FUNCIONARIO, PerfilUtilizador.ARMAZEM),
+                pageable
+        );
     }
 
     @Test
