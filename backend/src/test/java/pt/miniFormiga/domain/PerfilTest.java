@@ -2,7 +2,6 @@ package pt.miniFormiga.domain;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,21 +13,17 @@ class PerfilTest {
 
     @Test
     void deveValidarPermissoesDoPerfil() {
-        Perfil perfil = new Perfil("GERENTE", List.of("PDV_READ", "STOCK_READ"));
+        PerfilUtilizador perfil = PerfilUtilizador.GERENTE;
 
-        assertTrue(perfil.temPermissao("PDV_READ"));
-        assertFalse(perfil.temPermissao("UTILIZADOR_WRITE"));
+        assertTrue(perfil.temPermissao("STOCK_WRITE"));
+        assertFalse(perfil.temPermissao("PDV_WRITE"));
     }
 
     @Test
     void deveProtegerColecaoDePermissoesContraAlteracoesExternas() {
-        List<String> permissoes = new ArrayList<>(List.of("PDV_READ"));
-        Perfil perfil = new Perfil("GERENTE", permissoes);
+        List<String> permissoes = PerfilUtilizador.GERENTE.getPermissoes();
 
-        permissoes.add("UTILIZADOR_WRITE");
-
-        assertFalse(perfil.temPermissao("UTILIZADOR_WRITE"));
-        assertThrows(UnsupportedOperationException.class, () -> perfil.getPermissoes().add("STOCK_WRITE"));
+        assertThrows(UnsupportedOperationException.class, () -> permissoes.add("STOCK_WRITE"));
     }
 
     @Test

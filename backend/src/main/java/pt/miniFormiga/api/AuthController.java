@@ -14,12 +14,12 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pt.miniFormiga.api.dto.LoginRequest;
 import pt.miniFormiga.api.dto.LoginResponse;
-import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
+import pt.miniFormiga.subsistemas.auditoria.facade.ISubAuditoria;
 import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.security.JwtService;
 import pt.miniFormiga.security.MiniFormigaUserDetailsService;
-import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
+import pt.miniFormiga.subsistemas.utilizadores.facade.ISubUtilizadores;
 
 @RestController
 @RequestMapping("/api/v1/auth")

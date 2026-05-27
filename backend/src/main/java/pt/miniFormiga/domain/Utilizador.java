@@ -51,12 +51,8 @@ public class Utilizador extends EntidadeBase implements Persistable<java.util.UU
     protected Utilizador() {
     }
 
-    public Utilizador(String username, String passwordHash, String nome, Perfil perfil, Loja loja) {
-        this(username, passwordHash, nome, null, perfil == null ? null : perfil(perfil.getNome()), loja);
-    }
-
-    public Utilizador(String username, String passwordHash, String nome, String email, Perfil perfil, Loja loja) {
-        this(username, passwordHash, nome, email, perfil == null ? null : perfil(perfil.getNome()), loja);
+    public Utilizador(String username, String passwordHash, String nome, PerfilUtilizador perfil, Loja loja) {
+        this(username, passwordHash, nome, null, perfil, loja);
     }
 
     public Utilizador(String username, String passwordHash, String nome, String email, PerfilUtilizador perfil, Loja loja) {
@@ -77,10 +73,6 @@ public class Utilizador extends EntidadeBase implements Persistable<java.util.UU
 
     public void alterarPassword(String nova) {
         this.passwordHash = validarTexto(nova, "Password e obrigatoria");
-    }
-
-    public void atualizarDados(String nome, String email, Perfil perfil, Loja loja) {
-        atualizarDados(nome, email, perfil == null ? null : perfil(perfil.getNome()), loja);
     }
 
     public void atualizarDados(String nome, String email, PerfilUtilizador perfil, Loja loja) {

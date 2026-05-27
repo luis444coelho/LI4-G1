@@ -7,7 +7,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import pt.miniFormiga.domain.Utilizador;
-import pt.miniFormiga.repository.UtilizadorRepository;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
 
 import java.util.ArrayList;
 

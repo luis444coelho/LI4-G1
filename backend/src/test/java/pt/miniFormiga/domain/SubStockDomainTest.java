@@ -29,13 +29,14 @@ class SubStockDomainTest {
 
     @Test
     void stockPrecisaReposicaoQuandoQuantidadeMenorOuIgualAoNivelMinimo() {
-        Stock stock = new Stock(produto(), loja(), 10);
+        Produto produto = produto();
+        produto.definirStockInicial(10);
 
-        assertFalse(stock.precisaReposicao());
+        assertFalse(produto.precisaReposicao());
 
-        new NivelMinimo(stock, 10);
+        produto.definirNivelMinimo(10);
 
-        assertTrue(stock.precisaReposicao());
+        assertTrue(produto.precisaReposicao());
     }
 
     @Test
@@ -50,77 +51,57 @@ class SubStockDomainTest {
     void entidadesSubStockDevemExporEstadoDoDiagrama() {
         Loja loja = loja();
         Produto produto = produto();
-        Stock stock = new Stock(produto, loja, 6);
-        NivelMinimo nivelMinimo = new NivelMinimo(stock, 7);
-        MotivoAjuste motivo = new MotivoAjuste("QUEBRA", "Produto danificado");
-        Utilizador utilizador = new Utilizador("gerente", "hash", "Gerente", new Perfil("GERENTE", List.of("STOCK_WRITE")), loja);
-        AjusteInventario ajuste = new AjusteInventario(stock, motivo, utilizador, -1, "produto partido");
-        AlertaStock alerta = new AlertaStock(stock, stock.getQuantidade());
-        LocalizacaoProduto localizacao = new LocalizacaoProduto(produto, "A", "3", "Perto da caixa");
+        StockProdutoLoja stockProdutoLoja = new StockProdutoLoja(produto, loja, 6, 7);
+        Utilizador utilizador = new Utilizador("gerente", "hash", "Gerente", PerfilUtilizador.GERENTE, loja);
+        AjusteInventario ajuste = new AjusteInventario(stockProdutoLoja, MotivoAjusteCodigo.QUEBRA, utilizador, -1, "produto partido");
+        AlertaStock alerta = new AlertaStock(stockProdutoLoja, stockProdutoLoja.getQuantidadeStock());
 
-        assertEquals(produto, stock.getProduto());
-        assertEquals(loja, stock.getLoja());
-        assertEquals(6, stock.getQuantidade());
-        assertNotNull(stock.getDataDefinicao());
-        assertTrue(stock.getAjustesInventario().isEmpty());
-        assertTrue(stock.getAlertasStock().isEmpty());
-        assertEquals(stock, nivelMinimo.getStock());
-        assertNotNull(nivelMinimo.getDataDefinicao());
-        assertEquals(stock, alerta.getStock());
+        assertEquals(produto, stockProdutoLoja.getProduto());
+        assertEquals(loja, stockProdutoLoja.getLoja());
+        assertEquals(6, stockProdutoLoja.getQuantidadeStock());
+        assertEquals(7, stockProdutoLoja.getNivelMinimo());
+        assertEquals(stockProdutoLoja, alerta.getStockProdutoLoja());
         assertNotNull(alerta.getDataHora());
-        assertEquals("QUEBRA", motivo.getCodigo());
-        assertEquals("Produto danificado", motivo.getDescricao());
-        assertEquals(stock, ajuste.getStock());
+        assertEquals(stockProdutoLoja, ajuste.getStockProdutoLoja());
         assertEquals(MotivoAjusteCodigo.QUEBRA, ajuste.getMotivo());
         assertEquals(utilizador, ajuste.getResponsavel());
         assertEquals("produto partido", ajuste.getObservacoes());
         assertNotNull(ajuste.getDataHora());
-        assertEquals(produto, localizacao.getProduto());
-        assertEquals("A", localizacao.getCorredor());
-        assertEquals("3", localizacao.getPrateleira());
-        assertEquals("Perto da caixa", localizacao.getDescricao());
     }
 
     @Test
     void entidadesSubStockDevemAtualizarCamposMutaveis() {
         Produto produto = produto();
-        Stock stock = new Stock(produto, loja(), 6);
-        NivelMinimo nivelMinimo = new NivelMinimo(stock, 7);
+        StockProdutoLoja stockProdutoLoja = new StockProdutoLoja(produto, loja(), 6, 7);
         LinhaInventario linha = new LinhaInventario(inventario(), produto, 5, 6);
-        LocalizacaoProduto localizacao = new LocalizacaoProduto(produto, "A", "3", "Perto da caixa");
-        AlertaStock alerta = new AlertaStock(stock, 6);
+        AlertaStock alerta = new AlertaStock(stockProdutoLoja, 6);
 
-        stock.atualizarQuantidade(2);
-        nivelMinimo.atualizarQuantidade(8);
+        stockProdutoLoja.atualizarStock(2);
+        stockProdutoLoja.definirNivelMinimo(8);
         linha.atualizarQuantidadeContada(9);
-        localizacao.atualizar("B", "1", "Entrada");
         alerta.marcarComoLido();
 
-        assertEquals(8, stock.getQuantidade());
-        assertEquals(8, nivelMinimo.getQuantidade());
+        assertEquals(8, stockProdutoLoja.getQuantidadeStock());
+        assertEquals(8, stockProdutoLoja.getNivelMinimo());
         assertEquals(9, linha.getQuantidadeContada());
         assertEquals(3, linha.getDiscrepancia());
-        assertEquals("B", localizacao.getCorredor());
-        assertEquals("1", localizacao.getPrateleira());
-        assertEquals("Entrada", localizacao.getDescricao());
         assertTrue(alerta.isLido());
     }
 
     @Test
     void entidadesSubStockDevemValidarValoresInvalidos() {
-        Stock stock = new Stock(produto(), loja(), 1);
-        NivelMinimo nivelMinimo = new NivelMinimo(stock, 1);
+        StockProdutoLoja stockProdutoLoja = new StockProdutoLoja(produto(), loja(), 1, 1);
         LinhaInventario linha = new LinhaInventario(inventario(), produto(), 1, 1);
 
-        assertThrows(IllegalArgumentException.class, () -> new Stock(produto(), loja(), -1));
-        assertThrows(IllegalArgumentException.class, () -> stock.atualizarQuantidade(-2));
-        assertThrows(IllegalArgumentException.class, () -> nivelMinimo.atualizarQuantidade(-1));
+        assertThrows(IllegalArgumentException.class, () -> new StockProdutoLoja(produto(), loja(), -1, null));
+        assertThrows(IllegalArgumentException.class, () -> stockProdutoLoja.atualizarStock(-2));
+        assertThrows(IllegalArgumentException.class, () -> stockProdutoLoja.definirNivelMinimo(-1));
         assertThrows(IllegalArgumentException.class, () -> linha.atualizarQuantidadeContada(-1));
     }
 
     private InventarioFisico inventario() {
         Loja loja = loja();
-        Perfil perfil = new Perfil("RESPONSAVEL_ARMAZEM", List.of("STOCK_WRITE"));
+        PerfilUtilizador perfil = PerfilUtilizador.ARMAZEM;
         Utilizador utilizador = new Utilizador("armazem", "hash", "Armazem", perfil, loja);
         return new InventarioFisico(loja, utilizador);
     }

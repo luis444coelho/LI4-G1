@@ -25,11 +25,11 @@ import pt.miniFormiga.api.dto.UtilizadorResponse;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Utilizador;
-import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.UtilizadorRepository;
-import pt.miniFormiga.subsistemas.utilizadores.AtualizarUtilizadorCommand;
-import pt.miniFormiga.subsistemas.utilizadores.CriarUtilizadorCommand;
-import pt.miniFormiga.subsistemas.utilizadores.ISubUtilizadores;
+import pt.miniFormiga.subsistemas.lojas.repository.LojaRepository;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
+import pt.miniFormiga.subsistemas.utilizadores.dto.AtualizarUtilizadorCommand;
+import pt.miniFormiga.subsistemas.utilizadores.dto.CriarUtilizadorCommand;
+import pt.miniFormiga.subsistemas.utilizadores.facade.ISubUtilizadores;
 
 import java.util.List;
 import java.util.Comparator;

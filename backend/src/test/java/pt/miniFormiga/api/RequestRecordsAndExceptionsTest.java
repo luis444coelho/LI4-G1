@@ -3,7 +3,7 @@ package pt.miniFormiga.api;
 import org.junit.jupiter.api.Test;
 import pt.miniFormiga.exception.FaturaNaoEmitidaException;
 import pt.miniFormiga.exception.VendaNaoEncontradaException;
-import pt.miniFormiga.subsistemas.pdv.PdvDtos.RegistarFechoCaixaRequest;
+import pt.miniFormiga.subsistemas.pdv.dto.PdvDtos.RegistarFechoCaixaRequest;
 import pt.miniFormiga.subsistemas.utilizadores.RecursoNaoEncontradoException;
 import pt.miniFormiga.subsistemas.utilizadores.RegraNegocioException;
 

@@ -12,7 +12,7 @@ import pt.miniFormiga.domain.MeioPagamentoTipo;
 import java.util.Arrays;
 import java.util.List;
 
-import static pt.miniFormiga.subsistemas.pdv.PdvDtos.MeioPagamentoDTO;
+import static pt.miniFormiga.subsistemas.pdv.dto.PdvDtos.MeioPagamentoDTO;
 
 @RestController
 @RequestMapping("/api/v1/meios-pagamento")

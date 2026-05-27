@@ -9,10 +9,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import pt.miniFormiga.domain.AjusteInventario;
 import pt.miniFormiga.domain.MotivoAjusteCodigo;
-import pt.miniFormiga.repository.AjusteInventarioRepository;
-import pt.miniFormiga.subsistemas.stock.ISubStock;
-import pt.miniFormiga.subsistemas.stock.StockStore;
-import pt.miniFormiga.subsistemas.stock.StockDtos.*;
+import pt.miniFormiga.subsistemas.stock.repository.AjusteInventarioRepository;
+import pt.miniFormiga.subsistemas.stock.facade.ISubStock;
+import pt.miniFormiga.subsistemas.stock.service.StockStore;
+import pt.miniFormiga.subsistemas.stock.dto.StockDtos.*;
 
 import java.util.Arrays;
 import java.util.List;

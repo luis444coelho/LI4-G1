@@ -57,20 +57,12 @@ public class Sincronizacao extends EntidadeBase {
         this(loja, EstadoSincronizacaoCodigo.PENDENTE);
     }
 
-    public Sincronizacao(Loja loja, EstadoSincronizacao estado) {
-        this(loja, estado == null ? null : EstadoSincronizacaoCodigo.valueOf(estado.getCodigo()));
-    }
-
     public Sincronizacao(Loja loja, EstadoSincronizacaoCodigo estado) {
         this.loja = loja;
         this.estado = estado;
         this.dataHoraInicio = LocalDateTime.now();
         this.quantidadeRegistos = 0;
         this.conflitosResolvidos = 0;
-    }
-
-    public void iniciar(EstadoSincronizacao estadoEmCurso, String payloadJson, int quantidadeRegistos) {
-        iniciar(EstadoSincronizacaoCodigo.valueOf(estadoEmCurso.getCodigo()), payloadJson, quantidadeRegistos);
     }
 
     public void iniciar(EstadoSincronizacaoCodigo estadoEmCurso, String payloadJson, int quantidadeRegistos) {
@@ -83,10 +75,6 @@ public class Sincronizacao extends EntidadeBase {
         this.proximaTentativa = null;
     }
 
-    public void concluir(EstadoSincronizacao estadoFinal, String payloadJson, int quantidadeRegistos, String conflitosJson, int conflitosResolvidos) {
-        concluir(EstadoSincronizacaoCodigo.valueOf(estadoFinal.getCodigo()), payloadJson, quantidadeRegistos, conflitosJson, conflitosResolvidos);
-    }
-
     public void concluir(EstadoSincronizacaoCodigo estadoFinal, String payloadJson, int quantidadeRegistos, String conflitosJson, int conflitosResolvidos) {
         this.estado = estadoFinal;
         this.payloadJson = payloadJson;
@@ -96,10 +84,6 @@ public class Sincronizacao extends EntidadeBase {
         this.dataHoraFim = LocalDateTime.now();
         this.mensagemErro = null;
         this.proximaTentativa = null;
-    }
-
-    public void falharMantendoPendente(EstadoSincronizacao pendente, String payloadJson, int quantidadeRegistos, String mensagemErro, LocalDateTime proximaTentativa) {
-        falharMantendoPendente(EstadoSincronizacaoCodigo.valueOf(pendente.getCodigo()), payloadJson, quantidadeRegistos, mensagemErro, proximaTentativa);
     }
 
     public void falharMantendoPendente(EstadoSincronizacaoCodigo pendente, String payloadJson, int quantidadeRegistos, String mensagemErro, LocalDateTime proximaTentativa) {

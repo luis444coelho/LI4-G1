@@ -14,7 +14,7 @@ import pt.miniFormiga.api.error.ApiExceptionHandler;
 import pt.miniFormiga.api.dto.AtualizarUtilizadorRequest;
 import pt.miniFormiga.api.dto.CriarUtilizadorRequest;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.repository.LojaRepository;
 import pt.miniFormiga.repository.UtilizadorRepository;
@@ -56,7 +56,7 @@ class UtilizadoresControllerTest {
         );
         Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
         Loja outraLoja = new Loja("Loja Porto", "Rua Norte", "987654321");
-        Perfil gerente = new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_READ));
+        PerfilUtilizador gerente = PerfilUtilizador.GERENTE;
         Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", gerente, lojaPropria);
         PageRequest pageable = PageRequest.of(0, 10);
         Authentication authentication = mock(Authentication.class);
@@ -109,7 +109,7 @@ class UtilizadoresControllerTest {
         );
         Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
         Loja outraLoja = new Loja("Loja Porto", "Rua Norte", "987654321");
-        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE)), lojaPropria);
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", PerfilUtilizador.GERENTE, lojaPropria);
         Authentication authentication = authenticationGerente();
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
 
@@ -138,7 +138,7 @@ class UtilizadoresControllerTest {
                 utilizadorRepository
         );
         Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE)), lojaPropria);
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", PerfilUtilizador.GERENTE, lojaPropria);
         Authentication authentication = authenticationGerente();
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
 
@@ -215,8 +215,8 @@ class UtilizadoresControllerTest {
         );
         Loja lojaPropria = new Loja("Loja Braga", "Rua Central", "123456789");
         Loja outraLoja = new Loja("Loja Porto", "Rua Norte", "987654321");
-        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", new Perfil("GERENTE", List.of(Permissao.UTILIZADORES_WRITE)), lojaPropria);
-        Utilizador operadorPorto = new Utilizador("operador.porto", "hash", "Operador Porto", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), outraLoja);
+        Utilizador gerenteBraga = new Utilizador("gerente.braga", "hash", "Gerente", PerfilUtilizador.GERENTE, lojaPropria);
+        Utilizador operadorPorto = new Utilizador("operador.porto", "hash", "Operador Porto", PerfilUtilizador.FUNCIONARIO, outraLoja);
         Authentication authentication = authenticationGerente();
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(gerenteBraga));
         when(utilizadores.obterUtilizador(operadorPorto.getId())).thenReturn(operadorPorto);
@@ -307,7 +307,7 @@ class UtilizadoresControllerTest {
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador criado = new Utilizador("teste.gestor.1", "hash", "Teste Gestor", "teste.gestor.1@mini.pt", new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)), loja);
+        Utilizador criado = new Utilizador("teste.gestor.1", "hash", "Teste Gestor", "teste.gestor.1@mini.pt", PerfilUtilizador.FUNCIONARIO, loja);
         Authentication authentication = authenticationGestor();
         when(utilizadores.criarUtilizador(any())).thenReturn(criado);
 

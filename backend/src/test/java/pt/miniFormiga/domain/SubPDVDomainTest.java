@@ -16,7 +16,7 @@ class SubPDVDomainTest {
     @Test
     void vendaDeveCalcularTotalComMultiplasTaxasIva() {
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador operador = new Utilizador("op", "hash", "Operador", new Perfil("FUNCIONARIO", List.of("PDV_WRITE")), loja);
+        Utilizador operador = new Utilizador("op", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, loja);
         Produto agua = produto("Agua", "1.00", "0.40", "6");
         Produto gel = produto("Gel", "2.00", "1.00", "23");
         Venda venda = new Venda(loja, operador);
@@ -34,7 +34,7 @@ class SubPDVDomainTest {
     @Test
     void linhaVendaDeveCalcularTotalArmazenado() {
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador operador = new Utilizador("op-linha", "hash", "Operador", new Perfil("FUNCIONARIO", List.of("PDV_WRITE")), loja);
+        Utilizador operador = new Utilizador("op-linha", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, loja);
         Venda venda = new Venda(loja, operador);
         LinhaVenda linha = new LinhaVenda(venda, produto("Agua", "1.25", "0.40", "23"), 3);
 
@@ -57,10 +57,10 @@ class SubPDVDomainTest {
     @Test
     void fechoCaixaDeveAgregarPorMeioPagamento() {
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador operador = new Utilizador("op2", "hash", "Operador", new Perfil("FUNCIONARIO", List.of("PDV_WRITE")), loja);
-        Venda numerario = vendaFinalizada(loja, operador, new MeioPagamento("NUMERARIO", "Numerario"), "1.00");
-        Venda cartao = vendaFinalizada(loja, operador, new MeioPagamento("CARTAO", "Cartao"), "2.00");
-        Venda mbway = vendaFinalizada(loja, operador, new MeioPagamento("MBWAY", "MB Way"), "3.00");
+        Utilizador operador = new Utilizador("op2", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, loja);
+        Venda numerario = vendaFinalizada(loja, operador, MeioPagamentoTipo.NUMERARIO, "1.00");
+        Venda cartao = vendaFinalizada(loja, operador, MeioPagamentoTipo.CARTAO, "2.00");
+        Venda mbway = vendaFinalizada(loja, operador, MeioPagamentoTipo.MBWAY, "3.00");
         FechoCaixa fecho = new FechoCaixa(loja, operador, LocalDate.now(), List.of(numerario, cartao, mbway));
 
         fecho.calcularTotais();
@@ -77,9 +77,9 @@ class SubPDVDomainTest {
     @Test
     void fechoCaixaDeveIgnorarVendasAnuladasEConfirmar() {
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador operador = new Utilizador("op-fecho", "hash", "Operador", new Perfil("FUNCIONARIO", List.of("PDV_WRITE")), loja);
-        Venda vendaAtiva = vendaFinalizada(loja, operador, new MeioPagamento("NUMERARIO", "Numerario"), "2.00");
-        Venda vendaAnulada = vendaFinalizada(loja, operador, new MeioPagamento("CARTAO", "Cartao"), "5.00");
+        Utilizador operador = new Utilizador("op-fecho", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, loja);
+        Venda vendaAtiva = vendaFinalizada(loja, operador, MeioPagamentoTipo.NUMERARIO, "2.00");
+        Venda vendaAnulada = vendaFinalizada(loja, operador, MeioPagamentoTipo.CARTAO, "5.00");
         vendaAnulada.anular();
         FechoCaixa fecho = new FechoCaixa(loja, operador, LocalDate.now(), List.of(vendaAtiva, vendaAnulada));
 
@@ -144,16 +144,6 @@ class SubPDVDomainTest {
     }
 
     @Test
-    void faturaSequenciaDeveIncrementarNumero() {
-        FaturaSequencia sequencia = new FaturaSequencia("A/2026");
-
-        assertEquals(1, sequencia.proximoNumero());
-        assertEquals(2, sequencia.proximoNumero());
-        assertEquals(2, sequencia.getUltimoNumero());
-        assertEquals("A/2026", sequencia.getSerie());
-    }
-
-    @Test
     void vendaDeveAnularLinhaRecalcularEImpedirFinalizacaoSemLinhasAtivas() {
         Venda venda = vendaAberta();
         LinhaVenda linha = new LinhaVenda(venda, produto("Agua", "1.00", "0.40", "23"), 1);
@@ -162,7 +152,7 @@ class SubPDVDomainTest {
 
         assertTrue(linha.isAnulada());
         assertEquals(new BigDecimal("0.00"), venda.getTotalComIVA());
-        assertThrows(IllegalStateException.class, () -> venda.finalizar(new MeioPagamento("NUMERARIO", "Numerario")));
+        assertThrows(IllegalStateException.class, () -> venda.finalizar(MeioPagamentoTipo.NUMERARIO));
     }
 
     @Test
@@ -173,21 +163,10 @@ class SubPDVDomainTest {
         venda.anular();
 
         assertTrue(venda.isAnulada());
-        assertThrows(IllegalStateException.class, () -> venda.finalizar(new MeioPagamento("NUMERARIO", "Numerario")));
+        assertThrows(IllegalStateException.class, () -> venda.finalizar(MeioPagamentoTipo.NUMERARIO));
     }
 
-    @Test
-    void meioPagamentoDeveExporTipoEDescricao() {
-        MeioPagamento vazio = new MeioPagamento();
-        MeioPagamento numerario = new MeioPagamento("NUMERARIO", "Pagamento em numerario");
-
-        assertEquals(null, vazio.getTipo());
-        assertEquals(null, vazio.getDescricao());
-        assertEquals("NUMERARIO", numerario.getTipo());
-        assertEquals("Pagamento em numerario", numerario.getDescricao());
-    }
-
-    private Venda vendaFinalizada(Loja loja, Utilizador operador, MeioPagamento meioPagamento, String preco) {
+    private Venda vendaFinalizada(Loja loja, Utilizador operador, MeioPagamentoTipo meioPagamento, String preco) {
         Venda venda = new Venda(loja, operador);
         new LinhaVenda(venda, produto("Produto " + preco, preco, "0.50", "23"), 1);
         venda.finalizar(meioPagamento);
@@ -196,7 +175,7 @@ class SubPDVDomainTest {
 
     private Venda vendaAberta() {
         Loja loja = new Loja("Loja Braga", "Rua Central", "123456789");
-        Utilizador operador = new Utilizador("op-aberta", "hash", "Operador", new Perfil("FUNCIONARIO", List.of("PDV_WRITE")), loja);
+        Utilizador operador = new Utilizador("op-aberta", "hash", "Operador", PerfilUtilizador.FUNCIONARIO, loja);
         return new Venda(loja, operador);
     }
 

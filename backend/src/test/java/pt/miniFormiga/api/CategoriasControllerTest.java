@@ -3,7 +3,7 @@ package pt.miniFormiga.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Sort;
 import pt.miniFormiga.domain.Categoria;
-import pt.miniFormiga.repository.CategoriaRepository;
+import pt.miniFormiga.subsistemas.catalogo.repository.CategoriaRepository;
 
 import java.util.List;
 

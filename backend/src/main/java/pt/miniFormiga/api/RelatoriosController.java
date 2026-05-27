@@ -15,12 +15,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import pt.miniFormiga.subsistemas.relatorios.ISubRelatorios;
+import pt.miniFormiga.subsistemas.relatorios.facade.ISubRelatorios;
 
 import java.time.LocalDate;
 import java.util.UUID;
 
-import static pt.miniFormiga.subsistemas.relatorios.RelatoriosDtos.*;
+import static pt.miniFormiga.subsistemas.relatorios.dto.RelatoriosDtos.*;
 
 @RestController
 @RequestMapping("/api/v1")

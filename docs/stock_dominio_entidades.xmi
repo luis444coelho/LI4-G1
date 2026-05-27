@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.1"
+         xmlns:xmi="http://schema.omg.org/spec/XMI/2.1"
+         xmlns:uml="http://www.eclipse.org/uml2/5.0.0/UML">
+  <uml:Model xmi:id="model_stock" name="MiniFormigaStockDomain">
+    <packagedElement xmi:type="uml:Package" xmi:id="pkg_stock_domain" name="DominioStock">
+      <packagedElement xmi:type="uml:Class" xmi:id="class_produto" name="Produto">
+        <ownedAttribute xmi:id="produto_quantidadeStock" name="quantidadeStock" type="type_int"/>
+        <ownedAttribute xmi:id="produto_nivelMinimo" name="nivelMinimo" type="type_integer"/>
+        <ownedAttribute xmi:id="produto_corredor" name="corredor" type="type_string"/>
+        <ownedAttribute xmi:id="produto_prateleira" name="prateleira" type="type_string"/>
+        <ownedOperation xmi:id="produto_atualizarStock" name="atualizarStock"/>
+        <ownedOperation xmi:id="produto_definirNivelMinimo" name="definirNivelMinimo"/>
+        <ownedOperation xmi:id="produto_precisaReposicao" name="precisaReposicao"/>
+        <ownedOperation xmi:id="produto_atualizarLocalizacao" name="atualizarLocalizacao"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Class" xmi:id="class_stock_produto_loja" name="StockProdutoLoja">
+        <ownedAttribute xmi:id="stock_produto_loja_quantidadeStock" name="quantidadeStock" type="type_int"/>
+        <ownedAttribute xmi:id="stock_produto_loja_nivelMinimo" name="nivelMinimo" type="type_integer"/>
+        <ownedAttribute xmi:id="stock_produto_loja_corredor" name="corredor" type="type_string"/>
+        <ownedAttribute xmi:id="stock_produto_loja_prateleira" name="prateleira" type="type_string"/>
+        <ownedAttribute xmi:id="stock_produto_loja_ativoNaLoja" name="ativoNaLoja" type="type_boolean"/>
+        <ownedAttribute xmi:id="stock_produto_loja_stockUpdatedAt" name="stockUpdatedAt" type="type_localdatetime"/>
+        <ownedOperation xmi:id="stock_produto_loja_atualizarStock" name="atualizarStock"/>
+        <ownedOperation xmi:id="stock_produto_loja_definirStockInicial" name="definirStockInicial"/>
+        <ownedOperation xmi:id="stock_produto_loja_definirNivelMinimo" name="definirNivelMinimo"/>
+        <ownedOperation xmi:id="stock_produto_loja_precisaReposicao" name="precisaReposicao"/>
+        <ownedOperation xmi:id="stock_produto_loja_atualizarLocalizacao" name="atualizarLocalizacao"/>
+        <ownedOperation xmi:id="stock_produto_loja_desativarNaLoja" name="desativarNaLoja"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Class" xmi:id="class_ajuste_inventario" name="AjusteInventario">
+        <ownedAttribute xmi:id="ajuste_quantidade" name="quantidade" type="type_int"/>
+        <ownedAttribute xmi:id="ajuste_dataHora" name="dataHora" type="type_localdatetime"/>
+        <ownedAttribute xmi:id="ajuste_observacoes" name="observacoes" type="type_string"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Class" xmi:id="class_alerta_stock" name="AlertaStock">
+        <ownedAttribute xmi:id="alerta_dataHora" name="dataHora" type="type_localdatetime"/>
+        <ownedAttribute xmi:id="alerta_quantidadeNoMomento" name="quantidadeNoMomento" type="type_int"/>
+        <ownedAttribute xmi:id="alerta_lido" name="lido" type="type_boolean"/>
+        <ownedAttribute xmi:id="alerta_resolvido" name="resolvido" type="type_boolean"/>
+        <ownedAttribute xmi:id="alerta_dataResolucao" name="dataResolucao" type="type_localdatetime"/>
+        <ownedOperation xmi:id="alerta_marcarComoLido" name="marcarComoLido"/>
+        <ownedOperation xmi:id="alerta_resolver" name="resolver"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Class" xmi:id="class_inventario_fisico" name="InventarioFisico">
+        <ownedAttribute xmi:id="inventario_dataInicio" name="dataInicio" type="type_localdatetime"/>
+        <ownedAttribute xmi:id="inventario_dataFim" name="dataFim" type="type_localdatetime"/>
+        <ownedAttribute xmi:id="inventario_fechado" name="fechado" type="type_boolean"/>
+        <ownedOperation xmi:id="inventario_fechar" name="fechar"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Class" xmi:id="class_linha_inventario" name="LinhaInventario">
+        <ownedAttribute xmi:id="linha_quantidadeSistema" name="quantidadeSistema" type="type_int"/>
+        <ownedAttribute xmi:id="linha_quantidadeContada" name="quantidadeContada" type="type_int"/>
+        <ownedAttribute xmi:id="linha_discrepancia" name="discrepancia" type="type_int"/>
+        <ownedOperation xmi:id="linha_registarContagem" name="registarContagem"/>
+        <ownedOperation xmi:id="linha_calcularDiscrepancia" name="calcularDiscrepancia"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Class" xmi:id="class_loja" name="Loja"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_utilizador" name="Utilizador"/>
+
+      <packagedElement xmi:type="uml:Enumeration" xmi:id="enum_motivo_ajuste_codigo" name="MotivoAjusteCodigo">
+        <ownedLiteral xmi:id="motivo_quebra" name="QUEBRA"/>
+        <ownedLiteral xmi:id="motivo_desperdicio" name="DESPERDICIO"/>
+        <ownedLiteral xmi:id="motivo_correcao_erro" name="CORRECAO_ERRO"/>
+        <ownedLiteral xmi:id="motivo_devolucao" name="DEVOLUCAO"/>
+        <ownedLiteral xmi:id="motivo_entrada_mercadoria" name="ENTRADA_MERCADORIA"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_stock_produto_loja_produto" name="StockProdutoLoja_Produto">
+        <memberEnd xmi:idref="assoc_stock_produto_loja_produto_stock"/>
+        <memberEnd xmi:idref="assoc_stock_produto_loja_produto_produto"/>
+        <ownedEnd xmi:id="assoc_stock_produto_loja_produto_stock" name="stockProdutoLoja" type="class_stock_produto_loja" association="assoc_stock_produto_loja_produto"/>
+        <ownedEnd xmi:id="assoc_stock_produto_loja_produto_produto" name="produto" type="class_produto" association="assoc_stock_produto_loja_produto"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_stock_produto_loja_loja" name="StockProdutoLoja_Loja">
+        <memberEnd xmi:idref="assoc_stock_produto_loja_loja_stock"/>
+        <memberEnd xmi:idref="assoc_stock_produto_loja_loja_loja"/>
+        <ownedEnd xmi:id="assoc_stock_produto_loja_loja_stock" name="stockProdutoLoja" type="class_stock_produto_loja" association="assoc_stock_produto_loja_loja"/>
+        <ownedEnd xmi:id="assoc_stock_produto_loja_loja_loja" name="loja" type="class_loja" association="assoc_stock_produto_loja_loja"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_ajuste_stock_produto_loja" name="AjusteInventario_StockProdutoLoja">
+        <memberEnd xmi:idref="assoc_ajuste_stock_produto_loja_ajuste"/>
+        <memberEnd xmi:idref="assoc_ajuste_stock_produto_loja_stock"/>
+        <ownedEnd xmi:id="assoc_ajuste_stock_produto_loja_ajuste" name="ajusteInventario" type="class_ajuste_inventario" association="assoc_ajuste_stock_produto_loja"/>
+        <ownedEnd xmi:id="assoc_ajuste_stock_produto_loja_stock" name="stockProdutoLoja" type="class_stock_produto_loja" association="assoc_ajuste_stock_produto_loja"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_ajuste_produto" name="AjusteInventario_Produto">
+        <memberEnd xmi:idref="assoc_ajuste_produto_ajuste"/>
+        <memberEnd xmi:idref="assoc_ajuste_produto_produto"/>
+        <ownedEnd xmi:id="assoc_ajuste_produto_ajuste" name="ajusteInventario" type="class_ajuste_inventario" association="assoc_ajuste_produto"/>
+        <ownedEnd xmi:id="assoc_ajuste_produto_produto" name="produto" type="class_produto" association="assoc_ajuste_produto"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_ajuste_motivo" name="AjusteInventario_MotivoAjusteCodigo">
+        <memberEnd xmi:idref="assoc_ajuste_motivo_ajuste"/>
+        <memberEnd xmi:idref="assoc_ajuste_motivo_motivo"/>
+        <ownedEnd xmi:id="assoc_ajuste_motivo_ajuste" name="ajusteInventario" type="class_ajuste_inventario" association="assoc_ajuste_motivo"/>
+        <ownedEnd xmi:id="assoc_ajuste_motivo_motivo" name="motivo" type="enum_motivo_ajuste_codigo" association="assoc_ajuste_motivo"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_ajuste_utilizador" name="AjusteInventario_Utilizador">
+        <memberEnd xmi:idref="assoc_ajuste_utilizador_ajuste"/>
+        <memberEnd xmi:idref="assoc_ajuste_utilizador_utilizador"/>
+        <ownedEnd xmi:id="assoc_ajuste_utilizador_ajuste" name="ajusteInventario" type="class_ajuste_inventario" association="assoc_ajuste_utilizador"/>
+        <ownedEnd xmi:id="assoc_ajuste_utilizador_utilizador" name="utilizador" type="class_utilizador" association="assoc_ajuste_utilizador"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_alerta_stock_produto_loja" name="AlertaStock_StockProdutoLoja">
+        <memberEnd xmi:idref="assoc_alerta_stock_produto_loja_alerta"/>
+        <memberEnd xmi:idref="assoc_alerta_stock_produto_loja_stock"/>
+        <ownedEnd xmi:id="assoc_alerta_stock_produto_loja_alerta" name="alertaStock" type="class_alerta_stock" association="assoc_alerta_stock_produto_loja"/>
+        <ownedEnd xmi:id="assoc_alerta_stock_produto_loja_stock" name="stockProdutoLoja" type="class_stock_produto_loja" association="assoc_alerta_stock_produto_loja"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_alerta_produto" name="AlertaStock_Produto">
+        <memberEnd xmi:idref="assoc_alerta_produto_alerta"/>
+        <memberEnd xmi:idref="assoc_alerta_produto_produto"/>
+        <ownedEnd xmi:id="assoc_alerta_produto_alerta" name="alertaStock" type="class_alerta_stock" association="assoc_alerta_produto"/>
+        <ownedEnd xmi:id="assoc_alerta_produto_produto" name="produto" type="class_produto" association="assoc_alerta_produto"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_alerta_loja" name="AlertaStock_Loja">
+        <memberEnd xmi:idref="assoc_alerta_loja_alerta"/>
+        <memberEnd xmi:idref="assoc_alerta_loja_loja"/>
+        <ownedEnd xmi:id="assoc_alerta_loja_alerta" name="alertaStock" type="class_alerta_stock" association="assoc_alerta_loja"/>
+        <ownedEnd xmi:id="assoc_alerta_loja_loja" name="loja" type="class_loja" association="assoc_alerta_loja"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_inventario_loja" name="InventarioFisico_Loja">
+        <memberEnd xmi:idref="assoc_inventario_loja_inventario"/>
+        <memberEnd xmi:idref="assoc_inventario_loja_loja"/>
+        <ownedEnd xmi:id="assoc_inventario_loja_inventario" name="inventarioFisico" type="class_inventario_fisico" association="assoc_inventario_loja"/>
+        <ownedEnd xmi:id="assoc_inventario_loja_loja" name="loja" type="class_loja" association="assoc_inventario_loja"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_inventario_responsavel" name="InventarioFisico_Utilizador">
+        <memberEnd xmi:idref="assoc_inventario_responsavel_inventario"/>
+        <memberEnd xmi:idref="assoc_inventario_responsavel_utilizador"/>
+        <ownedEnd xmi:id="assoc_inventario_responsavel_inventario" name="inventarioFisico" type="class_inventario_fisico" association="assoc_inventario_responsavel"/>
+        <ownedEnd xmi:id="assoc_inventario_responsavel_utilizador" name="responsavel" type="class_utilizador" association="assoc_inventario_responsavel"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_inventario_linha" name="InventarioFisico_LinhaInventario">
+        <memberEnd xmi:idref="assoc_inventario_linha_inventario"/>
+        <memberEnd xmi:idref="assoc_inventario_linha_linha"/>
+        <ownedEnd xmi:id="assoc_inventario_linha_inventario" name="inventarioFisico" type="class_inventario_fisico" association="assoc_inventario_linha"/>
+        <ownedEnd xmi:id="assoc_inventario_linha_linha" name="linhas" type="class_linha_inventario" aggregation="composite" association="assoc_inventario_linha"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="assoc_linha_produto" name="LinhaInventario_Produto">
+        <memberEnd xmi:idref="assoc_linha_produto_linha"/>
+        <memberEnd xmi:idref="assoc_linha_produto_produto"/>
+        <ownedEnd xmi:id="assoc_linha_produto_linha" name="linhaInventario" type="class_linha_inventario" association="assoc_linha_produto"/>
+        <ownedEnd xmi:id="assoc_linha_produto_produto" name="produto" type="class_produto" association="assoc_linha_produto"/>
+      </packagedElement>
+    </packagedElement>
+
+    <packagedElement xmi:type="uml:PrimitiveType" xmi:id="type_int" name="int"/>
+    <packagedElement xmi:type="uml:PrimitiveType" xmi:id="type_integer" name="Integer"/>
+    <packagedElement xmi:type="uml:PrimitiveType" xmi:id="type_string" name="String"/>
+    <packagedElement xmi:type="uml:PrimitiveType" xmi:id="type_boolean" name="boolean"/>
+    <packagedElement xmi:type="uml:PrimitiveType" xmi:id="type_localdatetime" name="LocalDateTime"/>
+  </uml:Model>
+</xmi:XMI>

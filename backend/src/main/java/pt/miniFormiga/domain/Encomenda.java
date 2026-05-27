@@ -55,10 +55,6 @@ public class Encomenda extends EntidadeBase {
         this(loja, fornecedor, EstadoEncomendaCodigo.PENDENTE);
     }
 
-    public Encomenda(Loja loja, Fornecedor fornecedor, EstadoEncomenda estado) {
-        this(loja, fornecedor, estado == null ? null : EstadoEncomendaCodigo.valueOf(estado.getCodigo()));
-    }
-
     public Encomenda(Loja loja, Fornecedor fornecedor, EstadoEncomendaCodigo estado) {
         this.loja = loja;
         this.fornecedor = fornecedor;
@@ -89,10 +85,6 @@ public class Encomenda extends EntidadeBase {
                 ? this.dataSubmissao
                 : fornecedor.calcularDataProcessamento(this.dataSubmissao);
         calcularTotal();
-    }
-
-    public void alterarEstado(EstadoEncomenda estado) {
-        alterarEstado(estado == null ? null : EstadoEncomendaCodigo.valueOf(estado.getCodigo()));
     }
 
     public void alterarEstado(EstadoEncomendaCodigo estado) {

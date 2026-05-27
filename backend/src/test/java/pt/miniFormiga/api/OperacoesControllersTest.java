@@ -7,9 +7,9 @@ import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pt.miniFormiga.api.error.ApiExceptionHandler;
-import pt.miniFormiga.subsistemas.encomendas.ISubEncomendas;
-import pt.miniFormiga.subsistemas.pdv.ISubPDV;
-import pt.miniFormiga.subsistemas.sincronizacao.ISubSincronizacao;
+import pt.miniFormiga.subsistemas.encomendas.facade.ISubEncomendas;
+import pt.miniFormiga.subsistemas.pdv.facade.ISubPDV;
+import pt.miniFormiga.subsistemas.sincronizacao.facade.ISubSincronizacao;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,18 +30,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.CondicaoComercialResponse;
-import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.EncomendaResponse;
-import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.EntradaMercadoriaResponse;
-import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.FornecedorResponse;
-import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.LinhaEncomendaResponse;
-import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.ProximaGuiaRemessaResponse;
-import static pt.miniFormiga.subsistemas.encomendas.EncomendasDtos.SugestaoEncomendaResponse;
-import static pt.miniFormiga.subsistemas.pdv.PdvDtos.FechoCaixaDTO;
-import static pt.miniFormiga.subsistemas.pdv.PdvDtos.ProdutoDTO;
-import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.ConflitoSincronizacaoResponse;
-import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoResponse;
-import static pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoTransporte.ResultadoTransmissao;
+import static pt.miniFormiga.subsistemas.encomendas.dto.EncomendasDtos.CondicaoComercialResponse;
+import static pt.miniFormiga.subsistemas.encomendas.dto.EncomendasDtos.EncomendaResponse;
+import static pt.miniFormiga.subsistemas.encomendas.dto.EncomendasDtos.EntradaMercadoriaResponse;
+import static pt.miniFormiga.subsistemas.encomendas.dto.EncomendasDtos.FornecedorResponse;
+import static pt.miniFormiga.subsistemas.encomendas.dto.EncomendasDtos.LinhaEncomendaResponse;
+import static pt.miniFormiga.subsistemas.encomendas.dto.EncomendasDtos.ProximaGuiaRemessaResponse;
+import static pt.miniFormiga.subsistemas.encomendas.dto.EncomendasDtos.SugestaoEncomendaResponse;
+import static pt.miniFormiga.subsistemas.pdv.dto.PdvDtos.FechoCaixaDTO;
+import static pt.miniFormiga.subsistemas.pdv.dto.PdvDtos.ProdutoDTO;
+import static pt.miniFormiga.subsistemas.sincronizacao.dto.SincronizacaoDtos.ConflitoSincronizacaoResponse;
+import static pt.miniFormiga.subsistemas.sincronizacao.dto.SincronizacaoDtos.SincronizacaoResponse;
+import static pt.miniFormiga.subsistemas.sincronizacao.transport.SincronizacaoTransporte.ResultadoTransmissao;
 
 class OperacoesControllersTest {
 

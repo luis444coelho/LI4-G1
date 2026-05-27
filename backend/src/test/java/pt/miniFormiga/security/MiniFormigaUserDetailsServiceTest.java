@@ -3,9 +3,9 @@ package pt.miniFormiga.security;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Utilizador;
-import pt.miniFormiga.repository.UtilizadorRepository;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
 
 import java.util.List;
@@ -29,7 +29,7 @@ class MiniFormigaUserDetailsServiceTest {
                 "hash",
                 "Gerente Braga",
                 "gerente@mini-formiga.pt",
-                new Perfil("GERENTE", List.of(Permissao.STOCK_WRITE, Permissao.RELATORIOS_READ)),
+                PerfilUtilizador.GERENTE,
                 new Loja("Loja Braga", "Rua Central", "123456789")
         );
         when(utilizadorRepository.findByUsername("gerente.braga")).thenReturn(Optional.of(utilizador));
@@ -48,7 +48,7 @@ class MiniFormigaUserDetailsServiceTest {
                 "hash",
                 "Operador Braga",
                 "operador@mini-formiga.pt",
-                new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)),
+                PerfilUtilizador.FUNCIONARIO,
                 new Loja("Loja Braga", "Rua Central", "123456789")
         );
         utilizador.desativar();

@@ -6,7 +6,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,14 +20,11 @@ public class AlertaStock extends EntidadeBase {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "produto_loja_id")
-    private ProdutoLoja produtoLoja;
+    private StockProdutoLoja stockProdutoLoja;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loja_id")
     private Loja loja;
-
-    @Transient
-    private Stock stockLegado;
 
     @Column(nullable = false)
     private LocalDateTime dataHora;
@@ -48,12 +44,6 @@ public class AlertaStock extends EntidadeBase {
     protected AlertaStock() {
     }
 
-    public AlertaStock(Stock stock, int quantidadeNoMomento) {
-        this(stock.getProduto(), quantidadeNoMomento);
-        this.stockLegado = stock;
-        this.loja = stock.getLoja();
-    }
-
     public AlertaStock(Produto produto, int quantidadeNoMomento) {
         this.produto = produto;
         this.dataHora = LocalDateTime.now();
@@ -67,10 +57,10 @@ public class AlertaStock extends EntidadeBase {
         this.loja = loja;
     }
 
-    public AlertaStock(ProdutoLoja produtoLoja, int quantidadeNoMomento) {
-        this(produtoLoja.getProduto(), quantidadeNoMomento);
-        this.produtoLoja = produtoLoja;
-        this.loja = produtoLoja.getLoja();
+    public AlertaStock(StockProdutoLoja stockProdutoLoja, int quantidadeNoMomento) {
+        this(stockProdutoLoja.getProduto(), quantidadeNoMomento);
+        this.stockProdutoLoja = stockProdutoLoja;
+        this.loja = stockProdutoLoja.getLoja();
     }
 
     public void marcarComoLido() {
@@ -88,19 +78,15 @@ public class AlertaStock extends EntidadeBase {
     }
 
     public Produto getProduto() {
-        return produto == null && produtoLoja != null ? produtoLoja.getProduto() : produto;
+        return produto == null && stockProdutoLoja != null ? stockProdutoLoja.getProduto() : produto;
     }
 
-    public ProdutoLoja getProdutoLoja() {
-        return produtoLoja;
+    public StockProdutoLoja getStockProdutoLoja() {
+        return stockProdutoLoja;
     }
 
     public Loja getLoja() {
-        return loja == null && produtoLoja != null ? produtoLoja.getLoja() : loja;
-    }
-
-    public Stock getStock() {
-        return stockLegado;
+        return loja == null && stockProdutoLoja != null ? stockProdutoLoja.getLoja() : loja;
     }
 
     public LocalDateTime getDataHora() {

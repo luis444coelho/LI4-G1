@@ -77,7 +77,7 @@ class ApiExceptionHandlerTest {
         var generico = handler.integridadeDados(new DataIntegrityViolationException("duplicado"));
 
         assertEquals("USERNAME_DUPLICADO", username.getBody().code());
-        assertEquals("SCHEMA_LEGADO", schema.getBody().code());
+        assertEquals("SCHEMA_DESATUALIZADO", schema.getBody().code());
         assertEquals("DATA_INTEGRITY_VIOLATION", generico.getBody().code());
         assertTrue(generico.getBody().details().containsKey("detalhe"));
     }

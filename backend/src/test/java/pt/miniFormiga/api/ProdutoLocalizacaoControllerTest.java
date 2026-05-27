@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Test;
 import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.TaxaIVA;
-import pt.miniFormiga.subsistemas.stock.StockDtos.LocalizacaoRequest;
-import pt.miniFormiga.subsistemas.stock.StockDtos.LocalizacaoResponse;
-import pt.miniFormiga.subsistemas.stock.StockItem;
-import pt.miniFormiga.subsistemas.stock.StockStore;
+import pt.miniFormiga.subsistemas.stock.dto.StockDtos.LocalizacaoRequest;
+import pt.miniFormiga.subsistemas.stock.dto.StockDtos.LocalizacaoResponse;
+import pt.miniFormiga.subsistemas.stock.service.StockItem;
+import pt.miniFormiga.subsistemas.stock.service.StockStore;
 
 import java.math.BigDecimal;
 

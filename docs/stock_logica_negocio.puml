@@ -1,0 +1,111 @@
+@startuml
+title Mini-Formiga - Subsistema de Stock
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+package "Subsistema de Stock" {
+    interface ISubStock {
+        +consultarStock(lojaId)
+        +consultarStockProduto(produtoId, lojaId)
+        +atualizarStock(produtoId, lojaId, delta)
+        +definirNivelMinimo(produtoId, lojaId, quantidade)
+        +atualizarLocalizacao(produtoId, lojaId, corredor, prateleira)
+        +registarAjuste(produtoId, lojaId, quantidade, motivo, utilizadorId)
+        +getAlertasAtivos(lojaId)
+        +marcarAlertaComoLido(alertaId)
+        +resolverAlerta(alertaId)
+        +iniciarInventarioFisico(lojaId, responsavelId)
+        +registarContagemLinha(inventarioId, produtoId, quantidade)
+        +fecharInventario(inventarioId)
+    }
+
+    interface StockStore {
+        +listar(lojaId)
+        +obter(produtoId, lojaId)
+        +atualizarStock(produtoId, lojaId, delta)
+        +definirNivelMinimo(produtoId, lojaId, quantidade)
+        +atualizarLocalizacao(produtoId, lojaId, corredor, prateleira)
+    }
+
+    class SubStockFacade
+    class LocalProdutoStockStore
+    class GlobalStockProdutoLojaStore
+    class StockItem <<DTO interno>>
+}
+
+package "Dominio" {
+    class Produto <<Entidade>> {
+        quantidadeStock
+        nivelMinimo
+        corredor
+        prateleira
+        +atualizarStock(delta)
+        +definirNivelMinimo(quantidade)
+        +precisaReposicao()
+        +atualizarLocalizacao(corredor, prateleira)
+    }
+
+    class StockProdutoLoja <<Entidade>> {
+        quantidadeStock
+        nivelMinimo
+        corredor
+        prateleira
+        ativoNaLoja
+        +atualizarStock(delta)
+        +definirNivelMinimo(quantidade)
+        +precisaReposicao()
+        +atualizarLocalizacao(corredor, prateleira)
+    }
+
+    class AjusteInventario <<Entidade>>
+    class AlertaStock <<Entidade>>
+    class InventarioFisico <<Entidade>>
+    class LinhaInventario <<Entidade>>
+    enum MotivoAjusteCodigo
+    class Loja <<Entidade>>
+    class Utilizador <<Entidade>>
+}
+
+ISubStock <|.. SubStockFacade
+
+SubStockFacade --> StockStore
+StockStore <|.. LocalProdutoStockStore
+StockStore <|.. GlobalStockProdutoLojaStore
+
+StockStore --> StockItem
+StockItem --> Produto
+StockItem --> StockProdutoLoja
+
+SubStockFacade --> AjusteInventario : cria
+SubStockFacade --> AlertaStock : cria/resolve
+SubStockFacade --> InventarioFisico : cria/fecha
+SubStockFacade --> LinhaInventario : regista contagem
+
+StockProdutoLoja --> Produto
+StockProdutoLoja --> Loja
+AjusteInventario --> Produto
+AjusteInventario --> StockProdutoLoja
+AjusteInventario --> MotivoAjusteCodigo
+AjusteInventario --> Utilizador
+AlertaStock --> Produto
+AlertaStock --> StockProdutoLoja
+AlertaStock --> Loja
+InventarioFisico --> Loja
+InventarioFisico --> Utilizador
+InventarioFisico "1" *-- "0..*" LinhaInventario
+LinhaInventario --> Produto
+
+note bottom of StockStore
+Abstrai o armazenamento de stock:
+perfil local usa Produto; perfil global usa StockProdutoLoja.
+end note
+
+note right of StockProdutoLoja
+Representa o stock real de um produto
+numa loja especifica.
+end note
+
+@enduml

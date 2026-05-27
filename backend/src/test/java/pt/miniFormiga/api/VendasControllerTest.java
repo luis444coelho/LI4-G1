@@ -11,22 +11,22 @@ import org.springframework.security.web.method.annotation.AuthenticationPrincipa
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pt.miniFormiga.api.error.ApiExceptionHandler;
-import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
+import pt.miniFormiga.subsistemas.auditoria.facade.ISubAuditoria;
 import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.Devolucao;
 import pt.miniFormiga.domain.Fatura;
 import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MeioPagamentoTipo;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
-import pt.miniFormiga.repository.DevolucaoRepository;
-import pt.miniFormiga.repository.FaturaRepository;
-import pt.miniFormiga.repository.UtilizadorRepository;
-import pt.miniFormiga.subsistemas.pdv.ISubPDV;
+import pt.miniFormiga.subsistemas.pdv.repository.DevolucaoRepository;
+import pt.miniFormiga.subsistemas.pdv.repository.FaturaRepository;
+import pt.miniFormiga.subsistemas.utilizadores.repository.UtilizadorRepository;
+import pt.miniFormiga.subsistemas.pdv.facade.ISubPDV;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
 
 import java.math.BigDecimal;
@@ -46,8 +46,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static pt.miniFormiga.subsistemas.pdv.PdvDtos.FaturaDTO;
-import static pt.miniFormiga.subsistemas.pdv.PdvDtos.VendaDTO;
+import static pt.miniFormiga.subsistemas.pdv.dto.PdvDtos.FaturaDTO;
+import static pt.miniFormiga.subsistemas.pdv.dto.PdvDtos.VendaDTO;
 
 class VendasControllerTest {
 
@@ -255,7 +255,7 @@ class VendasControllerTest {
                 "hash",
                 "Operador Braga",
                 "operador@mini-formiga.pt",
-                new Perfil("FUNCIONARIO", List.of(Permissao.PDV_WRITE)),
+                PerfilUtilizador.FUNCIONARIO,
                 loja
         );
     }

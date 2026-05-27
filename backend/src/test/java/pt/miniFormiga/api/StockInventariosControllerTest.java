@@ -15,16 +15,16 @@ import pt.miniFormiga.domain.InventarioFisico;
 import pt.miniFormiga.domain.LinhaInventario;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MotivoAjusteCodigo;
-import pt.miniFormiga.domain.Perfil;
+import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
-import pt.miniFormiga.repository.AjusteInventarioRepository;
-import pt.miniFormiga.repository.InventarioFisicoRepository;
-import pt.miniFormiga.repository.LinhaInventarioRepository;
-import pt.miniFormiga.subsistemas.stock.ISubStock;
-import pt.miniFormiga.subsistemas.stock.StockItem;
-import pt.miniFormiga.subsistemas.stock.StockStore;
+import pt.miniFormiga.subsistemas.stock.repository.AjusteInventarioRepository;
+import pt.miniFormiga.subsistemas.stock.repository.InventarioFisicoRepository;
+import pt.miniFormiga.subsistemas.stock.repository.LinhaInventarioRepository;
+import pt.miniFormiga.subsistemas.stock.facade.ISubStock;
+import pt.miniFormiga.subsistemas.stock.service.StockItem;
+import pt.miniFormiga.subsistemas.stock.service.StockStore;
 import pt.miniFormiga.subsistemas.utilizadores.Permissao;
 
 import java.math.BigDecimal;
@@ -275,7 +275,7 @@ class StockInventariosControllerTest {
                 "hash",
                 "Armazem Braga",
                 "armazem@mini-formiga.pt",
-                new Perfil("ARMAZEM", List.of(Permissao.STOCK_WRITE)),
+                PerfilUtilizador.ARMAZEM,
                 loja
         );
     }
