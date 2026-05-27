@@ -1,0 +1,88 @@
+@startuml
+title Mini-Formiga - Subsistema de Sincronizacao
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+left to right direction
+
+package "Referencias a Outros Subsistemas" {
+    class SubPDVFacade
+    class SubRelatoriosFacade
+    interface ISubRelatorios
+}
+
+package "Subsistema de Sincronizacao" {
+
+    interface ISubSincronizacao {
+        +agendarSincronizacao(lojaId)
+        +iniciarSincronizacao(lojaId)
+        +estadoAtual(lojaId)
+        +historico(lojaId, pageable)
+        +conflitos(lojaId)
+        +receber(payload)
+    }
+
+    class SubSincronizacaoFacade {
+        +agendarSincronizacao(lojaId)
+        +iniciarSincronizacao(lojaId)
+        +estadoAtual(lojaId)
+        +historico(lojaId, pageable)
+        +conflitos(lojaId)
+        +receber(payload)
+    }
+
+    interface IConsultaSincronizacao {
+        +dadosRelatorio(lojaId)
+    }
+
+    class ConsultaSincronizacaoService {
+        +dadosRelatorio(lojaId)
+    }
+
+    interface SincronizacaoTransporte {
+        +transmitir(payload)
+    }
+
+    class ServidorCentralSincronizacaoService {
+        +receber(payload)
+    }
+
+    package "Modelos internos de sincronizacao" {
+        class SincronizacaoPayload <<DTO>>
+        class ResultadoTransmissao <<DTO>>
+        class DadosRelatorioSincronizado <<DTO>>
+    }
+}
+
+SubPDVFacade --> ISubSincronizacao : usa
+SubRelatoriosFacade --> IConsultaSincronizacao : consulta dados sincronizados
+
+ISubSincronizacao <|.. SubSincronizacaoFacade
+IConsultaSincronizacao <|.. ConsultaSincronizacaoService
+
+SubSincronizacaoFacade --> SincronizacaoTransporte : envia para central
+SubSincronizacaoFacade --> ISubRelatorios : inclui dashboard
+SubSincronizacaoFacade ..> ServidorCentralSincronizacaoService : rececao central
+
+ConsultaSincronizacaoService ..> SincronizacaoPayload : interpreta payload persistido
+ConsultaSincronizacaoService ..> DadosRelatorioSincronizado : devolve leitura
+
+ServidorCentralSincronizacaoService ..> SincronizacaoPayload
+ServidorCentralSincronizacaoService ..> ResultadoTransmissao
+
+note right of SincronizacaoTransporte
+Contrato usado pela logica de negocio.
+A implementacao REST pertence a infraestrutura
+e por isso nao e detalhada neste diagrama.
+end note
+
+note bottom of SincronizacaoPayload
+Detalhes como RegistoSincronizacao,
+VendaRelatorioSync e Conflito foram omitidos
+para manter o diagrama ao nivel da logica
+de negocio do subsistema.
+end note
+
+@enduml

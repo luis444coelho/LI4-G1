@@ -1,23 +1,19 @@
 package pt.miniFormiga.subsistemas.relatorios;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.miniFormiga.domain.AlertaStock;
-import pt.miniFormiga.domain.EstadoSincronizacaoCodigo;
 import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Produto;
-import pt.miniFormiga.domain.Sincronizacao;
 import pt.miniFormiga.domain.Venda;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
-import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoPayload;
-import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.VendaRelatorioSync;
+import pt.miniFormiga.subsistemas.sincronizacao.IConsultaSincronizacao;
+import pt.miniFormiga.subsistemas.sincronizacao.IConsultaSincronizacao.DadosRelatorioSincronizado;
+import pt.miniFormiga.subsistemas.sincronizacao.IConsultaSincronizacao.VendaRelatorioSincronizada;
 import pt.miniFormiga.subsistemas.stock.StockItem;
 import pt.miniFormiga.subsistemas.stock.StockStore;
 
@@ -53,21 +49,18 @@ public class SubRelatoriosFacade implements ISubRelatorios {
     private final AlertaStockRepository alertaStockRepository;
     private final LojaRepository lojaRepository;
     private final StockStore stockStore;
-    private final SincronizacaoRepository sincronizacaoRepository;
-    private final ObjectMapper objectMapper;
+    private final IConsultaSincronizacao consultaSincronizacao;
 
     public SubRelatoriosFacade(VendaRepository vendaRepository,
                             AlertaStockRepository alertaStockRepository,
                             LojaRepository lojaRepository,
                             StockStore stockStore,
-                            SincronizacaoRepository sincronizacaoRepository,
-                            ObjectMapper objectMapper) {
+                            IConsultaSincronizacao consultaSincronizacao) {
         this.vendaRepository = vendaRepository;
         this.alertaStockRepository = alertaStockRepository;
         this.lojaRepository = lojaRepository;
         this.stockStore = stockStore;
-        this.sincronizacaoRepository = sincronizacaoRepository;
-        this.objectMapper = objectMapper;
+        this.consultaSincronizacao = consultaSincronizacao;
     }
 
     @Override
@@ -99,12 +92,12 @@ public class SubRelatoriosFacade implements ISubRelatorios {
     }
 
     private DashboardResponse dashboardSincronizado(RelatorioFiltro filtro) {
-        List<SincronizacaoPayload> payloads = payloadsSincronizados(filtro);
-        if (payloads.isEmpty()) {
+        List<DadosRelatorioSincronizado> dados = dadosRelatorioSincronizados(filtro);
+        if (dados.isEmpty()) {
             return null;
         }
 
-        List<VendaRelatorioSync> linhasSync = filtrarVendasSincronizadas(payloads, filtro);
+        List<VendaRelatorioSincronizada> linhasSync = filtrarVendasSincronizadas(dados, filtro);
         if (!linhasSync.isEmpty()) {
             ResumoSync resumo = resumirSync(linhasSync);
             List<VendasPorLojaResponse> vendasPorLoja = vendasPorLojaSync(linhasSync);
@@ -115,7 +108,7 @@ public class SubRelatoriosFacade implements ISubRelatorios {
                     dinheiro(resumo.margem),
                     resumo.numeroVendas(),
                     vendasPorLoja.size(),
-                    totalLojasSincronizadas(filtro, payloads),
+                    totalLojasSincronizadas(filtro, dados),
                     alertasAtivos(filtro).size(),
                     media(resumo.comIva, resumo.numeroVendas()),
                     vendasPorLoja
@@ -126,8 +119,8 @@ public class SubRelatoriosFacade implements ISubRelatorios {
             return null;
         }
 
-        List<DashboardResponse> dashboards = payloads.stream()
-                .map(SincronizacaoPayload::dashboard)
+        List<DashboardResponse> dashboards = dados.stream()
+                .map(DadosRelatorioSincronizado::dashboard)
                 .filter(dashboard -> dashboard != null && periodoCompativel(filtro, dashboard.periodo()))
                 .toList();
         if (dashboards.isEmpty()) {
@@ -149,35 +142,24 @@ public class SubRelatoriosFacade implements ISubRelatorios {
                 dinheiro(margem),
                 numeroVendas,
                 vendasPorLoja.size(),
-                totalLojasSincronizadas(filtro, payloads),
+                totalLojasSincronizadas(filtro, dados),
                 alertasAtivos(filtro).size(),
                 media(totalVendas, numeroVendas),
                 vendasPorLoja
         );
     }
 
-    private long totalLojasSincronizadas(RelatorioFiltro filtro, List<SincronizacaoPayload> payloads) {
+    private long totalLojasSincronizadas(RelatorioFiltro filtro, List<DadosRelatorioSincronizado> dados) {
         if (filtro.lojaId() != null) {
             return 1;
         }
         long totalLojas = lojaRepository.findAll().size();
-        long lojasPayload = payloads.stream()
-                .map(SincronizacaoPayload::lojaId)
+        long lojasPayload = dados.stream()
+                .map(DadosRelatorioSincronizado::lojaId)
                 .filter(id -> id != null)
                 .distinct()
                 .count();
         return lojasPayload > 0 ? lojasPayload : totalLojas;
-    }
-
-    private SincronizacaoPayload payload(Sincronizacao sincronizacao) {
-        if (sincronizacao.getPayloadJson() == null || sincronizacao.getPayloadJson().isBlank()) {
-            return null;
-        }
-        try {
-            return objectMapper.readValue(sincronizacao.getPayloadJson(), SincronizacaoPayload.class);
-        } catch (JsonProcessingException e) {
-            return null;
-        }
     }
 
     @Override
@@ -266,7 +248,7 @@ public class SubRelatoriosFacade implements ISubRelatorios {
     }
 
     private RelatorioVendasResponse relatorioVendasSincronizado(RelatorioFiltro filtro) {
-        List<VendaRelatorioSync> linhasSync = vendasSincronizadas(filtro);
+        List<VendaRelatorioSincronizada> linhasSync = vendasSincronizadas(filtro);
         if (!linhasSync.isEmpty()) {
             List<LinhaVendaRelatorioResponse> linhas = linhasSync.stream()
                     .map(this::linhaResponse)
@@ -313,7 +295,7 @@ public class SubRelatoriosFacade implements ISubRelatorios {
     }
 
     private RelatorioRentabilidadeResponse relatorioRentabilidadeSincronizado(RelatorioFiltro filtro) {
-        List<VendaRelatorioSync> linhasSync = vendasSincronizadas(filtro);
+        List<VendaRelatorioSincronizada> linhasSync = vendasSincronizadas(filtro);
         if (!linhasSync.isEmpty()) {
             ResumoSync resumo = resumirSync(linhasSync);
             return new RelatorioRentabilidadeResponse(
@@ -371,44 +353,17 @@ public class SubRelatoriosFacade implements ISubRelatorios {
                 && !periodoSincronizado.inicio().isAfter(filtro.fim());
     }
 
-    private List<VendaRelatorioSync> vendasSincronizadas(RelatorioFiltro filtro) {
-        return filtrarVendasSincronizadas(payloadsSincronizados(filtro), filtro);
+    private List<VendaRelatorioSincronizada> vendasSincronizadas(RelatorioFiltro filtro) {
+        return filtrarVendasSincronizadas(dadosRelatorioSincronizados(filtro), filtro);
     }
 
-    private List<SincronizacaoPayload> payloadsSincronizados(RelatorioFiltro filtro) {
-        List<EstadoSincronizacaoCodigo> estados = List.of(
-                EstadoSincronizacaoCodigo.CONCLUIDA,
-                EstadoSincronizacaoCodigo.COM_CONFLITOS
-        );
-        if (filtro.lojaId() != null) {
-            return sincronizacaoRepository.findFirstByLojaIdAndEstadoInOrderByDataHoraFimDesc(filtro.lojaId(), estados)
-                    .map(this::payload)
-                    .stream()
-                    .filter(payload -> payload != null)
-                    .toList();
-        }
-        Set<UUID> lojasIncluidas = new LinkedHashSet<>();
-        List<SincronizacaoPayload> payloads = new ArrayList<>();
-        List<Sincronizacao> sincronizacoes = sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(estados);
-        if (sincronizacoes == null) {
-            return List.of();
-        }
-        for (Sincronizacao sincronizacao : sincronizacoes) {
-            SincronizacaoPayload payload = payload(sincronizacao);
-            UUID lojaId = payload != null ? payload.lojaId() : sincronizacao.getLoja() == null ? null : sincronizacao.getLoja().getId();
-            if (lojaId == null || !lojasIncluidas.add(lojaId)) {
-                continue;
-            }
-            if (payload != null) {
-                payloads.add(payload);
-            }
-        }
-        return payloads;
+    private List<DadosRelatorioSincronizado> dadosRelatorioSincronizados(RelatorioFiltro filtro) {
+        return consultaSincronizacao.dadosRelatorio(filtro.lojaId());
     }
 
-    private List<VendaRelatorioSync> filtrarVendasSincronizadas(List<SincronizacaoPayload> payloads, RelatorioFiltro filtro) {
-        return payloads.stream()
-                .flatMap(payload -> (payload.vendasRelatorio() == null ? List.<VendaRelatorioSync>of() : payload.vendasRelatorio()).stream())
+    private List<VendaRelatorioSincronizada> filtrarVendasSincronizadas(List<DadosRelatorioSincronizado> dados, RelatorioFiltro filtro) {
+        return dados.stream()
+                .flatMap(item -> (item.vendasRelatorio() == null ? List.<VendaRelatorioSincronizada>of() : item.vendasRelatorio()).stream())
                 .filter(linha -> linha != null
                         && !linha.dataHora().toLocalDate().isBefore(filtro.inicio())
                         && !linha.dataHora().toLocalDate().isAfter(filtro.fim())
@@ -416,7 +371,7 @@ public class SubRelatoriosFacade implements ISubRelatorios {
                         && (filtro.categoriaId() == null || filtro.categoriaId().equals(linha.categoriaId()))
                         && (filtro.produtoId() == null || filtro.produtoId().equals(linha.produtoId()))
                         && pertenceTurno(linha.dataHora(), filtro.turno()))
-                .sorted(Comparator.comparing(VendaRelatorioSync::dataHora).thenComparing(VendaRelatorioSync::produto))
+                .sorted(Comparator.comparing(VendaRelatorioSincronizada::dataHora).thenComparing(VendaRelatorioSincronizada::produto))
                 .toList();
     }
 
@@ -574,7 +529,7 @@ public class SubRelatoriosFacade implements ISubRelatorios {
         return resumo;
     }
 
-    private ResumoSync resumirSync(List<VendaRelatorioSync> linhas) {
+    private ResumoSync resumirSync(List<VendaRelatorioSincronizada> linhas) {
         ResumoSync resumo = new ResumoSync();
         linhas.forEach(resumo::adicionar);
         return resumo;
@@ -622,10 +577,10 @@ public class SubRelatoriosFacade implements ISubRelatorios {
                 .toList();
     }
 
-    private List<VendasPorLojaResponse> vendasPorLojaSync(List<VendaRelatorioSync> linhas) {
+    private List<VendasPorLojaResponse> vendasPorLojaSync(List<VendaRelatorioSincronizada> linhas) {
         Map<UUID, ResumoSync> porLoja = new LinkedHashMap<>();
         Map<UUID, String> nomes = new LinkedHashMap<>();
-        for (VendaRelatorioSync linha : linhas) {
+        for (VendaRelatorioSincronizada linha : linhas) {
             porLoja.computeIfAbsent(linha.lojaId(), id -> new ResumoSync()).adicionar(linha);
             nomes.putIfAbsent(linha.lojaId(), linha.loja());
         }
@@ -644,9 +599,9 @@ public class SubRelatoriosFacade implements ISubRelatorios {
                 .toList();
     }
 
-    private List<VendasPorDiaResponse> vendasPorDiaSync(List<VendaRelatorioSync> linhas) {
+    private List<VendasPorDiaResponse> vendasPorDiaSync(List<VendaRelatorioSincronizada> linhas) {
         Map<LocalDate, ResumoSync> porDia = new LinkedHashMap<>();
-        for (VendaRelatorioSync linha : linhas) {
+        for (VendaRelatorioSincronizada linha : linhas) {
             porDia.computeIfAbsent(linha.dataHora().toLocalDate(), data -> new ResumoSync()).adicionar(linha);
         }
         return porDia.entrySet().stream()
@@ -680,7 +635,7 @@ public class SubRelatoriosFacade implements ISubRelatorios {
         );
     }
 
-    private LinhaVendaRelatorioResponse linhaResponse(VendaRelatorioSync linha) {
+    private LinhaVendaRelatorioResponse linhaResponse(VendaRelatorioSincronizada linha) {
         return new LinhaVendaRelatorioResponse(
                 linha.vendaId(),
                 linha.dataHora(),
@@ -765,16 +720,16 @@ public class SubRelatoriosFacade implements ISubRelatorios {
                 .toList();
     }
 
-    private List<RentabilidadeProdutoResponse> rentabilidadePorProdutoSync(List<VendaRelatorioSync> linhas) {
+    private List<RentabilidadeProdutoResponse> rentabilidadePorProdutoSync(List<VendaRelatorioSincronizada> linhas) {
         Map<UUID, ResumoSync> porProduto = new LinkedHashMap<>();
-        Map<UUID, VendaRelatorioSync> produtos = new LinkedHashMap<>();
-        for (VendaRelatorioSync linha : linhas) {
+        Map<UUID, VendaRelatorioSincronizada> produtos = new LinkedHashMap<>();
+        for (VendaRelatorioSincronizada linha : linhas) {
             porProduto.computeIfAbsent(linha.produtoId(), id -> new ResumoSync()).adicionar(linha);
             produtos.putIfAbsent(linha.produtoId(), linha);
         }
         return porProduto.entrySet().stream()
                 .map(entry -> {
-                    VendaRelatorioSync produto = produtos.get(entry.getKey());
+                    VendaRelatorioSincronizada produto = produtos.get(entry.getKey());
                     ResumoSync resumo = entry.getValue();
                     return new RentabilidadeProdutoResponse(
                             entry.getKey(),
@@ -791,9 +746,9 @@ public class SubRelatoriosFacade implements ISubRelatorios {
                 .toList();
     }
 
-    private List<RentabilidadeCategoriaResponse> rentabilidadePorCategoriaSync(List<VendaRelatorioSync> linhas) {
+    private List<RentabilidadeCategoriaResponse> rentabilidadePorCategoriaSync(List<VendaRelatorioSincronizada> linhas) {
         Map<String, ResumoSync> porCategoria = new LinkedHashMap<>();
-        for (VendaRelatorioSync linha : linhas) {
+        for (VendaRelatorioSincronizada linha : linhas) {
             porCategoria.computeIfAbsent(linha.categoria(), categoria -> new ResumoSync()).adicionar(linha);
         }
         return porCategoria.entrySet().stream()
@@ -1299,7 +1254,7 @@ public class SubRelatoriosFacade implements ISubRelatorios {
         private int quantidade;
         private final Set<UUID> vendas = new LinkedHashSet<>();
 
-        private void adicionar(VendaRelatorioSync linha) {
+        private void adicionar(VendaRelatorioSincronizada linha) {
             semIva = semIva.add(linha.valorSemIva());
             iva = iva.add(linha.iva());
             comIva = comIva.add(linha.valorComIva());

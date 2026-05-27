@@ -1,12 +1,10 @@
 package pt.miniFormiga.subsistemas.relatorios;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import pt.miniFormiga.domain.AlertaStock;
 import pt.miniFormiga.domain.Categoria;
-import pt.miniFormiga.domain.EstadoSincronizacaoCodigo;
 import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MeioPagamento;
@@ -14,26 +12,24 @@ import pt.miniFormiga.domain.NivelMinimo;
 import pt.miniFormiga.domain.Perfil;
 import pt.miniFormiga.domain.Produto;
 import pt.miniFormiga.domain.Stock;
-import pt.miniFormiga.domain.Sincronizacao;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.repository.AlertaStockRepository;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
+import pt.miniFormiga.subsistemas.sincronizacao.IConsultaSincronizacao;
+import pt.miniFormiga.subsistemas.sincronizacao.IConsultaSincronizacao.DadosRelatorioSincronizado;
+import pt.miniFormiga.subsistemas.sincronizacao.IConsultaSincronizacao.VendaRelatorioSincronizada;
 import pt.miniFormiga.subsistemas.stock.StockStore;
 import pt.miniFormiga.subsistemas.stock.StockItem;
-import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.SincronizacaoPayload;
-import pt.miniFormiga.subsistemas.sincronizacao.SincronizacaoDtos.VendaRelatorioSync;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,7 +50,7 @@ class SubRelatoriosFacadeTest {
     private AlertaStockRepository alertaStockRepository;
     private LojaRepository lojaRepository;
     private StockStore stockStore;
-    private SincronizacaoRepository sincronizacaoRepository;
+    private IConsultaSincronizacao consultaSincronizacao;
     private SubRelatoriosFacade facade;
 
     private Loja loja;
@@ -67,14 +63,13 @@ class SubRelatoriosFacadeTest {
         alertaStockRepository = mock(AlertaStockRepository.class);
         lojaRepository = mock(LojaRepository.class);
         stockStore = mock(StockStore.class);
-        sincronizacaoRepository = mock(SincronizacaoRepository.class);
+        consultaSincronizacao = mock(IConsultaSincronizacao.class);
         facade = new SubRelatoriosFacade(
                 vendaRepository,
                 alertaStockRepository,
                 lojaRepository,
                 stockStore,
-                sincronizacaoRepository,
-                new ObjectMapper().findAndRegisterModules()
+                consultaSincronizacao
         );
 
         loja = new Loja("Loja Braga", "Rua Central", "123456789");
@@ -236,7 +231,7 @@ class SubRelatoriosFacadeTest {
 
     @Test
     void relatoriosCentraisUsamLinhasSincronizadasComIvaECusto() throws Exception {
-        VendaRelatorioSync linha = new VendaRelatorioSync(
+        VendaRelatorioSincronizada linha = new VendaRelatorioSincronizada(
                 UUID.randomUUID(),
                 LocalDateTime.of(2026, 5, 10, 12, 0),
                 loja.getId(),
@@ -252,25 +247,14 @@ class SubRelatoriosFacadeTest {
                 new BigDecimal("1.50"),
                 new BigDecimal("2.50")
         );
-        SincronizacaoPayload payload = new SincronizacaoPayload(
+        DadosRelatorioSincronizado dados = new DadosRelatorioSincronizado(
                 loja.getId(),
-                LocalDateTime.of(2026, 5, 10, 13, 0),
                 null,
-                Map.of(),
-                null,
-                List.of(linha),
-                List.of()
+                List.of(linha)
         );
-        Sincronizacao sync = new Sincronizacao(loja, EstadoSincronizacaoCodigo.CONCLUIDA);
-        sync.concluir(EstadoSincronizacaoCodigo.CONCLUIDA,
-                new ObjectMapper().findAndRegisterModules().writeValueAsString(payload),
-                1,
-                "[]",
-                0);
         when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
                 .thenReturn(List.of());
-        when(sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(any()))
-                .thenReturn(List.of(sync));
+        when(consultaSincronizacao.dadosRelatorio(null)).thenReturn(List.of(dados));
 
         RelatorioVendasResponse vendas = facade.relatorioVendas(
                 new RelatorioFiltro(null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), null));
@@ -293,16 +277,15 @@ class SubRelatoriosFacadeTest {
     void dashboardCentralAgregaUltimaSincronizacaoDeCadaLoja() throws Exception {
         Loja lojaPorto = new Loja(UUID.randomUUID(), "Loja Porto", "Rua Porto", "223456789", "222000000");
         Loja lojaTecnicaAntiga = new Loja(UUID.randomUUID(), "Loja Tecnica", "Rua Sync", "923456789", "900000000");
-        VendaRelatorioSync linhaBraga = vendaSync(loja.getId(), loja.getNome(), new BigDecimal("4.92"));
-        VendaRelatorioSync linhaPorto = vendaSync(lojaPorto.getId(), lojaPorto.getNome(), new BigDecimal("2.46"));
-
-        Sincronizacao syncPorto = syncComPayload(lojaPorto, linhaPorto, LocalDateTime.of(2026, 5, 10, 15, 0));
-        Sincronizacao syncBraga = syncComPayload(loja, linhaBraga, LocalDateTime.of(2026, 5, 10, 14, 0));
+        VendaRelatorioSincronizada linhaBraga = vendaSync(loja.getId(), loja.getNome(), new BigDecimal("4.92"));
+        VendaRelatorioSincronizada linhaPorto = vendaSync(lojaPorto.getId(), lojaPorto.getNome(), new BigDecimal("2.46"));
 
         when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
                 .thenReturn(List.of());
-        when(sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(any()))
-                .thenReturn(List.of(syncPorto, syncBraga));
+        when(consultaSincronizacao.dadosRelatorio(null)).thenReturn(List.of(
+                new DadosRelatorioSincronizado(lojaPorto.getId(), null, List.of(linhaPorto)),
+                new DadosRelatorioSincronizado(loja.getId(), null, List.of(linhaBraga))
+        ));
         when(lojaRepository.findAll()).thenReturn(List.of(loja, lojaPorto, lojaTecnicaAntiga));
         when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()).thenReturn(List.of());
 
@@ -539,25 +522,14 @@ class SubRelatoriosFacadeTest {
                 new BigDecimal("4.10"),
                 List.of(new VendasPorLojaResponse(loja.getId(), loja.getNome(), new BigDecimal("12.30"), new BigDecimal("2.30"), new BigDecimal("6.00"), 3))
         );
-        SincronizacaoPayload payload = new SincronizacaoPayload(
+        DadosRelatorioSincronizado dados = new DadosRelatorioSincronizado(
                 loja.getId(),
-                LocalDateTime.of(2026, 5, 31, 23, 0),
-                null,
-                Map.of(),
                 dashboard,
-                List.of(),
                 List.of()
         );
-        Sincronizacao sync = new Sincronizacao(loja, EstadoSincronizacaoCodigo.CONCLUIDA);
-        sync.concluir(EstadoSincronizacaoCodigo.CONCLUIDA,
-                new ObjectMapper().findAndRegisterModules().writeValueAsString(payload),
-                1,
-                "[]",
-                0);
         when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
                 .thenReturn(List.of());
-        when(sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(any()))
-                .thenReturn(List.of(sync));
+        when(consultaSincronizacao.dadosRelatorio(null)).thenReturn(List.of(dados));
         when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()).thenReturn(List.of());
 
         DashboardResponse dashboardResponse = facade.obterDashboard(
@@ -578,15 +550,10 @@ class SubRelatoriosFacadeTest {
     }
 
     @Test
-    void sincronizacoesInvalidasOuDuplicadasSaoIgnoradasNoDashboardCentral() throws Exception {
-        Sincronizacao invalida = new Sincronizacao(loja, EstadoSincronizacaoCodigo.CONCLUIDA);
-        invalida.concluir(EstadoSincronizacaoCodigo.CONCLUIDA, "{json", 1, "[]", 0);
-        Sincronizacao semPayload = new Sincronizacao(new Loja("Loja Porto", "Rua Porto", "223456789"), EstadoSincronizacaoCodigo.CONCLUIDA);
-        semPayload.concluir(EstadoSincronizacaoCodigo.CONCLUIDA, "", 0, "[]", 0);
+    void semDadosSincronizadosDashboardCentralFicaVazio() {
         when(vendaRepository.findByAnuladaFalseAndMeioPagamentoIsNotNullAndDataHoraBetween(any(), any()))
                 .thenReturn(List.of());
-        when(sincronizacaoRepository.findByEstadoInOrderByDataHoraFimDesc(any()))
-                .thenReturn(List.of(invalida, semPayload));
+        when(consultaSincronizacao.dadosRelatorio(null)).thenReturn(List.of());
         when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc()).thenReturn(List.of());
         when(lojaRepository.findAll()).thenReturn(List.of(loja));
 
@@ -617,11 +584,11 @@ class SubRelatoriosFacadeTest {
         return new AlertaStock(stock, 5);
     }
 
-    private VendaRelatorioSync vendaSync(UUID lojaId, String lojaNome, BigDecimal valorComIva) {
+    private VendaRelatorioSincronizada vendaSync(UUID lojaId, String lojaNome, BigDecimal valorComIva) {
         BigDecimal valorSemIva = valorComIva.divide(new BigDecimal("1.23"), 2, java.math.RoundingMode.HALF_UP);
         BigDecimal iva = valorComIva.subtract(valorSemIva);
         BigDecimal custo = new BigDecimal("0.75");
-        return new VendaRelatorioSync(
+        return new VendaRelatorioSincronizada(
                 UUID.randomUUID(),
                 LocalDateTime.of(2026, 5, 10, 12, 0),
                 lojaId,
@@ -639,22 +606,4 @@ class SubRelatoriosFacadeTest {
         );
     }
 
-    private Sincronizacao syncComPayload(Loja lojaSync, VendaRelatorioSync linha, LocalDateTime geradoEm) throws Exception {
-        SincronizacaoPayload payload = new SincronizacaoPayload(
-                lojaSync.getId(),
-                geradoEm,
-                null,
-                Map.of(),
-                null,
-                List.of(linha),
-                List.of()
-        );
-        Sincronizacao sync = new Sincronizacao(lojaSync, EstadoSincronizacaoCodigo.CONCLUIDA);
-        sync.concluir(EstadoSincronizacaoCodigo.CONCLUIDA,
-                new ObjectMapper().findAndRegisterModules().writeValueAsString(payload),
-                1,
-                "[]",
-                0);
-        return sync;
-    }
 }
