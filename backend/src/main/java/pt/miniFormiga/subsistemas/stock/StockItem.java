@@ -3,7 +3,7 @@ package pt.miniFormiga.subsistemas.stock;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.EntidadeBase;
 import pt.miniFormiga.domain.Produto;
-import pt.miniFormiga.domain.ProdutoLoja;
+import pt.miniFormiga.domain.StockProdutoLoja;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -16,7 +16,7 @@ public record StockItem(Produto produto,
                         String corredor,
                         String prateleira,
                         LocalDateTime atualizadoEm,
-                        ProdutoLoja produtoLoja) {
+                        StockProdutoLoja stockProdutoLoja) {
 
     public static StockItem local(Produto produto, UUID lojaId, String lojaNome) {
         return new StockItem(
@@ -32,18 +32,18 @@ public record StockItem(Produto produto,
         );
     }
 
-    public static StockItem global(ProdutoLoja produtoLoja) {
-        Loja loja = produtoLoja.getLoja();
+    public static StockItem global(StockProdutoLoja stockProdutoLoja) {
+        Loja loja = stockProdutoLoja.getLoja();
         return new StockItem(
-                produtoLoja.getProduto(),
+                stockProdutoLoja.getProduto(),
                 loja.getId(),
                 loja.getNome(),
-                produtoLoja.getQuantidadeStock(),
-                produtoLoja.getNivelMinimo(),
-                produtoLoja.getCorredor(),
-                produtoLoja.getPrateleira(),
-                produtoLoja.getStockUpdatedAt(),
-                produtoLoja
+                stockProdutoLoja.getQuantidadeStock(),
+                stockProdutoLoja.getNivelMinimo(),
+                stockProdutoLoja.getCorredor(),
+                stockProdutoLoja.getPrateleira(),
+                stockProdutoLoja.getStockUpdatedAt(),
+                stockProdutoLoja
         );
     }
 
@@ -56,6 +56,6 @@ public record StockItem(Produto produto,
     }
 
     public EntidadeBase entidadeStock() {
-        return produtoLoja == null ? produto : produtoLoja;
+        return stockProdutoLoja == null ? produto : stockProdutoLoja;
     }
 }

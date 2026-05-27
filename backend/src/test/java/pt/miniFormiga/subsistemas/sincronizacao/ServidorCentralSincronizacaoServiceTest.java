@@ -10,7 +10,7 @@ import pt.miniFormiga.repository.EntradaMercadoriaRepository;
 import pt.miniFormiga.repository.FaturaRepository;
 import pt.miniFormiga.repository.FechoCaixaRepository;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.ProdutoLojaRepository;
+import pt.miniFormiga.repository.StockProdutoLojaRepository;
 import pt.miniFormiga.repository.ProdutoRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
@@ -36,7 +36,7 @@ class ServidorCentralSincronizacaoServiceTest {
     private SincronizacaoRepository sincronizacaoRepository;
     private LojaRepository lojaRepository;
     private ProdutoRepository produtoRepository;
-    private ProdutoLojaRepository produtoLojaRepository;
+    private StockProdutoLojaRepository stockProdutoLojaRepository;
     private ServidorCentralSincronizacaoService service;
     private Loja loja;
 
@@ -47,7 +47,7 @@ class ServidorCentralSincronizacaoServiceTest {
         VendaRepository vendaRepository = mock(VendaRepository.class);
         FaturaRepository faturaRepository = mock(FaturaRepository.class);
         produtoRepository = mock(ProdutoRepository.class);
-        produtoLojaRepository = mock(ProdutoLojaRepository.class);
+        stockProdutoLojaRepository = mock(StockProdutoLojaRepository.class);
         AjusteInventarioRepository ajusteRepository = mock(AjusteInventarioRepository.class);
         FechoCaixaRepository fechoRepository = mock(FechoCaixaRepository.class);
         EntradaMercadoriaRepository entradaRepository = mock(EntradaMercadoriaRepository.class);
@@ -57,7 +57,7 @@ class ServidorCentralSincronizacaoServiceTest {
                 vendaRepository,
                 faturaRepository,
                 produtoRepository,
-                produtoLojaRepository,
+                stockProdutoLojaRepository,
                 ajusteRepository,
                 fechoRepository,
                 entradaRepository,
@@ -114,7 +114,7 @@ class ServidorCentralSincronizacaoServiceTest {
         when(stockCentral.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 5, 23, 12, 0));
         when(stockCentral.getVersion()).thenReturn(2L);
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
-        when(produtoLojaRepository.findById(stockId)).thenReturn(Optional.empty());
+        when(stockProdutoLojaRepository.findById(stockId)).thenReturn(Optional.empty());
         when(produtoRepository.findById(stockId)).thenReturn(Optional.of(stockCentral));
         SincronizacaoPayload payload = new SincronizacaoPayload(
                 loja.getId(),

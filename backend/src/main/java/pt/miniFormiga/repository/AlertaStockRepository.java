@@ -11,32 +11,32 @@ import java.util.UUID;
 
 public interface AlertaStockRepository extends JpaRepository<AlertaStock, UUID> {
     @Override
-    @EntityGraph(attributePaths = {"produto", "produtoLoja", "produtoLoja.produto", "loja"})
+    @EntityGraph(attributePaths = {"produto", "stockProdutoLoja", "stockProdutoLoja.produto", "loja"})
     Optional<AlertaStock> findById(UUID id);
 
     boolean existsByProdutoIdAndResolvidoFalse(UUID produtoId);
 
     boolean existsByProdutoIdAndResolvidoTrue(UUID produtoId);
 
-    boolean existsByProdutoLojaIdAndResolvidoFalse(UUID produtoLojaId);
+    boolean existsByStockProdutoLojaIdAndResolvidoFalse(UUID stockProdutoLojaId);
 
-    boolean existsByProdutoLojaIdAndResolvidoTrue(UUID produtoLojaId);
+    boolean existsByStockProdutoLojaIdAndResolvidoTrue(UUID stockProdutoLojaId);
 
-    @EntityGraph(attributePaths = {"produto", "produtoLoja", "produtoLoja.produto", "loja"})
+    @EntityGraph(attributePaths = {"produto", "stockProdutoLoja", "stockProdutoLoja.produto", "loja"})
     List<AlertaStock> findByResolvidoFalseOrderByDataHoraDesc();
 
-    @EntityGraph(attributePaths = {"produto", "produtoLoja", "produtoLoja.produto", "loja"})
+    @EntityGraph(attributePaths = {"produto", "stockProdutoLoja", "stockProdutoLoja.produto", "loja"})
     @Query("""
             select alerta
             from AlertaStock alerta
-            left join alerta.produtoLoja produtoLoja
+            left join alerta.stockProdutoLoja stockProdutoLoja
             left join alerta.loja loja
             where alerta.resolvido = false
               and (
                 loja.id = :lojaId
-                or produtoLoja.loja.id = :lojaId
+                or stockProdutoLoja.loja.id = :lojaId
                 or exists (
-                    select 1 from ProdutoLoja produtoDaLoja
+                    select 1 from StockProdutoLoja produtoDaLoja
                     where produtoDaLoja.produto = alerta.produto
                       and produtoDaLoja.loja.id = :lojaId
                 )

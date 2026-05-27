@@ -14,7 +14,7 @@ import java.util.Objects;
 @Entity
 @Table(name = "produtos_lojas",
         uniqueConstraints = @UniqueConstraint(name = "uk_produtos_lojas_produto_loja", columnNames = {"produto_id", "loja_id"}))
-public class ProdutoLoja extends EntidadeBase {
+public class StockProdutoLoja extends EntidadeBase {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "produto_id", nullable = false)
@@ -42,10 +42,10 @@ public class ProdutoLoja extends EntidadeBase {
     @Column(nullable = false)
     private LocalDateTime stockUpdatedAt = LocalDateTime.now();
 
-    protected ProdutoLoja() {
+    protected StockProdutoLoja() {
     }
 
-    public ProdutoLoja(Produto produto, Loja loja, int quantidadeStock, Integer nivelMinimo) {
+    public StockProdutoLoja(Produto produto, Loja loja, int quantidadeStock, Integer nivelMinimo) {
         this.produto = Objects.requireNonNull(produto, "Produto e obrigatorio");
         this.loja = Objects.requireNonNull(loja, "Loja e obrigatoria");
         definirStockInicial(quantidadeStock);

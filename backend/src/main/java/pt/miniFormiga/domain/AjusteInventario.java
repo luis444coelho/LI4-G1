@@ -8,7 +8,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 
 import java.time.LocalDateTime;
 
@@ -22,10 +21,7 @@ public class AjusteInventario extends EntidadeBase {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "produto_loja_id")
-    private ProdutoLoja produtoLoja;
-
-    @Transient
-    private Stock stockLegado;
+    private StockProdutoLoja stockProdutoLoja;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -47,15 +43,6 @@ public class AjusteInventario extends EntidadeBase {
     protected AjusteInventario() {
     }
 
-    public AjusteInventario(Stock stock,
-                            MotivoAjuste motivo,
-                            Utilizador responsavel,
-                            int quantidade,
-                            String observacoes) {
-        this(stock.getProduto(), MotivoAjusteCodigo.valueOf(motivo.getCodigo()), responsavel, quantidade, observacoes);
-        this.stockLegado = stock;
-    }
-
     public AjusteInventario(Produto produto,
                             MotivoAjusteCodigo motivo,
                             Utilizador responsavel,
@@ -69,25 +56,21 @@ public class AjusteInventario extends EntidadeBase {
         this.dataHora = LocalDateTime.now();
     }
 
-    public AjusteInventario(ProdutoLoja produtoLoja,
+    public AjusteInventario(StockProdutoLoja stockProdutoLoja,
                             MotivoAjusteCodigo motivo,
                             Utilizador responsavel,
                             int quantidade,
                             String observacoes) {
-        this(produtoLoja.getProduto(), motivo, responsavel, quantidade, observacoes);
-        this.produtoLoja = produtoLoja;
+        this(stockProdutoLoja.getProduto(), motivo, responsavel, quantidade, observacoes);
+        this.stockProdutoLoja = stockProdutoLoja;
     }
 
     public Produto getProduto() {
-        return produto == null && produtoLoja != null ? produtoLoja.getProduto() : produto;
+        return produto == null && stockProdutoLoja != null ? stockProdutoLoja.getProduto() : produto;
     }
 
-    public ProdutoLoja getProdutoLoja() {
-        return produtoLoja;
-    }
-
-    public Stock getStock() {
-        return stockLegado;
+    public StockProdutoLoja getStockProdutoLoja() {
+        return stockProdutoLoja;
     }
 
     public MotivoAjusteCodigo getMotivo() {

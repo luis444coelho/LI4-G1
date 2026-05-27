@@ -28,7 +28,7 @@ public class DadosIniciaisConfig {
                                     CategoriaRepository categoriaRepository,
                                     TaxaIVARepository taxaIVARepository,
                                     ProdutoRepository produtoRepository,
-                                    ProdutoLojaRepository produtoLojaRepository,
+                                    StockProdutoLojaRepository stockProdutoLojaRepository,
                                     FornecedorRepository fornecedorRepository,
                                     CondicaoComercialRepository condicaoComercialRepository,
                                     PasswordEncoder passwordEncoder) {
@@ -64,9 +64,9 @@ public class DadosIniciaisConfig {
             Produto sandes = criarProdutoSeNecessario(produtoRepository, "5600000000028", "Sandes Mista", "Sandes pronta", new BigDecimal("2.50"), new BigDecimal("1.20"), snacks, reduzida, 50);
             Produto champo = criarProdutoSeNecessario(produtoRepository, "5600000000035", "Champo 200ml", "Champo de higiene pessoal", new BigDecimal("3.50"), new BigDecimal("1.80"), higiene, normal, 50);
             Produto acucar = criarProdutoSeNecessario(produtoRepository, "5600000000042", "Acucar 1kg", "Acucar branco 1kg", new BigDecimal("1.80"), new BigDecimal("0.90"), mercearia, reduzida, 50);
-            criarProdutosBaseDaLoja(produtoLojaRepository, lojaBraga, agua, sandes, champo, acucar);
-            criarProdutosBaseDaLoja(produtoLojaRepository, lojaPorto, agua, sandes, champo, acucar);
-            criarProdutosBaseDaLoja(produtoLojaRepository, lojaLisboa, agua, sandes, champo, acucar);
+            criarProdutosBaseDaLoja(stockProdutoLojaRepository, lojaBraga, agua, sandes, champo, acucar);
+            criarProdutosBaseDaLoja(stockProdutoLojaRepository, lojaPorto, agua, sandes, champo, acucar);
+            criarProdutosBaseDaLoja(stockProdutoLojaRepository, lojaLisboa, agua, sandes, champo, acucar);
 
             Fornecedor fornecedor = criarFornecedorSeNecessario(fornecedorRepository);
             criarCondicaoSeNecessaria(condicaoComercialRepository, fornecedor, agua);
@@ -165,29 +165,29 @@ public class DadosIniciaisConfig {
         )));
     }
 
-    private void criarProdutoLojaSeNecessario(ProdutoLojaRepository repository,
+    private void criarStockProdutoLojaSeNecessario(StockProdutoLojaRepository repository,
                                               Produto produto,
                                               Loja loja,
                                               int quantidade,
                                               int nivelMinimo) {
-        ProdutoLoja produtoLoja = repository.findByProdutoIdAndLojaId(produto.getId(), loja.getId())
-                .orElseGet(() -> repository.save(new ProdutoLoja(produto, loja, quantidade, nivelMinimo)));
-        produtoLoja.definirNivelMinimo(nivelMinimo);
-        if ("5600000000011".equals(produto.getCodigo()) && produtoLoja.getQuantidadeStock() >= nivelMinimo) {
-            produtoLoja.definirStockInicial(quantidade);
+        StockProdutoLoja stockProdutoLoja = repository.findByProdutoIdAndLojaId(produto.getId(), loja.getId())
+                .orElseGet(() -> repository.save(new StockProdutoLoja(produto, loja, quantidade, nivelMinimo)));
+        stockProdutoLoja.definirNivelMinimo(nivelMinimo);
+        if ("5600000000011".equals(produto.getCodigo()) && stockProdutoLoja.getQuantidadeStock() >= nivelMinimo) {
+            stockProdutoLoja.definirStockInicial(quantidade);
         }
     }
 
-    private void criarProdutosBaseDaLoja(ProdutoLojaRepository repository,
+    private void criarProdutosBaseDaLoja(StockProdutoLojaRepository repository,
                                          Loja loja,
                                          Produto agua,
                                          Produto sandes,
                                          Produto champo,
                                          Produto acucar) {
-        criarProdutoLojaSeNecessario(repository, agua, loja, 5, 10);
-        criarProdutoLojaSeNecessario(repository, sandes, loja, 50, 10);
-        criarProdutoLojaSeNecessario(repository, champo, loja, 50, 10);
-        criarProdutoLojaSeNecessario(repository, acucar, loja, 50, 10);
+        criarStockProdutoLojaSeNecessario(repository, agua, loja, 5, 10);
+        criarStockProdutoLojaSeNecessario(repository, sandes, loja, 50, 10);
+        criarStockProdutoLojaSeNecessario(repository, champo, loja, 50, 10);
+        criarStockProdutoLojaSeNecessario(repository, acucar, loja, 50, 10);
     }
 
     private void criarCondicaoSeNecessaria(CondicaoComercialRepository repository, Fornecedor fornecedor, Produto produto) {

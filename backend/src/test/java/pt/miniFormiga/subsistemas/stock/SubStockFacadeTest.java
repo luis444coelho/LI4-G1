@@ -9,11 +9,8 @@ import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.InventarioFisico;
 import pt.miniFormiga.domain.LinhaInventario;
 import pt.miniFormiga.domain.Loja;
-import pt.miniFormiga.domain.MotivoAjuste;
-import pt.miniFormiga.domain.NivelMinimo;
 import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
-import pt.miniFormiga.domain.Stock;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.domain.Utilizador;
@@ -81,7 +78,7 @@ class SubStockFacadeTest {
 
     @Test
     void atualizarStockComDeltaNegativoSuficienteAtualizaQuantidade() {
-        Stock stock = stock(10);
+        StockFixture stock = stock(10);
         whenStock(stock);
         when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(stock.getProduto().getId())).thenReturn(false);
 
@@ -93,7 +90,7 @@ class SubStockFacadeTest {
 
     @Test
     void atualizarStockComDeltaNegativoInsuficienteFalhaComValoresCorretos() {
-        Stock stock = stock(2);
+        StockFixture stock = stock(2);
         whenStock(stock);
 
         StockInsuficienteException exception = assertThrows(StockInsuficienteException.class,
@@ -106,7 +103,7 @@ class SubStockFacadeTest {
 
     @Test
     void atualizarStockComDeltaPositivoIncrementaQuantidade() {
-        Stock stock = stock(2);
+        StockFixture stock = stock(2);
         whenStock(stock);
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), 5);
@@ -116,8 +113,8 @@ class SubStockFacadeTest {
 
     @Test
     void atualizarStockAbaixoDoNivelMinimoCriaAlerta() {
-        Stock stock = stock(12);
-        new NivelMinimo(stock, 10);
+        StockFixture stock = stock(12);
+        stock.definirNivelMinimo(10);
         whenStock(stock);
         when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(stock.getProduto().getId())).thenReturn(false);
         when(alertaStockRepository.save(any(AlertaStock.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -130,7 +127,7 @@ class SubStockFacadeTest {
 
     @Test
     void atualizarStockSemNivelMinimoNaoCriaAlerta() {
-        Stock stock = stock(12);
+        StockFixture stock = stock(12);
         whenStock(stock);
 
         facade.atualizarStock(stock.getProduto().getId(), stock.getLoja().getId(), -10);
@@ -141,7 +138,7 @@ class SubStockFacadeTest {
 
     @Test
     void definirNivelMinimoComStockJaAbaixoEmiteAlertaImediatamente() {
-        Stock stock = stock(5);
+        StockFixture stock = stock(5);
         whenStock(stock);
         when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(stock.getProduto().getId())).thenReturn(false);
 
@@ -153,7 +150,7 @@ class SubStockFacadeTest {
 
     @Test
     void definirNivelMinimoAbaixoDoStockNaoCriaAlerta() {
-        Stock stock = stock(12);
+        StockFixture stock = stock(12);
         whenStock(stock);
         facade.definirNivelMinimo(stock.getProduto().getId(), stock.getLoja().getId(), 10);
 
@@ -163,8 +160,8 @@ class SubStockFacadeTest {
 
     @Test
     void alertaAtivoExistenteImpedeDuplicacao() {
-        Stock stock = stock(5);
-        new NivelMinimo(stock, 10);
+        StockFixture stock = stock(5);
+        stock.definirNivelMinimo(10);
         whenStock(stock);
         when(alertaStockRepository.existsByProdutoIdAndResolvidoFalse(stock.getProduto().getId())).thenReturn(true);
 
@@ -175,8 +172,8 @@ class SubStockFacadeTest {
 
     @Test
     void alertaNovoFicaAssociadoAGestorEGerenteDaLoja() {
-        Stock stock = stock(5);
-        new NivelMinimo(stock, 10);
+        StockFixture stock = stock(5);
+        stock.definirNivelMinimo(10);
         Utilizador gestor = utilizador(stock.getLoja(), "GESTOR");
         Utilizador gerente = utilizador(stock.getLoja(), "GERENTE");
 
@@ -220,7 +217,7 @@ class SubStockFacadeTest {
 
     @Test
     void registarContagemLinhaCriaSnapshotECalculaDiscrepancia() {
-        Stock stock = stock(8);
+        StockFixture stock = stock(8);
         InventarioFisico inventario = new InventarioFisico(stock.getLoja(), utilizador(stock.getLoja()));
         Produto produto = stock.getProduto();
 
@@ -236,7 +233,7 @@ class SubStockFacadeTest {
 
     @Test
     void fecharInventarioPreencheDataFechoEAtualizaStockParaQuantidadeContada() {
-        Stock stock = stock(8);
+        StockFixture stock = stock(8);
         InventarioFisico inventario = new InventarioFisico(stock.getLoja(), utilizador(stock.getLoja()));
         new LinhaInventario(inventario, stock.getProduto(), 3, 8);
 
@@ -256,7 +253,7 @@ class SubStockFacadeTest {
 
     @Test
     void registarAjusteComMotivoQuebraAtualizaStockEAudita() {
-        Stock stock = stock(10);
+        StockFixture stock = stock(10);
         Utilizador utilizador = utilizador(stock.getLoja());
 
         whenStock(stock);
@@ -273,7 +270,7 @@ class SubStockFacadeTest {
 
     @Test
     void registarAjustePositivoAumentaStock() {
-        Stock stock = stock(10);
+        StockFixture stock = stock(10);
         Utilizador utilizador = utilizador(stock.getLoja());
 
         whenStock(stock);
@@ -289,7 +286,7 @@ class SubStockFacadeTest {
 
     @Test
     void registarAjusteNegativoNaoPermiteStockNegativo() {
-        Stock stock = stock(3);
+        StockFixture stock = stock(3);
         Utilizador utilizador = utilizador(stock.getLoja());
 
         whenStock(stock);
@@ -303,9 +300,9 @@ class SubStockFacadeTest {
     @Test
     void getAlertasAtivosRetornaApenasRepositorioOrdenado() {
         Loja loja = loja();
-        Stock stock = new Stock(produto(), loja, 5);
-        AlertaStock recente = new AlertaStock(stock, 5);
-        AlertaStock antigo = new AlertaStock(stock, 7);
+        StockFixture stock = new StockFixture(produto(), loja, 5);
+        AlertaStock recente = new AlertaStock(stock.getProduto(), stock.getLoja(), 5);
+        AlertaStock antigo = new AlertaStock(stock.getProduto(), stock.getLoja(), 7);
         when(alertaStockRepository.findAtivosByLojaId(loja.getId()))
                 .thenReturn(List.of(recente, antigo));
 
@@ -334,7 +331,8 @@ class SubStockFacadeTest {
 
     @Test
     void resolverAlertaFechaCicloDeVida() {
-        AlertaStock alerta = new AlertaStock(stock(4), 4);
+        StockFixture stock = stock(4);
+        AlertaStock alerta = new AlertaStock(stock.getProduto(), stock.getLoja(), 4);
         when(alertaStockRepository.findById(alerta.getId())).thenReturn(Optional.of(alerta));
         when(alertaStockRepository.save(alerta)).thenReturn(alerta);
 
@@ -349,8 +347,8 @@ class SubStockFacadeTest {
     void iniciarInventarioFisicoCriaLinhasParaTodoOStockDaLoja() {
         Loja loja = loja();
         Utilizador utilizador = utilizador(loja);
-        Stock agua = new Stock(produto("Agua"), loja, 8);
-        Stock pao = new Stock(produto("Pao"), loja, 4);
+        StockFixture agua = new StockFixture(produto("Agua"), loja, 8);
+        StockFixture pao = new StockFixture(produto("Pao"), loja, 4);
         agua.getProduto().definirStockInicial(8);
         pao.getProduto().definirStockInicial(4);
 
@@ -371,7 +369,7 @@ class SubStockFacadeTest {
 
     @Test
     void registarContagemLinhaAtualizaLinhaExistenteDoInventario() {
-        Stock stock = stock(8);
+        StockFixture stock = stock(8);
         InventarioFisico inventario = new InventarioFisico(stock.getLoja(), utilizador(stock.getLoja()));
         LinhaInventario linha = new LinhaInventario(inventario, stock.getProduto(), 0, 8);
 
@@ -387,17 +385,17 @@ class SubStockFacadeTest {
         assertEquals(-2, atualizada.getDiscrepancia());
     }
 
-    private void whenStock(Stock stock) {
+    private void whenStock(StockFixture stock) {
         stock.getProduto().definirStockInicial(stock.getQuantidade());
         if (stock.getNivelMinimo() != null) {
-            stock.getProduto().definirNivelMinimo(stock.getNivelMinimo().getQuantidade());
+            stock.getProduto().definirNivelMinimo(stock.getNivelMinimo());
         }
         when(produtoRepository.findById(stock.getProduto().getId())).thenReturn(Optional.of(stock.getProduto()));
         when(lojaRepository.findById(stock.getLoja().getId())).thenReturn(Optional.of(stock.getLoja()));
     }
 
-    private Stock stock(int quantidade) {
-        Stock stock = new Stock(produto(), loja(), quantidade);
+    private StockFixture stock(int quantidade) {
+        StockFixture stock = new StockFixture(produto(), loja(), quantidade);
         stock.getProduto().definirStockInicial(quantidade);
         return stock;
     }
@@ -422,5 +420,39 @@ class SubStockFacadeTest {
     private Utilizador utilizador(Loja loja, String perfil) {
         return new Utilizador("gerente.stock", "hash", "Gerente Stock",
                 PerfilUtilizador.valueOf(perfil), loja);
+    }
+
+    private static class StockFixture {
+        private final Produto produto;
+        private final Loja loja;
+        private final int quantidade;
+        private Integer nivelMinimo;
+
+        StockFixture(Produto produto, Loja loja, int quantidade) {
+            this.produto = produto;
+            this.loja = loja;
+            this.quantidade = quantidade;
+        }
+
+        void definirNivelMinimo(int nivelMinimo) {
+            this.nivelMinimo = nivelMinimo;
+            this.produto.definirNivelMinimo(nivelMinimo);
+        }
+
+        Produto getProduto() {
+            return produto;
+        }
+
+        Loja getLoja() {
+            return loja;
+        }
+
+        int getQuantidade() {
+            return quantidade;
+        }
+
+        Integer getNivelMinimo() {
+            return nivelMinimo;
+        }
     }
 }

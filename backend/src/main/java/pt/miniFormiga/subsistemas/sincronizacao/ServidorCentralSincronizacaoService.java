@@ -14,7 +14,7 @@ import pt.miniFormiga.repository.EntradaMercadoriaRepository;
 import pt.miniFormiga.repository.FaturaRepository;
 import pt.miniFormiga.repository.FechoCaixaRepository;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.ProdutoLojaRepository;
+import pt.miniFormiga.repository.StockProdutoLojaRepository;
 import pt.miniFormiga.repository.ProdutoRepository;
 import pt.miniFormiga.repository.SincronizacaoRepository;
 import pt.miniFormiga.repository.VendaRepository;
@@ -43,7 +43,7 @@ public class ServidorCentralSincronizacaoService {
     private final VendaRepository vendaRepository;
     private final FaturaRepository faturaRepository;
     private final ProdutoRepository produtoRepository;
-    private final ProdutoLojaRepository produtoLojaRepository;
+    private final StockProdutoLojaRepository stockProdutoLojaRepository;
     private final AjusteInventarioRepository ajusteRepository;
     private final FechoCaixaRepository fechoRepository;
     private final EntradaMercadoriaRepository entradaRepository;
@@ -54,7 +54,7 @@ public class ServidorCentralSincronizacaoService {
                                                VendaRepository vendaRepository,
                                                FaturaRepository faturaRepository,
                                                ProdutoRepository produtoRepository,
-                                               ProdutoLojaRepository produtoLojaRepository,
+                                               StockProdutoLojaRepository stockProdutoLojaRepository,
                                                AjusteInventarioRepository ajusteRepository,
                                                FechoCaixaRepository fechoRepository,
                                                EntradaMercadoriaRepository entradaRepository,
@@ -64,7 +64,7 @@ public class ServidorCentralSincronizacaoService {
         this.vendaRepository = vendaRepository;
         this.faturaRepository = faturaRepository;
         this.produtoRepository = produtoRepository;
-        this.produtoLojaRepository = produtoLojaRepository;
+        this.stockProdutoLojaRepository = stockProdutoLojaRepository;
         this.ajusteRepository = ajusteRepository;
         this.fechoRepository = fechoRepository;
         this.entradaRepository = entradaRepository;
@@ -123,8 +123,8 @@ public class ServidorCentralSincronizacaoService {
             case "VENDA" -> vendaRepository.findById(registo.id());
             case "FATURA" -> faturaRepository.findById(registo.id());
             case "STOCK" -> {
-                Optional<? extends EntidadeBase> produtoLoja = produtoLojaRepository.findById(registo.id());
-                yield produtoLoja.isPresent() ? produtoLoja : produtoRepository.findById(registo.id());
+                Optional<? extends EntidadeBase> stockProdutoLoja = stockProdutoLojaRepository.findById(registo.id());
+                yield stockProdutoLoja.isPresent() ? stockProdutoLoja : produtoRepository.findById(registo.id());
             }
             case "AJUSTE_STOCK" -> ajusteRepository.findById(registo.id());
             case "FECHO_CAIXA" -> fechoRepository.findById(registo.id());

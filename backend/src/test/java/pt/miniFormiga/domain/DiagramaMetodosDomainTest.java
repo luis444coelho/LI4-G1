@@ -47,17 +47,16 @@ class DiagramaMetodosDomainTest {
 
     @Test
     void stockDeveAtualizarQuantidadeEValidarNivelMinimo() {
-        Stock stock = new Stock(criarProduto(), criarLoja(), 10);
-        NivelMinimo nivelMinimo = new NivelMinimo(stock, 5);
+        StockProdutoLoja stock = new StockProdutoLoja(criarProduto(), criarLoja(), 10, 5);
 
-        assertEquals(nivelMinimo, stock.getNivelMinimo());
-        assertFalse(stock.estaAbaixoMinimo());
+        assertEquals(5, stock.getNivelMinimo());
+        assertFalse(stock.precisaReposicao());
 
-        stock.atualizarQuantidade(-6);
+        stock.atualizarStock(-6);
 
-        assertEquals(4, stock.getQuantidade());
-        assertTrue(stock.estaAbaixoMinimo());
-        assertThrows(IllegalArgumentException.class, () -> stock.atualizarQuantidade(-5));
+        assertEquals(4, stock.getQuantidadeStock());
+        assertTrue(stock.precisaReposicao());
+        assertThrows(IllegalArgumentException.class, () -> stock.atualizarStock(-5));
     }
 
     @Test
@@ -160,13 +159,11 @@ class DiagramaMetodosDomainTest {
     void deveCriarEntidadesDeApoioDoDiagrama() {
         Produto produto = criarProduto();
         Fornecedor fornecedor = criarFornecedor();
-        Stock stock = new Stock(produto, criarLoja(), 6);
-        MotivoAjuste motivo = new MotivoAjuste("QUEBRA", "Quebra");
+        StockProdutoLoja stock = new StockProdutoLoja(produto, criarLoja(), 6, 7);
         Utilizador utilizador = criarUtilizador();
-        NivelMinimo nivelMinimo = new NivelMinimo(stock, 7);
 
-        AjusteInventario ajuste = new AjusteInventario(stock, motivo, utilizador, -1, "produto danificado");
-        AlertaStock alerta = new AlertaStock(stock, stock.getQuantidade());
+        AjusteInventario ajuste = new AjusteInventario(stock, MotivoAjusteCodigo.QUEBRA, utilizador, -1, "produto danificado");
+        AlertaStock alerta = new AlertaStock(stock, stock.getQuantidadeStock());
         CondicaoComercial condicao = new CondicaoComercial(
                 fornecedor,
                 produto,
@@ -178,9 +175,9 @@ class DiagramaMetodosDomainTest {
         EstadoEncomendaCodigo estadoEncomenda = EstadoEncomendaCodigo.PENDENTE;
         MeioPagamentoTipo cartao = MeioPagamentoTipo.CARTAO;
 
-        assertEquals("QUEBRA", motivo.getCodigo());
+        assertEquals(MotivoAjusteCodigo.QUEBRA, ajuste.getMotivo());
         assertEquals(-1, ajuste.getQuantidade());
-        assertEquals(stock.getQuantidade(), alerta.getQuantidadeNoMomento());
+        assertEquals(stock.getQuantidadeStock(), alerta.getQuantidadeNoMomento());
         assertFalse(alerta.isLido());
         alerta.marcarComoLido();
         assertTrue(alerta.isLido());

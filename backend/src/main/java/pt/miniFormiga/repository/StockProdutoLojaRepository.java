@@ -2,21 +2,21 @@ package pt.miniFormiga.repository;
 
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import pt.miniFormiga.domain.ProdutoLoja;
+import pt.miniFormiga.domain.StockProdutoLoja;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ProdutoLojaRepository extends JpaRepository<ProdutoLoja, UUID> {
+public interface StockProdutoLojaRepository extends JpaRepository<StockProdutoLoja, UUID> {
 
     @EntityGraph(attributePaths = {"produto", "produto.categoria", "produto.taxaIVA", "loja"})
-    Optional<ProdutoLoja> findByProdutoIdAndLojaId(UUID produtoId, UUID lojaId);
+    Optional<StockProdutoLoja> findByProdutoIdAndLojaId(UUID produtoId, UUID lojaId);
 
     @EntityGraph(attributePaths = {"produto", "produto.categoria", "produto.taxaIVA", "loja"})
-    List<ProdutoLoja> findByLojaIdAndAtivoNaLojaTrue(UUID lojaId);
+    List<StockProdutoLoja> findByLojaIdAndAtivoNaLojaTrue(UUID lojaId);
 
     @Override
     @EntityGraph(attributePaths = {"produto", "produto.categoria", "produto.taxaIVA", "loja"})
-    List<ProdutoLoja> findAll();
+    List<StockProdutoLoja> findAll();
 }

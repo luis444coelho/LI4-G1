@@ -167,7 +167,7 @@ public class SubPDVFacade implements ISubPDV {
         MeioPagamentoTipo tipo = meioPagamento(meioPagamento);
         for (LinhaVenda linha : venda.getLinhas()) {
             if (!linha.isAnulada()) {
-                // A atualizacao do stock e feita dentro da mesma transacao e protegida por @Version no agregado Stock.
+                // A atualizacao do stock e feita na mesma transacao e protegida por @Version no agregado de stock.
                 stock.atualizarStock(linha.getProduto().getId(), venda.getLoja().getId(), -linha.getQuantidade());
             }
         }

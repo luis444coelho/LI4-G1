@@ -100,7 +100,7 @@ public final class StockDtos {
                     ajuste.getId(),
                     ajuste.getProduto().getId(),
                     ajuste.getProduto().getNome(),
-                    ajuste.getProdutoLoja() == null ? null : ajuste.getProdutoLoja().getLoja().getId(),
+                    ajuste.getStockProdutoLoja() == null ? null : ajuste.getStockProdutoLoja().getLoja().getId(),
                     ajuste.getQuantidade(),
                     ajuste.getMotivoAjuste().getCodigo(),
                     ajuste.getUtilizador().getId(),

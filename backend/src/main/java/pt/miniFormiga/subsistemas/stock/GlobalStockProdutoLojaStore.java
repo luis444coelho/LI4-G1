@@ -5,12 +5,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Produto;
-import pt.miniFormiga.domain.ProdutoLoja;
+import pt.miniFormiga.domain.StockProdutoLoja;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.exception.RecursoNaoEncontradoException;
 import pt.miniFormiga.exception.StockInsuficienteException;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.ProdutoLojaRepository;
+import pt.miniFormiga.repository.StockProdutoLojaRepository;
 import pt.miniFormiga.repository.ProdutoRepository;
 
 import java.util.List;
@@ -19,16 +19,16 @@ import java.util.UUID;
 @Service
 @Profile("global | central")
 @Transactional
-public class GlobalProdutoLojaStockStore implements StockStore {
+public class GlobalStockProdutoLojaStore implements StockStore {
 
-    private final ProdutoLojaRepository produtoLojaRepository;
+    private final StockProdutoLojaRepository stockProdutoLojaRepository;
     private final ProdutoRepository produtoRepository;
     private final LojaRepository lojaRepository;
 
-    public GlobalProdutoLojaStockStore(ProdutoLojaRepository produtoLojaRepository,
+    public GlobalStockProdutoLojaStore(StockProdutoLojaRepository stockProdutoLojaRepository,
                                        ProdutoRepository produtoRepository,
                                        LojaRepository lojaRepository) {
-        this.produtoLojaRepository = produtoLojaRepository;
+        this.stockProdutoLojaRepository = stockProdutoLojaRepository;
         this.produtoRepository = produtoRepository;
         this.lojaRepository = lojaRepository;
     }
@@ -36,62 +36,62 @@ public class GlobalProdutoLojaStockStore implements StockStore {
     @Override
     public List<StockItem> listar(UUID lojaId) {
         if (lojaId == null) {
-            return produtoLojaRepository.findAll().stream().map(StockItem::global).toList();
+            return stockProdutoLojaRepository.findAll().stream().map(StockItem::global).toList();
         }
-        return produtoLojaRepository.findByLojaIdAndAtivoNaLojaTrue(lojaId).stream()
+        return stockProdutoLojaRepository.findByLojaIdAndAtivoNaLojaTrue(lojaId).stream()
                 .map(StockItem::global)
                 .toList();
     }
 
     @Override
     public StockItem obter(UUID produtoId, UUID lojaId) {
-        return StockItem.global(obterProdutoLoja(produtoId, lojaId));
+        return StockItem.global(obterStockProdutoLoja(produtoId, lojaId));
     }
 
     @Override
     public StockItem atualizarStock(UUID produtoId, UUID lojaId, int delta) {
-        ProdutoLoja produtoLoja = obterProdutoLoja(produtoId, lojaId);
-        int novaQuantidade = produtoLoja.getQuantidadeStock() + delta;
+        StockProdutoLoja stockProdutoLoja = obterStockProdutoLoja(produtoId, lojaId);
+        int novaQuantidade = stockProdutoLoja.getQuantidadeStock() + delta;
         if (novaQuantidade < 0) {
-            throw new StockInsuficienteException(produtoId, produtoLoja.getQuantidadeStock(), Math.abs(delta));
+            throw new StockInsuficienteException(produtoId, stockProdutoLoja.getQuantidadeStock(), Math.abs(delta));
         }
-        produtoLoja.atualizarStock(delta);
-        return StockItem.global(produtoLoja);
+        stockProdutoLoja.atualizarStock(delta);
+        return StockItem.global(stockProdutoLoja);
     }
 
     @Override
     public StockItem definirNivelMinimo(UUID produtoId, UUID lojaId, int quantidade) {
-        ProdutoLoja produtoLoja = obterOuCriarProdutoLoja(produtoId, lojaId);
-        produtoLoja.definirNivelMinimo(quantidade);
-        return StockItem.global(produtoLoja);
+        StockProdutoLoja stockProdutoLoja = obterOuCriarStockProdutoLoja(produtoId, lojaId);
+        stockProdutoLoja.definirNivelMinimo(quantidade);
+        return StockItem.global(stockProdutoLoja);
     }
 
     @Override
     public StockItem atualizarLocalizacao(UUID produtoId, UUID lojaId, String corredor, String prateleira) {
-        ProdutoLoja produtoLoja = obterOuCriarProdutoLoja(produtoId, lojaId);
-        produtoLoja.atualizarLocalizacao(corredor, prateleira);
-        return StockItem.global(produtoLoja);
+        StockProdutoLoja stockProdutoLoja = obterOuCriarStockProdutoLoja(produtoId, lojaId);
+        stockProdutoLoja.atualizarLocalizacao(corredor, prateleira);
+        return StockItem.global(stockProdutoLoja);
     }
 
-    private ProdutoLoja obterProdutoLoja(UUID produtoId, UUID lojaId) {
+    private StockProdutoLoja obterStockProdutoLoja(UUID produtoId, UUID lojaId) {
         if (lojaId == null) {
             throw new BusinessException("LOJA_OBRIGATORIA", "Loja e obrigatoria no modo global");
         }
-        return produtoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("ProdutoLoja", produtoId));
+        return stockProdutoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("StockProdutoLoja", produtoId));
     }
 
-    private ProdutoLoja obterOuCriarProdutoLoja(UUID produtoId, UUID lojaId) {
+    private StockProdutoLoja obterOuCriarStockProdutoLoja(UUID produtoId, UUID lojaId) {
         if (lojaId == null) {
             throw new BusinessException("LOJA_OBRIGATORIA", "Loja e obrigatoria no modo global");
         }
-        return produtoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)
+        return stockProdutoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)
                 .orElseGet(() -> {
                     Produto produto = produtoRepository.findById(produtoId)
                             .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", produtoId));
                     Loja loja = lojaRepository.findById(lojaId)
                             .orElseThrow(() -> new RecursoNaoEncontradoException("Loja", lojaId));
-                    return produtoLojaRepository.save(new ProdutoLoja(produto, loja, 0, null));
+                    return stockProdutoLojaRepository.save(new StockProdutoLoja(produto, loja, 0, null));
                 });
     }
 }

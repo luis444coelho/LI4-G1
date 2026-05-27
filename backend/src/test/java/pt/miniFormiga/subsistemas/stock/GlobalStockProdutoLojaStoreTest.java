@@ -4,13 +4,13 @@ import org.junit.jupiter.api.Test;
 import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.Produto;
-import pt.miniFormiga.domain.ProdutoLoja;
+import pt.miniFormiga.domain.StockProdutoLoja;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.exception.BusinessException;
 import pt.miniFormiga.exception.RecursoNaoEncontradoException;
 import pt.miniFormiga.exception.StockInsuficienteException;
 import pt.miniFormiga.repository.LojaRepository;
-import pt.miniFormiga.repository.ProdutoLojaRepository;
+import pt.miniFormiga.repository.StockProdutoLojaRepository;
 import pt.miniFormiga.repository.ProdutoRepository;
 
 import java.math.BigDecimal;
@@ -25,22 +25,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class GlobalProdutoLojaStockStoreTest {
+class GlobalStockProdutoLojaStoreTest {
 
-    private final ProdutoLojaRepository produtoLojaRepository = mock(ProdutoLojaRepository.class);
+    private final StockProdutoLojaRepository stockProdutoLojaRepository = mock(StockProdutoLojaRepository.class);
     private final ProdutoRepository produtoRepository = mock(ProdutoRepository.class);
     private final LojaRepository lojaRepository = mock(LojaRepository.class);
-    private final GlobalProdutoLojaStockStore store = new GlobalProdutoLojaStockStore(
-            produtoLojaRepository,
+    private final GlobalStockProdutoLojaStore store = new GlobalStockProdutoLojaStore(
+            stockProdutoLojaRepository,
             produtoRepository,
             lojaRepository
     );
 
     @Test
     void listarSemLojaDevolveStockDeTodasAsLojas() {
-        ProdutoLoja braga = produtoLoja(5, 10);
-        ProdutoLoja porto = produtoLoja(20, 5);
-        when(produtoLojaRepository.findAll()).thenReturn(List.of(braga, porto));
+        StockProdutoLoja braga = stockProdutoLoja(5, 10);
+        StockProdutoLoja porto = stockProdutoLoja(20, 5);
+        when(stockProdutoLojaRepository.findAll()).thenReturn(List.of(braga, porto));
 
         List<StockItem> stock = store.listar(null);
 
@@ -51,9 +51,9 @@ class GlobalProdutoLojaStockStoreTest {
 
     @Test
     void listarPorLojaFiltraProdutosAtivosDaLoja() {
-        ProdutoLoja produtoLoja = produtoLoja(12, 5);
-        UUID lojaId = produtoLoja.getLoja().getId();
-        when(produtoLojaRepository.findByLojaIdAndAtivoNaLojaTrue(lojaId)).thenReturn(List.of(produtoLoja));
+        StockProdutoLoja stockProdutoLoja = stockProdutoLoja(12, 5);
+        UUID lojaId = stockProdutoLoja.getLoja().getId();
+        when(stockProdutoLojaRepository.findByLojaIdAndAtivoNaLojaTrue(lojaId)).thenReturn(List.of(stockProdutoLoja));
 
         List<StockItem> stock = store.listar(lojaId);
 
@@ -63,11 +63,11 @@ class GlobalProdutoLojaStockStoreTest {
     }
 
     @Test
-    void atualizarStockUsaProdutoLojaExistenteEProtegeStockNegativo() {
-        ProdutoLoja produtoLoja = produtoLoja(4, 10);
-        UUID produtoId = produtoLoja.getProduto().getId();
-        UUID lojaId = produtoLoja.getLoja().getId();
-        when(produtoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)).thenReturn(Optional.of(produtoLoja));
+    void atualizarStockUsaStockProdutoLojaExistenteEProtegeStockNegativo() {
+        StockProdutoLoja stockProdutoLoja = stockProdutoLoja(4, 10);
+        UUID produtoId = stockProdutoLoja.getProduto().getId();
+        UUID lojaId = stockProdutoLoja.getLoja().getId();
+        when(stockProdutoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)).thenReturn(Optional.of(stockProdutoLoja));
 
         StockItem atualizado = store.atualizarStock(produtoId, lojaId, 3);
 
@@ -76,29 +76,29 @@ class GlobalProdutoLojaStockStoreTest {
     }
 
     @Test
-    void definirNivelMinimoCriaProdutoLojaQuandoNaoExiste() {
+    void definirNivelMinimoCriaStockProdutoLojaQuandoNaoExiste() {
         Produto produto = produto();
         Loja loja = loja();
-        when(produtoLojaRepository.findByProdutoIdAndLojaId(produto.getId(), loja.getId())).thenReturn(Optional.empty());
+        when(stockProdutoLojaRepository.findByProdutoIdAndLojaId(produto.getId(), loja.getId())).thenReturn(Optional.empty());
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
-        when(produtoLojaRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stockProdutoLojaRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         StockItem item = store.definirNivelMinimo(produto.getId(), loja.getId(), 6);
 
         assertEquals(6, item.nivelMinimo());
         assertEquals(loja.getId(), item.lojaId());
-        verify(produtoLojaRepository).save(org.mockito.ArgumentMatchers.any(ProdutoLoja.class));
+        verify(stockProdutoLojaRepository).save(org.mockito.ArgumentMatchers.any(StockProdutoLoja.class));
     }
 
     @Test
-    void localizacaoTambemCriaProdutoLojaEValidaLojaObrigatoria() {
+    void localizacaoTambemCriaStockProdutoLojaEValidaLojaObrigatoria() {
         Produto produto = produto();
         Loja loja = loja();
-        when(produtoLojaRepository.findByProdutoIdAndLojaId(produto.getId(), loja.getId())).thenReturn(Optional.empty());
+        when(stockProdutoLojaRepository.findByProdutoIdAndLojaId(produto.getId(), loja.getId())).thenReturn(Optional.empty());
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         when(lojaRepository.findById(loja.getId())).thenReturn(Optional.of(loja));
-        when(produtoLojaRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stockProdutoLojaRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         StockItem item = store.atualizarLocalizacao(produto.getId(), loja.getId(), "A2", "P4");
 
@@ -108,16 +108,16 @@ class GlobalProdutoLojaStockStoreTest {
     }
 
     @Test
-    void obterFalhaQuandoProdutoLojaNaoExiste() {
+    void obterFalhaQuandoStockProdutoLojaNaoExiste() {
         UUID produtoId = UUID.randomUUID();
         UUID lojaId = UUID.randomUUID();
-        when(produtoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)).thenReturn(Optional.empty());
+        when(stockProdutoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)).thenReturn(Optional.empty());
 
         assertThrows(RecursoNaoEncontradoException.class, () -> store.obter(produtoId, lojaId));
     }
 
-    private ProdutoLoja produtoLoja(int quantidade, Integer minimo) {
-        return new ProdutoLoja(produto(), loja(), quantidade, minimo);
+    private StockProdutoLoja stockProdutoLoja(int quantidade, Integer minimo) {
+        return new StockProdutoLoja(produto(), loja(), quantidade, minimo);
     }
 
     private Produto produto() {

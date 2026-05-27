@@ -10,7 +10,7 @@ import pt.miniFormiga.domain.LinhaInventario;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MotivoAjusteCodigo;
 import pt.miniFormiga.domain.Produto;
-import pt.miniFormiga.domain.ProdutoLoja;
+import pt.miniFormiga.domain.StockProdutoLoja;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.TipoOperacao;
 import pt.miniFormiga.exception.BusinessException;
@@ -190,28 +190,28 @@ public class SubStockFacade implements ISubStock {
     }
 
     private void emitirAlertaSeNecessario(StockItem item) {
-        boolean alertaAberto = item.produtoLoja() == null
+        boolean alertaAberto = item.stockProdutoLoja() == null
                 ? alertaStockRepository.existsByProdutoIdAndResolvidoFalse(item.produtoId())
-                : alertaStockRepository.existsByProdutoLojaIdAndResolvidoFalse(item.produtoLoja().getId());
+                : alertaStockRepository.existsByStockProdutoLojaIdAndResolvidoFalse(item.stockProdutoLoja().getId());
         if (item.precisaReposicao() && !alertaAberto) {
             alertaStockRepository.save(criarAlerta(item));
         }
     }
 
     private void emitirAlertaSeNecessarioAoListar(StockItem item) {
-        boolean alertaExistente = item.produtoLoja() == null
+        boolean alertaExistente = item.stockProdutoLoja() == null
                 ? alertaStockRepository.existsByProdutoIdAndResolvidoFalse(item.produtoId())
                     || alertaStockRepository.existsByProdutoIdAndResolvidoTrue(item.produtoId())
-                : alertaStockRepository.existsByProdutoLojaIdAndResolvidoFalse(item.produtoLoja().getId())
-                    || alertaStockRepository.existsByProdutoLojaIdAndResolvidoTrue(item.produtoLoja().getId());
+                : alertaStockRepository.existsByStockProdutoLojaIdAndResolvidoFalse(item.stockProdutoLoja().getId())
+                    || alertaStockRepository.existsByStockProdutoLojaIdAndResolvidoTrue(item.stockProdutoLoja().getId());
         if (item.precisaReposicao() && !alertaExistente) {
             alertaStockRepository.save(criarAlerta(item));
         }
     }
 
     private AlertaStock criarAlerta(StockItem item) {
-        if (item.produtoLoja() != null) {
-            return new AlertaStock(item.produtoLoja(), item.quantidade());
+        if (item.stockProdutoLoja() != null) {
+            return new AlertaStock(item.stockProdutoLoja(), item.quantidade());
         }
         Loja loja = item.lojaId() == null
                 ? null
@@ -226,9 +226,9 @@ public class SubStockFacade implements ISubStock {
                                          Utilizador utilizador,
                                          int quantidade,
                                          String observacoes) {
-        ProdutoLoja produtoLoja = item.produtoLoja();
-        if (produtoLoja != null) {
-            return new AjusteInventario(produtoLoja, motivo, utilizador, quantidade, observacoes);
+        StockProdutoLoja stockProdutoLoja = item.stockProdutoLoja();
+        if (stockProdutoLoja != null) {
+            return new AjusteInventario(stockProdutoLoja, motivo, utilizador, quantidade, observacoes);
         }
         Produto produto = item.produto();
         return new AjusteInventario(produto, motivo, utilizador, quantidade, observacoes);

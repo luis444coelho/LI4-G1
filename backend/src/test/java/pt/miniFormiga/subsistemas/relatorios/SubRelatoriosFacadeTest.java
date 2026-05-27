@@ -8,10 +8,8 @@ import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.LinhaVenda;
 import pt.miniFormiga.domain.Loja;
 import pt.miniFormiga.domain.MeioPagamentoTipo;
-import pt.miniFormiga.domain.NivelMinimo;
 import pt.miniFormiga.domain.PerfilUtilizador;
 import pt.miniFormiga.domain.Produto;
-import pt.miniFormiga.domain.Stock;
 import pt.miniFormiga.domain.TaxaIVA;
 import pt.miniFormiga.domain.Utilizador;
 import pt.miniFormiga.domain.Venda;
@@ -343,7 +341,7 @@ class SubRelatoriosFacadeTest {
                 new StockItem(champo, loja.getId(), loja.getNome(), 2, 8, null, null, null, null)
         ));
         when(alertaStockRepository.findByResolvidoFalseOrderByDataHoraDesc())
-                .thenReturn(List.of(alertaStock(), new AlertaStock(new Stock(champo, loja, 2), 2)));
+                .thenReturn(List.of(alertaStock(), new AlertaStock(champo, loja, 2)));
 
         RelatorioStockResponse response = facade.relatorioStock(new RelatorioFiltro(
                 loja.getId(),
@@ -579,9 +577,9 @@ class SubRelatoriosFacadeTest {
     }
 
     private AlertaStock alertaStock() {
-        Stock stock = new Stock(produto, loja, 5);
-        new NivelMinimo(stock, 10);
-        return new AlertaStock(stock, 5);
+        produto.definirStockInicial(5);
+        produto.definirNivelMinimo(10);
+        return new AlertaStock(produto, loja, 5);
     }
 
     private VendaRelatorioSincronizada vendaSync(UUID lojaId, String lojaNome, BigDecimal valorComIva) {
