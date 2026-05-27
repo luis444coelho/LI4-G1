@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import pt.miniFormiga.subsistemas.auditoria.ISubAuditoria;
+import pt.miniFormiga.subsistemas.auditoria.facade.ISubAuditoria;
 import pt.miniFormiga.domain.Categoria;
 import pt.miniFormiga.domain.CondicaoComercial;
 import pt.miniFormiga.domain.Encomenda;
@@ -404,7 +404,7 @@ class SubEncomendasFacadeTest {
 
     @Test
     void listarEObterEncomendasGeramNumeroDocumentoSequencial() {
-        Encomenda encomenda = new Encomenda(loja, fornecedor, new EstadoEncomenda("PENDENTE", "Pendente"));
+        Encomenda encomenda = new Encomenda(loja, fornecedor, EstadoEncomendaCodigo.PENDENTE);
         new LinhaEncomenda(encomenda, produto, 2, new BigDecimal("0.60"));
         encomenda.submeter(LocalDateTime.of(2026, 5, 20, 10, 0));
         PageRequest pageable = PageRequest.of(0, 5);
@@ -420,7 +420,7 @@ class SubEncomendasFacadeTest {
 
     @Test
     void atualizarEstadoValidaCodigoERegistaAuditoria() {
-        Encomenda encomenda = new Encomenda(loja, fornecedor, new EstadoEncomenda("PENDENTE", "Pendente"));
+        Encomenda encomenda = new Encomenda(loja, fornecedor, EstadoEncomendaCodigo.PENDENTE);
         when(encomendaRepository.findById(encomenda.getId())).thenReturn(Optional.of(encomenda));
 
         EncomendaResponse atualizada = facade.atualizarEstado(encomenda.getId(), new AtualizarEstadoEncomendaRequest("ENVIADA"));
@@ -546,7 +546,7 @@ class SubEncomendasFacadeTest {
         Loja outraLoja = new Loja("Loja Porto", "Rua Norte", "123456780");
         Produto sandes = new Produto("5600000000226", "Sandes", new BigDecimal("2.00"), new BigDecimal("1.00"),
                 new TaxaIVA("Normal", new BigDecimal("23")), new Categoria("Snacks", "Snacks"));
-        Encomenda encomenda = new Encomenda(loja, fornecedor, new EstadoEncomenda("PENDENTE", "Pendente"));
+        Encomenda encomenda = new Encomenda(loja, fornecedor, EstadoEncomendaCodigo.PENDENTE);
         new LinhaEncomenda(encomenda, produto, 8, new BigDecimal("0.60"));
         when(encomendaRepository.findById(encomenda.getId())).thenReturn(Optional.of(encomenda));
 

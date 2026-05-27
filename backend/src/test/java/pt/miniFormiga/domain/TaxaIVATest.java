@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,6 +32,7 @@ class TaxaIVATest {
         Categoria categoria = new Categoria("Padaria", "Pao e bolos");
         Produto produto = new Produto("5600000000002", "Bolo de arroz", new BigDecimal("1.00"), new BigDecimal("0.55"), taxaIVA, categoria);
 
+        assertEquals("Taxa Intermedia", taxaIVA.getDescricao());
         assertTrue(taxaIVA.getProdutos().contains(produto));
     }
 }

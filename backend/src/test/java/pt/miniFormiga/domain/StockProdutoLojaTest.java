@@ -43,6 +43,21 @@ class StockProdutoLojaTest {
     }
 
     @Test
+    void fronteirasPermitemStockZeroENivelMinimoZero() {
+        StockProdutoLoja stockProdutoLoja = new StockProdutoLoja(produto(), loja(), 3, 0);
+
+        stockProdutoLoja.atualizarStock(-3);
+        stockProdutoLoja.definirNivelMinimo(0);
+
+        assertEquals(0, stockProdutoLoja.getQuantidadeStock());
+        assertEquals(0, stockProdutoLoja.getNivelMinimo());
+        assertTrue(stockProdutoLoja.precisaReposicao());
+
+        StockProdutoLoja acimaDoMinimo = new StockProdutoLoja(produto(), loja(), 6, 5);
+        assertFalse(acimaDoMinimo.precisaReposicao());
+    }
+
+    @Test
     void validacoesProtegemInvariantesDeStockDaLoja() {
         Produto produto = produto();
         Loja loja = loja();

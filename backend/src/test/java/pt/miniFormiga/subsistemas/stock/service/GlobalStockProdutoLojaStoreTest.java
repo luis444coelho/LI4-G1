@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -70,9 +71,26 @@ class GlobalStockProdutoLojaStoreTest {
         when(stockProdutoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)).thenReturn(Optional.of(stockProdutoLoja));
 
         StockItem atualizado = store.atualizarStock(produtoId, lojaId, 3);
+        StockItem zerado = store.atualizarStock(produtoId, lojaId, -7);
 
         assertEquals(7, atualizado.quantidade());
-        assertThrows(StockInsuficienteException.class, () -> store.atualizarStock(produtoId, lojaId, -8));
+        assertEquals(0, zerado.quantidade());
+        assertThrows(StockInsuficienteException.class, () -> store.atualizarStock(produtoId, lojaId, -1));
+    }
+
+    @Test
+    void obterStockProdutoLojaExistenteMapeiaItemGlobal() {
+        StockProdutoLoja stockProdutoLoja = stockProdutoLoja(6, 5);
+        UUID produtoId = stockProdutoLoja.getProduto().getId();
+        UUID lojaId = stockProdutoLoja.getLoja().getId();
+        when(stockProdutoLojaRepository.findByProdutoIdAndLojaId(produtoId, lojaId)).thenReturn(Optional.of(stockProdutoLoja));
+
+        StockItem item = store.obter(produtoId, lojaId);
+
+        assertEquals(produtoId, item.produtoId());
+        assertEquals(lojaId, item.lojaId());
+        assertEquals(6, item.quantidade());
+        assertFalse(item.precisaReposicao());
     }
 
     @Test
@@ -105,6 +123,23 @@ class GlobalStockProdutoLojaStoreTest {
         assertEquals("A2", item.corredor());
         assertEquals("P4", item.prateleira());
         assertThrows(BusinessException.class, () -> store.obter(produto.getId(), null));
+    }
+
+    @Test
+    void criarStockProdutoLojaFalhaQuandoProdutoOuLojaNaoExistem() {
+        Produto produto = produto();
+        Loja loja = loja();
+        when(stockProdutoLojaRepository.findByProdutoIdAndLojaId(produto.getId(), loja.getId())).thenReturn(Optional.empty());
+        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNaoEncontradoException.class,
+                () -> store.definirNivelMinimo(produto.getId(), loja.getId(), 6));
+
+        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
+        when(lojaRepository.findById(loja.getId())).thenReturn(Optional.empty());
+
+        assertThrows(RecursoNaoEncontradoException.class,
+                () -> store.definirNivelMinimo(produto.getId(), loja.getId(), 6));
     }
 
     @Test

@@ -7,20 +7,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class EstadosReferenciaTest {
 
     @Test
-    void estadosLegacyExposicaoCodigoEDescricao() {
-        EstadoEncomenda estadoEncomenda = new EstadoEncomenda("PENDENTE", "Pendente");
-        EstadoSincronizacao estadoSincronizacao = new EstadoSincronizacao("CONCLUIDA", "Concluida");
-        MotivoAjuste motivoAjuste = new MotivoAjuste("QUEBRA", "Produto danificado");
-        FaturaSequencia sequencia = new FaturaSequencia("A");
+    void enumsDeReferenciaExpoemCodigoPersistido() {
+        assertEquals("PENDENTE", EstadoEncomendaCodigo.PENDENTE.getCodigo());
+        assertEquals("ENVIADA", EstadoEncomendaCodigo.ENVIADA.getCodigo());
+        assertEquals("RECEBIDA", EstadoEncomendaCodigo.RECEBIDA.getCodigo());
+        assertEquals("CANCELADA", EstadoEncomendaCodigo.CANCELADA.getCodigo());
 
-        assertEquals("PENDENTE", estadoEncomenda.getCodigo());
-        assertEquals("Pendente", estadoEncomenda.getDescricao());
-        assertEquals("CONCLUIDA", estadoSincronizacao.getCodigo());
-        assertEquals("Concluida", estadoSincronizacao.getDescricao());
-        assertEquals("QUEBRA", motivoAjuste.getCodigo());
-        assertEquals("Produto danificado", motivoAjuste.getDescricao());
-        assertEquals("A", sequencia.getSerie());
-        assertEquals(1, sequencia.proximoNumero());
-        assertEquals(1, sequencia.getUltimoNumero());
+        assertEquals("PENDENTE", EstadoSincronizacaoCodigo.PENDENTE.getCodigo());
+        assertEquals("EM_CURSO", EstadoSincronizacaoCodigo.EM_CURSO.getCodigo());
+        assertEquals("CONCLUIDA", EstadoSincronizacaoCodigo.CONCLUIDA.getCodigo());
+        assertEquals("FALHADA", EstadoSincronizacaoCodigo.FALHADA.getCodigo());
+        assertEquals("COM_CONFLITOS", EstadoSincronizacaoCodigo.COM_CONFLITOS.getCodigo());
+
+        assertEquals("QUEBRA", MotivoAjusteCodigo.QUEBRA.getCodigo());
+        assertEquals("DESPERDICIO", MotivoAjusteCodigo.DESPERDICIO.getCodigo());
+        assertEquals("CORRECAO_ERRO", MotivoAjusteCodigo.CORRECAO_ERRO.getCodigo());
+        assertEquals("DEVOLUCAO", MotivoAjusteCodigo.DEVOLUCAO.getCodigo());
+        assertEquals("ENTRADA_MERCADORIA", MotivoAjusteCodigo.ENTRADA_MERCADORIA.getCodigo());
     }
 }
